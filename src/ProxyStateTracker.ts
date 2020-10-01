@@ -1,4 +1,5 @@
-import { createHiddenProperty } from './commons';
+import { createHiddenProperty, inherit } from './commons';
+import internal from './internal';
 import {
   ProxyStateTrackerConstructor,
   ProxyStateTrackerConstructorProps,
@@ -42,5 +43,7 @@ const ProxyStateTracker = (function(
   createHiddenProperty(this, 'useScope', useScope);
   // function constructor https://stackoverflow.com/a/43624326/2006805
 } as any) as ProxyStateTrackerConstructor;
+
+inherit(ProxyStateTracker, internal);
 
 export default ProxyStateTracker;

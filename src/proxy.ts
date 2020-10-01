@@ -61,9 +61,6 @@ function createTracker(
   // can not use this in handler, should be `target`
   const handler = {
     get: (target: IProxyTracker, prop: PropertyKey, receiver: any) => {
-      debugger;
-      console.log('prop before tracker ', prop);
-
       // target.runFn('assertScope');
       if (prop === TRACKER) return Reflect.get(target, prop, receiver);
       // assertScope(trackerNode, context.trackerNode)

@@ -1,14 +1,15 @@
-import TrackerNode from './TrackerNode';
+import StateTrackerNode from './StateTrackerNode';
 
 class StateTrackerContext {
-  private queue: Array<TrackerNode>;
+  private queue: Array<StateTrackerNode>;
 
   constructor() {
     this.queue = [];
   }
 
-  enter(trackerNode: TrackerNode) {
-    this.queue.push(trackerNode);
+  enter() {
+    const node = new StateTrackerNode();
+    this.queue.push(node);
   }
 
   leave() {
@@ -19,8 +20,9 @@ class StateTrackerContext {
     return this.queue.pop();
   }
 
-  current() {
+  getCurrent() {
     const length = this.queue.length;
+    console.log('this. queue', this.queue);
     return this.queue[length - 1];
   }
 }

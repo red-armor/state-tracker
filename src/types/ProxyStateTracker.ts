@@ -63,5 +63,7 @@ export interface IProxyStateTracker {
   // unlink(): any;
   // createChild(): any;
   // revoke(): void;
+  enter(): void;
+  leave(): void;
   [key: string]: any;
 }
