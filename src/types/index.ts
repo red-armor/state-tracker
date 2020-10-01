@@ -3,3 +3,5 @@ export * from './commons';
 export * from './es5Tracker';
 export * from './trackerNode';
 export * from './internalFunction';
+
+export * from './ProxyStateTracker';
