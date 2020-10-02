@@ -22,7 +22,6 @@ class StateTrackerContext {
 
   getCurrent(): StateTrackerNode {
     const length = this.queue.length;
-    console.log('this. queue', this.queue);
     return this.queue[length - 1];
   }
 }

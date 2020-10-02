@@ -38,13 +38,11 @@ function produce(state: State, options?: Options): IProxyStateTracker {
       const tracker = target[TRACKER];
       const base = tracker._base;
 
-      console.log('prop ', prop);
       const accessPath = tracker.accessPath;
       const nextAccessPath = accessPath.concat(prop as string);
       const isPeeking = tracker.isPeeking;
 
       if (!isPeeking) {
-        console.log('report paths ', nextAccessPath);
         trackerContext.getCurrent().reportPaths(nextAccessPath);
       }
       const childProxies = tracker.childProxies;

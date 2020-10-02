@@ -13,7 +13,6 @@ class StateTrackerNode {
 
   reportPaths(path: Array<string>) {
     this.paths.push(path);
-    console.log('path ', this.paths);
   }
 
   getRemarkable() {

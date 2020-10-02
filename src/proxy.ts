@@ -41,11 +41,7 @@ function createTracker(
     );
   }
 
-  console.log('shallow start');
-
   const copy = shallowCopy(target);
-
-  console.log('shallow end');
 
   const internalProps = [
     TRACKER,
@@ -61,11 +57,7 @@ function createTracker(
   // can not use this in handler, should be `target`
   const handler = {
     get: (target: IProxyTracker, prop: PropertyKey, receiver: any) => {
-      // target.runFn('assertScope');
       if (prop === TRACKER) return Reflect.get(target, prop, receiver);
-      // assertScope(trackerNode, context.trackerNode)
-
-      console.log('prop after tracker ', prop);
 
       const tracker = target[TRACKER];
       const base = tracker.base;
