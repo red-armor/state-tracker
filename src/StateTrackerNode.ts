@@ -7,6 +7,10 @@ class StateTrackerNode {
     this.paths = [];
   }
 
+  getPaths() {
+    return this.paths;
+  }
+
   reportPaths(path: Array<string>) {
     this.paths.push(path);
     console.log('path ', this.paths);

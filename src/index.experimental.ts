@@ -28,19 +28,23 @@ function produce(state: State, options?: Options): IProxyStateTracker {
 
   const trackerContext = stateTrackerContext || new StateTrackerContext();
 
-  const internalKeys = [TRACKER, 'enter', 'leave'];
+  const internalKeys = [TRACKER, 'enter', 'leave', 'getContext'];
 
   const handler = {
     get: (target: IProxyStateTracker, prop: PropertyKey, receiver: any) => {
       if (internalKeys.indexOf(prop as string | symbol) !== -1)
         return Reflect.get(target, prop, receiver);
+
       const tracker = target[TRACKER];
-      const base = tracker.base;
+      const base = tracker._base;
+
+      console.log('prop ', prop);
       const accessPath = tracker.accessPath;
       const nextAccessPath = accessPath.concat(prop as string);
       const isPeeking = tracker.isPeeking;
 
       if (!isPeeking) {
+        console.log('report paths ', nextAccessPath);
         trackerContext.getCurrent().reportPaths(nextAccessPath);
       }
       const childProxies = tracker.childProxies;
@@ -51,8 +55,10 @@ function produce(state: State, options?: Options): IProxyStateTracker {
 
       // for rebase value, if base value change, the childProxy should
       // be replaced
-      if (childProxy && childProxy.base === value) {
-        return childProxy;
+      if (childProxy) {
+        const childProxyTracker = childProxy[TRACKER];
+        const childProxyBase = childProxyTracker._base;
+        if (childProxyBase === value) return childProxy;
       }
       return (childProxies[prop as string] = produce(value, {
         accessPath: nextAccessPath,
@@ -65,10 +71,8 @@ function produce(state: State, options?: Options): IProxyStateTracker {
     },
   };
 
-  const proxy = new Proxy(state, handler);
-
   const tracker = new ProxyStateTracker({
-    base: state,
+    _base: state,
     parentProxy,
     accessPath,
     rootPath,
@@ -76,12 +80,17 @@ function produce(state: State, options?: Options): IProxyStateTracker {
     useScope,
   });
 
+  const proxy = new Proxy(state, handler);
+
   createHiddenProperty(proxy, TRACKER, tracker);
   createHiddenProperty(proxy, 'enter', function() {
     trackerContext.enter();
   });
   createHiddenProperty(proxy, 'leave', function() {
     trackerContext.leave();
+  });
+  createHiddenProperty(proxy, 'getContext', function() {
+    return trackerContext;
   });
 
   return proxy as IProxyStateTracker;

@@ -16,7 +16,7 @@ const ProxyStateTracker = (function(
     accessPath,
     parentProxy,
     rootPath,
-    base,
+    _base,
     useRevoke,
     useScope,
   }: ProxyStateTrackerConstructorProps
@@ -28,9 +28,9 @@ const ProxyStateTracker = (function(
   createHiddenProperty(
     this,
     'type',
-    Array.isArray(base) ? Type.Array : Type.Object
+    Array.isArray(_base) ? Type.Array : Type.Object
   );
-  createHiddenProperty(this, 'base', base);
+  createHiddenProperty(this, '_base', _base);
 
   createHiddenProperty(this, 'parentProxy', parentProxy);
   createHiddenProperty(this, 'childProxies', {} as any);

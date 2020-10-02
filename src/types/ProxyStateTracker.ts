@@ -1,6 +1,7 @@
 import { Type } from './';
 import { InternalFunction } from './';
 import { TRACKER } from '../commons';
+import StateTrackerContext from '../StateTrackerContext';
 
 export interface ProxyStateTrackerConfig {
   accessPath?: Array<string>;
@@ -14,7 +15,7 @@ export interface ProxyStateTrackerConstructorProps {
   accessPath: Array<string>;
   parentProxy: IProxyStateTracker | null;
   rootPath: Array<string>;
-  base: any;
+  _base: any;
   useRevoke: boolean;
   useScope: boolean;
 }
@@ -24,7 +25,7 @@ export interface ProxyStateTrackerProperties {
   accessPath: Array<string>;
   rootPath: Array<string>;
   type: Type.Array | Type.Object;
-  base: {
+  _base: {
     [key: string]: any;
   };
   parentProxy: IProxyStateTracker;
@@ -47,7 +48,7 @@ export interface ProxyStateTrackerConstructor {
     accessPath,
     parentProxy,
     rootPath,
-    base,
+    _base,
     useRevoke,
     useScope,
   }: ProxyStateTrackerConstructorProps): ProxyStateTrackerInterface;
@@ -65,5 +66,6 @@ export interface IProxyStateTracker {
   // revoke(): void;
   enter(): void;
   leave(): void;
+  getContext(): StateTrackerContext;
   [key: string]: any;
 }

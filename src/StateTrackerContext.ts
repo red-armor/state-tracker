@@ -20,7 +20,7 @@ class StateTrackerContext {
     return this.queue.pop();
   }
 
-  getCurrent() {
+  getCurrent(): StateTrackerNode {
     const length = this.queue.length;
     console.log('this. queue', this.queue);
     return this.queue[length - 1];
