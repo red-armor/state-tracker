@@ -1,5 +1,5 @@
 import { Type } from './';
-import { InternalFunction } from './';
+// import { InternalFunction } from './';
 import { TRACKER } from '../commons';
 import StateTrackerContext from '../StateTrackerContext';
 
@@ -19,6 +19,8 @@ export interface ProxyStateTrackerConstructorProps {
   useRevoke: boolean;
   useScope: boolean;
   stateTrackerContext: StateTrackerContext;
+  context: string;
+  lastUpdateAt: number;
 }
 
 export interface ProxyStateTrackerProperties {
@@ -38,8 +40,10 @@ export interface ProxyStateTrackerProperties {
   useRevoke: boolean;
   useScope: boolean;
   _updateTimes: number;
+  _context: string;
+  _lastUpdateAt: number;
 }
-export type ProxyStateTrackerFunctions = InternalFunction;
+export type ProxyStateTrackerFunctions = any;
 
 export type ProxyStateTrackerInterface = ProxyStateTrackerProperties &
   ProxyStateTrackerFunctions;

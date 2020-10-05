@@ -7,8 +7,8 @@ class StateTrackerContext {
     this.queue = [];
   }
 
-  enter() {
-    const node = new StateTrackerNode();
+  enter(mark: string) {
+    const node = new StateTrackerNode(mark);
     this.queue.push(node);
   }
 

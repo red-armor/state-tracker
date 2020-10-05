@@ -369,7 +369,7 @@ describe('relink', () => {
     });
 
     const childProxies = proxyState['a'][TRACKER].childProxies;
-    expect(Object.keys(childProxies)).toEqual(['a1', 'a2']);
+    expect(Object.keys(childProxies)).toEqual(['a1']);
     expect(proxyState['a']['a2']).toBe(4);
     expect(Object.keys(childProxies)).toEqual(['a1']);
 

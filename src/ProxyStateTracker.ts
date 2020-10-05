@@ -20,11 +20,15 @@ const ProxyStateTracker = (function(
     useRevoke,
     useScope,
     stateTrackerContext,
+    context,
+    lastUpdateAt,
   }: ProxyStateTrackerConstructorProps
 ) {
   createHiddenProperty(this, 'id', `ProxyStateTracker_${count++}`) // eslint-disable-line
   createHiddenProperty(this, '_updateTimes', 0);
   createHiddenProperty(this, '_stateTrackerContext', stateTrackerContext);
+  createHiddenProperty(this, '_context', context);
+  createHiddenProperty(this, '_lastUpdateAt', lastUpdateAt);
 
   createHiddenProperty(this, 'accessPath', accessPath);
   createHiddenProperty(this, 'rootPath', rootPath);

@@ -12,7 +12,7 @@ export const emptyFunction = () => {};
 export const isObject = (o: any) => o ? (typeof o === 'object' || typeof o === 'function') : false // eslint-disable-line
 export const hasSymbol = typeof Symbol !== 'undefined';
 export const TRACKER: unique symbol = hasSymbol
-  ? Symbol('tracker')
+  ? Symbol.for('tracker')
   : ('__tracker__' as any);
 
 export const canIUseProxy = () => {

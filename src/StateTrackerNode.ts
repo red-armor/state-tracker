@@ -2,9 +2,11 @@ import { generateRemarkablePaths } from './path';
 
 class StateTrackerNode {
   private paths: Array<Array<string>>;
+  public context: string;
 
-  constructor() {
+  constructor(context: string) {
     this.paths = [];
+    this.context = context;
   }
 
   getPaths() {
