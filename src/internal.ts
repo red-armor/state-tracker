@@ -1,17 +1,17 @@
-import { IProxyStateTracker } from './types';
+// import { IProxyStateTracker } from './types';
 
 function internal() {}
 const proto = internal.prototype;
 
-const peek = (proxyState: IProxyStateTracker, accessPath: Array<string>) => { // eslint-disable-line
-  return accessPath.reduce((nextProxyState, cur: string) => {
-    const tracker = nextProxyState;
-    tracker.isPeeking = true;
-    const nextProxy = nextProxyState[cur];
-    tracker.isPeeking = false;
-    return nextProxy;
-  }, proxyState);
-};
+// const peek = (proxyState: IProxyStateTracker, accessPath: Array<string>) => { // eslint-disable-line
+//   return accessPath.reduce((nextProxyState, cur: string) => {
+//     const tracker = nextProxyState;
+//     tracker.isPeeking = true;
+//     const nextProxy = nextProxyState[cur];
+//     tracker.isPeeking = false;
+//     return nextProxy;
+//   }, proxyState);
+// };
 
 proto.hydrate = function() {};
 

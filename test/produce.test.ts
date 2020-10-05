@@ -8,6 +8,104 @@ const getTrackerId = (str: string): number => {
   return 0;
 };
 
+describe('child proxies', () => {
+  it('Access a key which has object value will add prop to childProxies', () => {
+    const state = {
+      a: {
+        a1: 1,
+        a2: 2,
+      },
+      b: {
+        b1: {
+          b11: 1,
+          b12: 2,
+        },
+        b2: 2,
+      },
+      c: 3,
+    };
+    const proxyState = produce(state);
+    const tracker = proxyState[TRACKER];
+
+    expect(proxyState.a).toEqual({ a1: 1, a2: 2 });
+    expect(proxyState.c).toEqual(3);
+    const childProxies = tracker.childProxies;
+    const keys = Object.keys(childProxies);
+    expect(keys).toEqual(['a']);
+  });
+
+  it('Access a key which has array value will add prop to childProxies', () => {
+    const state = {
+      a: [2, 3, 4],
+      b: {
+        b1: {
+          b11: 1,
+          b12: 2,
+        },
+        b2: 2,
+      },
+      c: 3,
+    };
+    const proxyState = produce(state);
+    const tracker = proxyState[TRACKER];
+
+    expect(proxyState.a).toEqual([2, 3, 4]);
+    expect(proxyState.c).toEqual(3);
+    const childProxies = tracker.childProxies;
+    const keys = Object.keys(childProxies);
+    expect(keys).toEqual(['a']);
+  });
+
+  it('Set a key with different type value which will cause clear up childProxies', () => {
+    const state = {
+      a: [2, 3, 4],
+      b: {
+        b1: {
+          b11: 1,
+          b12: 2,
+        },
+        b2: 2,
+      },
+      c: 3,
+    };
+    const proxyState = produce(state);
+    const tracker = proxyState[TRACKER];
+
+    expect(proxyState.a).toEqual([2, 3, 4]);
+    expect(proxyState.c).toEqual(3);
+    proxyState.a = { a1: 1 };
+    const childProxies = tracker.childProxies;
+    const keys = Object.keys(childProxies);
+    expect(keys).toEqual([]);
+  });
+
+  it('childProxies will not update even if set to value with less keys than before', () => {
+    const state = {
+      a: [2, 3, 4],
+      b: {
+        b1: {
+          b11: 1,
+          b12: 2,
+        },
+        b2: 2,
+      },
+      c: 3,
+    };
+    const proxyState = produce(state);
+    const tracker = proxyState.b[TRACKER];
+
+    expect(proxyState.b.b1).toEqual({ b11: 1, b12: 2 });
+    expect(proxyState.c).toEqual(3);
+    proxyState.b = { b1: 1 };
+    const childProxies = tracker.childProxies;
+    const keys = Object.keys(childProxies);
+    expect(keys).toEqual(['b1']);
+    expect(proxyState.b.b1).toEqual(1);
+    const keys2 = Object.keys(childProxies);
+    expect(keys2).toEqual([]);
+  });
+});
+
 describe('access path', () => {
   it('verify getPaths', () => {
     const state = {
@@ -234,5 +332,51 @@ describe('tracker id', () => {
     const id1 = getTrackerId(proxyState.b.b2[TRACKER].id);
     const id2 = getTrackerId(proxyState.b.b1[TRACKER].id);
     expect(id2).toBeGreaterThan(id1);
+  });
+});
+
+describe('relink', () => {
+  it('relink an object', () => {
+    const state = {
+      a: {
+        a1: {
+          a11: 2,
+        },
+        a2: {
+          a21: 3,
+        },
+      },
+      b: {
+        b1: {
+          b11: 1,
+          b12: 2,
+        },
+        b2: [2],
+      },
+    };
+    const proxyState = produce(state);
+    /* eslint-disable */
+    proxyState.a;
+    proxyState.a.a1;
+    proxyState.a.a2;
+    /* eslint-enable */
+
+    proxyState.relink(['a'], {
+      a1: {
+        a11: 3,
+      },
+      a2: 4,
+    });
+
+    const childProxies = proxyState['a'][TRACKER].childProxies;
+    expect(Object.keys(childProxies)).toEqual(['a1', 'a2']);
+    expect(proxyState['a']['a2']).toBe(4);
+    expect(Object.keys(childProxies)).toEqual(['a1']);
+
+    proxyState.relink(['a'], {
+      a1: 5,
+      a2: 6,
+    });
+    expect(proxyState['a'][TRACKER]._updateTimes).toBe(2);
   });
 });

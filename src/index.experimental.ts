@@ -4,9 +4,6 @@ import {
   createHiddenProperty,
   isTrackable,
   isTypeEqual,
-  isPlainObject,
-  isArray,
-  // diffArraySimple,
 } from './commons';
 import ProxyStateTracker from './ProxyStateTracker';
 import { IProxyStateTracker, ProxyStateTrackerInterface } from './types';
@@ -56,7 +53,7 @@ function produce(state: State, options?: Options): IProxyStateTracker {
       if (internalKeys.indexOf(prop as string | symbol) !== -1)
         return Reflect.get(target, prop, receiver);
 
-      const tracker = target[TRACKER];
+      const tracker = Reflect.get(target, TRACKER);
       const base = tracker._base;
 
       const accessPath = tracker.accessPath;
@@ -70,7 +67,11 @@ function produce(state: State, options?: Options): IProxyStateTracker {
       const childProxies = tracker.childProxies;
       const value = base[prop as string];
 
-      if (!isTrackable(value)) return value;
+      if (!isTrackable(value)) {
+        // delete childProxies[prop] if it set to unTrackable value.
+        if (childProxies[prop]) delete childProxies[prop];
+        return value;
+      }
       const childProxy = childProxies[prop as string];
 
       // for rebase value, if base value change, the childProxy should
@@ -90,6 +91,25 @@ function produce(state: State, options?: Options): IProxyStateTracker {
         mayReusedTracker: childProxyTracker,
         stateTrackerContext: trackerContext,
       }));
+    },
+    set: (
+      target: IProxyStateTracker,
+      prop: PropertyKey,
+      newValue: any,
+      receiver: any
+    ) => {
+      const tracker = Reflect.get(target, TRACKER);
+      const childProxies = tracker.childProxies;
+      const base = tracker._base[prop];
+      const childProxiesKeys = Object.keys(childProxies);
+      const len = childProxiesKeys.length;
+
+      if (!isTypeEqual(base, newValue) || !len) {
+        tracker.childProxies = [];
+        return Reflect.set(target, prop, newValue, receiver);
+      }
+
+      return Reflect.set(target, prop, newValue, receiver);
     },
   };
 
@@ -133,37 +153,7 @@ function produce(state: State, options?: Options): IProxyStateTracker {
     const last = copy.pop();
     const front = copy;
     const parentState = peek(this, front);
-    const parentTracker = parentState[TRACKER];
-    parentTracker.isPeeking = true;
-    const currentState = last ? parentState[last] : parentState;
-    if (typeof currentState[TRACKER] === 'undefined') {
-      parentState[last!] = value;
-    } else {
-      const currentTracker = currentState[TRACKER];
-      const currentBase = currentTracker._base;
-      currentTracker.isPeeking = true;
-      if (isTypeEqual(value, currentBase)) {
-        if (isPlainObject(value)) {
-        }
-
-        if (isArray(value)) {
-        }
-
-        parentState[last!] = value;
-        parentTracker.childProxies[last!] = produce(value, {
-          parentProxy: parentState,
-          accessPath: front,
-          rootPath: parentTracker.rootPath,
-          useRevoke: parentTracker.useRevoke,
-          useScope: parentTracker.useScope,
-          mayReusedTracker: currentTracker,
-          stateTrackerContext: currentTracker._stateTrackerContext,
-        });
-      }
-
-      currentTracker.isPeeking = false;
-    }
-    parentTracker.isPeeking = false;
+    parentState[last!] = value;
   });
   createHiddenProperty(proxy, 'unlink', function(this: IProxyStateTracker) {
     const tracker = this[TRACKER];
