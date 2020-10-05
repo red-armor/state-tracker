@@ -18,6 +18,7 @@ export interface ProxyStateTrackerConstructorProps {
   _base: any;
   useRevoke: boolean;
   useScope: boolean;
+  stateTrackerContext: StateTrackerContext;
 }
 
 export interface ProxyStateTrackerProperties {

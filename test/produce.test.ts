@@ -187,6 +187,31 @@ describe('change value', () => {
     const id2 = getTrackerId(proxyState.a[TRACKER].id);
     expect(id1).toBe(id2);
     expect(proxyState.a[TRACKER]._updateTimes).toBe(1);
+
+    proxyState.a = {
+      a1: 3,
+      a2: 4,
+    };
+    expect(proxyState.a[TRACKER]._updateTimes).toBe(2);
+  });
+
+  it('Tracker base value will be updated after try to access it value', () => {
+    const old = {
+      a1: 1,
+      a2: 2,
+    };
+    const next = {
+      a1: 3,
+      a2: 4,
+    };
+    const state = {
+      a: old,
+    };
+    const proxyState = produce(state);
+    const tracker = proxyState.a[TRACKER];
+
+    proxyState.a = next;
+    expect(tracker._base).toBe(old);
   });
 });
 

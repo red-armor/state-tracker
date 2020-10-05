@@ -1,20 +1,19 @@
+import { IProxyStateTracker } from './types';
+
 function internal() {}
 const proto = internal.prototype;
 
-// const peek = (proxy: IProxyTracker | IES5Tracker, accessPath: Array<string>) => { // eslint-disable-line
-//   return accessPath.reduce((proxy, cur: string) => {
-//     proxy.setProp('isPeeking', true);
-//     const nextProxy = proxy[cur];
-//     proxy.setProp('isPeeking', false);
-//     return nextProxy;
-//   }, proxy);
-// };
+const peek = (proxyState: IProxyStateTracker, accessPath: Array<string>) => { // eslint-disable-line
+  return accessPath.reduce((nextProxyState, cur: string) => {
+    const tracker = nextProxyState;
+    tracker.isPeeking = true;
+    const nextProxy = nextProxyState[cur];
+    tracker.isPeeking = false;
+    return nextProxy;
+  }, proxyState);
+};
 
 proto.hydrate = function() {};
-
-proto.relink = function() {
-  // const proxy = this
-};
 
 proto.update = function(newBaseValue: any) {
   const _tracker = this;

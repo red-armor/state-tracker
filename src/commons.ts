@@ -31,6 +31,10 @@ export const isTrackable = (o: any) => { // eslint-disable-line
   return ['[object Object]', '[object Array]'].indexOf(toString(o)) !== -1;
 };
 
+export const isTypeEqual = (a: any, b: any) => toString(a) === toString(b);
+export const isArray = (a: any) => Array.isArray(a);
+export const isPlainObject = (a: any) => toString(a) === '[object Object]';
+
 type EachArray<T> = (index: number, entry: any, obj: T) => void;
 type EachObject<T> = <K extends keyof T>(key: K, entry: T[K], obj: T) => number;
 
@@ -98,4 +102,20 @@ export const hideProperty = (target: object, prop: PropertyKey) => {
     enumerable: false,
     configurable: false,
   });
+};
+
+export const diffArraySimple = (
+  a: Array<string> = [] as any,
+  b: Array<string>
+): Array<string> => {
+  const parts: Array<string> = [];
+
+  for (let i = 0; i < a.length; i++) {
+    const key = a[i];
+    if (b.indexOf(key) === -1) {
+      parts.push(key);
+    }
+  }
+
+  return parts;
 };
