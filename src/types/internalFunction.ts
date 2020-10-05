@@ -10,6 +10,7 @@ export interface InternalFunction {
   setRemarkable(): boolean;
   getRemarkableFullPaths(): Array<Array<string>>;
   assertScope(): void;
+  update(newBaseValue: any): void;
 }
 
 export interface PropProperty {

@@ -162,7 +162,7 @@ describe('change value', () => {
     expect(id1).toBe(id2);
   });
 
-  it('Assigned with different object, state tracker id number will increment with 1', () => {
+  it('update with different object, tracker id should be preserved, _updateTimes will increment with 1', () => {
     const state = {
       a: {
         a1: 1,
@@ -178,12 +178,15 @@ describe('change value', () => {
     };
     const proxyState = produce(state);
     const id1 = getTrackerId(proxyState.a[TRACKER].id);
+
     proxyState.a = {
       a1: 3,
       a2: 4,
     };
+
     const id2 = getTrackerId(proxyState.a[TRACKER].id);
-    expect(id1).toBe(id2 - 1);
+    expect(id1).toBe(id2);
+    expect(proxyState.a[TRACKER]._updateTimes).toBe(1);
   });
 });
 

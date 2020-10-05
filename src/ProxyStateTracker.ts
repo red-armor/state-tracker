@@ -22,6 +22,7 @@ const ProxyStateTracker = (function(
   }: ProxyStateTrackerConstructorProps
 ) {
   createHiddenProperty(this, 'id', `ProxyStateTracker_${count++}`) // eslint-disable-line
+  createHiddenProperty(this, '_updateTimes', 0);
 
   createHiddenProperty(this, 'accessPath', accessPath);
   createHiddenProperty(this, 'rootPath', rootPath);
@@ -36,8 +37,6 @@ const ProxyStateTracker = (function(
   createHiddenProperty(this, 'childProxies', {} as any);
 
   createHiddenProperty(this, 'isPeeking', false);
-  createHiddenProperty(this, 'propProperties', [] as any);
-  createHiddenProperty(this, 'paths', [] as any);
 
   createHiddenProperty(this, 'useRevoke', useRevoke);
   createHiddenProperty(this, 'useScope', useScope);

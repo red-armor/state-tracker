@@ -33,10 +33,10 @@ export interface ProxyStateTrackerProperties {
     [key: string]: IProxyStateTracker;
   };
   isPeeking: boolean;
-  propProperties: Array<any>;
   paths: Array<Array<string>>;
   useRevoke: boolean;
   useScope: boolean;
+  _updateTimes: number;
 }
 export type ProxyStateTrackerFunctions = InternalFunction;
 

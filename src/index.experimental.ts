@@ -1,6 +1,6 @@
 import { TRACKER, createHiddenProperty, isTrackable } from './commons';
 import ProxyStateTracker from './ProxyStateTracker';
-import { IProxyStateTracker } from './types';
+import { IProxyStateTracker, ProxyStateTrackerInterface } from './types';
 import StateTrackerContext from './StateTrackerContext';
 
 interface State {
@@ -14,6 +14,7 @@ interface Options {
   useRevoke: boolean;
   useScope: boolean;
   stateTrackerContext: StateTrackerContext;
+  mayReusedTracker: null | ProxyStateTrackerInterface;
 }
 
 function produce(state: State, options?: Options): IProxyStateTracker {
@@ -24,6 +25,7 @@ function produce(state: State, options?: Options): IProxyStateTracker {
     useRevoke = false,
     useScope = false,
     stateTrackerContext,
+    mayReusedTracker,
   } = options || {};
 
   const trackerContext = stateTrackerContext || new StateTrackerContext();
@@ -54,14 +56,16 @@ function produce(state: State, options?: Options): IProxyStateTracker {
 
       // for rebase value, if base value change, the childProxy should
       // be replaced
+      let childProxyTracker = null;
       if (childProxy) {
-        const childProxyTracker = childProxy[TRACKER];
+        childProxyTracker = childProxy[TRACKER];
         const childProxyBase = childProxyTracker._base;
         if (childProxyBase === value) return childProxy;
       }
       return (childProxies[prop as string] = produce(value, {
         accessPath: nextAccessPath,
         parentProxy: target,
+        mayReusedTracker: childProxyTracker,
         rootPath,
         useRevoke,
         useScope,
@@ -70,14 +74,23 @@ function produce(state: State, options?: Options): IProxyStateTracker {
     },
   };
 
-  const tracker = new ProxyStateTracker({
-    _base: state,
-    parentProxy,
-    accessPath,
-    rootPath,
-    useRevoke,
-    useScope,
-  });
+  // Tracker is just like an assistant, it could be reused.
+  // However, Tracker node should be created as a new now after call of enter context.
+  if (mayReusedTracker) {
+    // baseValue should be update on each time or `childProxyBase === value` will
+    // be always false.
+    mayReusedTracker.update(state);
+  }
+  const tracker =
+    mayReusedTracker ||
+    new ProxyStateTracker({
+      _base: state,
+      parentProxy,
+      accessPath,
+      rootPath,
+      useRevoke,
+      useScope,
+    });
 
   const proxy = new Proxy(state, handler);
 
