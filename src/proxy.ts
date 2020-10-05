@@ -1,185 +1,185 @@
+import invariant from 'invariant';
 import {
-  isObject,
   TRACKER,
-  shallowCopy,
-  isTrackable,
-  hasOwnProperty,
   createHiddenProperty,
+  isTrackable,
+  isTypeEqual,
 } from './commons';
-import ProxyTracker from './proxyTracker';
-import context from './context';
-import {
-  IProxyTracker,
-  ProxyTrackerInterface,
-  TrackerNode,
-  ProxyTrackerConfig,
-  ProxyTrackerFunctions,
-  PropProperty,
-} from './types';
+import ProxyStateTracker from './ProxyStateTracker';
+import { IProxyStateTracker, ProxyStateTrackerInterface } from './types';
+import StateTrackerContext from './StateTrackerContext';
 
-const peek = (proxy: IProxyTracker, accessPath: Array<string>) => { // eslint-disable-line
-  return accessPath.reduce((proxy, cur) => {
-    const tracker = proxy[TRACKER];
+interface State {
+  [key: string]: any;
+}
+
+interface Options {
+  accessPath: Array<string>;
+  parentProxy?: IProxyStateTracker;
+  rootPath: Array<string>;
+  useRevoke: boolean;
+  useScope: boolean;
+  stateTrackerContext: StateTrackerContext;
+  mayReusedTracker: null | ProxyStateTrackerInterface;
+}
+
+const peek = (proxyState: IProxyStateTracker, accessPath: Array<string>) => { // eslint-disable-line
+  return accessPath.reduce((nextProxyState, cur: string) => {
+    const tracker = nextProxyState;
     tracker.isPeeking = true;
-    const nextProxy = proxy[cur] as any;
+    const nextProxy = nextProxyState[cur];
     tracker.isPeeking = false;
     return nextProxy;
-  }, proxy);
+  }, proxyState);
 };
 
-function createTracker(
-  target: any,
-  config: ProxyTrackerConfig,
-  trackerNode: TrackerNode
-): IProxyTracker {
-  const { accessPath = [], parentProxy, useRevoke, useScope, rootPath = [] } =
-    config || {};
+function produce(state: State, options?: Options): IProxyStateTracker {
+  const {
+    parentProxy = null,
+    accessPath = [],
+    rootPath = [],
+    useRevoke = false,
+    useScope = false,
+    stateTrackerContext,
+    mayReusedTracker,
+  } = options || {};
 
-  if (!isObject(target)) {
-    throw new TypeError(
-      'Cannot create proxy with a non-object as target or handler'
-    );
-  }
+  const trackerContext = stateTrackerContext || new StateTrackerContext();
 
-  const copy = shallowCopy(target);
+  const internalKeys = [TRACKER, 'enter', 'leave', 'getContext'];
 
-  const internalProps = [
-    TRACKER,
-    'revoke',
-    'runFn',
-    'unlink',
-    'getProp',
-    'setProp',
-    'getProps',
-    'createChild',
-  ];
-
-  // can not use this in handler, should be `target`
   const handler = {
-    get: (target: IProxyTracker, prop: PropertyKey, receiver: any) => {
-      if (prop === TRACKER) return Reflect.get(target, prop, receiver);
-
-      const tracker = target[TRACKER];
-      const base = tracker.base;
-
-      // refer to immer...
-      // if (Array.isArray(tracker)) target = tracker[0]
-      const isInternalPropAccessed = internalProps.indexOf(prop as any) !== -1;
-      if (isInternalPropAccessed || !hasOwnProperty(base, prop)) {
+    get: (target: IProxyStateTracker, prop: PropertyKey, receiver: any) => {
+      if (internalKeys.indexOf(prop as string | symbol) !== -1)
         return Reflect.get(target, prop, receiver);
-      }
+
+      const tracker = Reflect.get(target, TRACKER);
+      const base = tracker._base;
+
       const accessPath = tracker.accessPath;
       const nextAccessPath = accessPath.concat(prop as string);
       const isPeeking = tracker.isPeeking;
 
       if (!isPeeking) {
-        // for relink return parent prop...
-        if (context.trackerNode && trackerNode.id !== context.trackerNode.id) {
-          const contextProxy = context.trackerNode.proxy;
-          if (contextProxy) {
-            const contextProxyTracker = contextProxy[TRACKER];
-            const propProperties: Array<PropProperty> =
-              contextProxyTracker.propProperties;
-            propProperties.push({
-              path: nextAccessPath,
-              source: trackerNode.proxy,
-            });
-            tracker.propProperties = propProperties;
-          }
-          if (trackerNode.proxy)
-            return peek(trackerNode.proxy as IProxyTracker, nextAccessPath);
-        }
-        tracker.reportAccessPath.call(target, nextAccessPath); // this is required
+        if (trackerContext.getCurrent())
+          trackerContext.getCurrent().reportPaths(nextAccessPath);
       }
       const childProxies = tracker.childProxies;
       const value = base[prop as string];
 
-      if (!isTrackable(value)) return value;
+      if (!isTrackable(value)) {
+        // delete childProxies[prop] if it set to unTrackable value.
+        if (childProxies[prop]) delete childProxies[prop];
+        return value;
+      }
       const childProxy = childProxies[prop as string];
 
       // for rebase value, if base value change, the childProxy should
       // be replaced
-      if (childProxy && childProxy.base === value) {
-        return childProxy;
+      let childProxyTracker = null;
+      if (childProxy) {
+        childProxyTracker = childProxy[TRACKER];
+        const childProxyBase = childProxyTracker._base;
+        if (childProxyBase === value) return childProxy;
       }
-      return (childProxies[prop as string] = createTracker(
-        value,
-        {
-          accessPath: nextAccessPath,
-          parentProxy: target,
-          rootPath,
-          useRevoke,
-          useScope,
-        },
-        trackerNode
-      ));
+      return (childProxies[prop as string] = produce(value, {
+        accessPath: nextAccessPath,
+        parentProxy: target,
+        rootPath,
+        useRevoke,
+        useScope,
+        mayReusedTracker: childProxyTracker,
+        stateTrackerContext: trackerContext,
+      }));
+    },
+    set: (
+      target: IProxyStateTracker,
+      prop: PropertyKey,
+      newValue: any,
+      receiver: any
+    ) => {
+      const tracker = Reflect.get(target, TRACKER);
+      const childProxies = tracker.childProxies;
+      const base = tracker._base[prop];
+      const childProxiesKeys = Object.keys(childProxies);
+      const len = childProxiesKeys.length;
+
+      if (!isTypeEqual(base, newValue) || !len) {
+        tracker.childProxies = [];
+        return Reflect.set(target, prop, newValue, receiver);
+      }
+
+      return Reflect.set(target, prop, newValue, receiver);
     },
   };
 
-  const tracker = new ProxyTracker({
-    base: target,
-    parentProxy,
-    accessPath,
-    rootPath,
-    trackerNode,
-    useRevoke,
-    useScope,
-  });
+  // Tracker is just like an assistant, it could be reused.
+  // However, Tracker node should be created as a new now after call of enter context.
+  if (mayReusedTracker) {
+    // baseValue should be update on each time or `childProxyBase === value` will
+    // be always false.
+    mayReusedTracker.update(state);
+  }
+  const tracker =
+    mayReusedTracker ||
+    new ProxyStateTracker({
+      _base: state,
+      parentProxy,
+      accessPath,
+      rootPath,
+      useRevoke,
+      useScope,
+      stateTrackerContext: trackerContext,
+    });
 
-  const { proxy, revoke } = Proxy.revocable<IProxyTracker>(copy, handler);
-
-  createHiddenProperty(proxy, 'getProps', function(this: IProxyTracker) {
-    const args: Array<keyof ProxyTrackerInterface> = Array.prototype.slice.call(
-      arguments
-    );
-    return args.map(prop => this[TRACKER][prop]);
-  });
-  createHiddenProperty(proxy, 'getProp', function(this: IProxyTracker) {
-    const args: Array<keyof ProxyTrackerInterface> = Array.prototype.slice.call(
-      arguments
-    );
-    return this[TRACKER][args[0]];
-  });
-  createHiddenProperty(proxy, 'setProp', function(this: IProxyTracker) {
-    const args = Array.prototype.slice.call(arguments) // eslint-disable-line
-    const prop = args[0];
-    const value = args[1];
-    // this[TRACKER][prop as keyof ProxyTrackerInterface] = value
-    // @ts-ignore
-    return (this[TRACKER][prop] = value);
-  });
-  createHiddenProperty(proxy, 'runFn', function(this: IProxyTracker): any {
-    const args = Array.prototype.slice.call(arguments) // eslint-disable-line
-    const fn = this[TRACKER][args[0] as keyof ProxyTrackerFunctions];
-    const rest = args.slice(1);
-    if (typeof fn === 'function') return (fn as Function).apply(this, rest);
-  });
-  createHiddenProperty(proxy, 'unlink', function(this: IProxyTracker) {
-    return this.runFn('unlink');
-  });
-  createHiddenProperty(proxy, 'createChild', function(this: IProxyTracker) {
-    const args = Array.prototype.slice.call(arguments) // eslint-disable-line
-    const target = args[0] || {};
-    const config = args[1] || {};
-    return createTracker(
-      target,
-      {
-        useRevoke,
-        useScope,
-        rootPath,
-        ...config,
-      },
-      trackerNode
-    );
-  });
-  createHiddenProperty(proxy, 'revoke', function(this: IProxyTracker) {
-    const useRevoke = this.getProp('useRevoke');
-    if (useRevoke) revoke();
-  });
+  const proxy = new Proxy(state, handler);
 
   createHiddenProperty(proxy, TRACKER, tracker);
+  createHiddenProperty(proxy, 'enter', function() {
+    trackerContext.enter();
+  });
+  createHiddenProperty(proxy, 'leave', function() {
+    trackerContext.leave();
+  });
+  createHiddenProperty(proxy, 'getContext', function() {
+    return trackerContext;
+  });
+  createHiddenProperty(proxy, 'relink', function(
+    this: IProxyStateTracker,
+    path: Array<string>,
+    value: any
+  ) {
+    const copy = path.slice();
+    const last = copy.pop();
+    const front = copy;
+    const parentState = peek(this, front);
+    parentState[last!] = value;
+  });
+  createHiddenProperty(proxy, 'unlink', function(this: IProxyStateTracker) {
+    const tracker = this[TRACKER];
+    return tracker._base;
+  });
+  createHiddenProperty(proxy, 'hydrate', function(
+    this: IProxyStateTracker,
+    path: Array<string>,
+    value: any
+  ) {
+    const copy = path.slice();
+    const last = copy.pop();
+    const front = copy;
+    const parentState = peek(this, front);
+    const parentTracker = parentState[TRACKER];
+    parentTracker.isPeeking = true;
+    invariant(
+      typeof parentState[last!] === 'undefined',
+      `'hydrate' should be only used on initial stage, please ensure '${path}' is ` +
+        `not defined already.`
+    );
+    parentState[last!] = value;
+    parentTracker.isPeeking = false;
+  });
 
-  return proxy as IProxyTracker;
+  return proxy as IProxyStateTracker;
 }
 
-export default createTracker;
+export { produce };

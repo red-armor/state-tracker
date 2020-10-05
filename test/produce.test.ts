@@ -1,5 +1,5 @@
 import { TRACKER } from '../src/commons';
-import produce from '../src/index.experimental';
+import produce from '../src';
 import ProxyStateTracker from '../src/ProxyStateTracker';
 
 const getTrackerId = (str: string): number => {

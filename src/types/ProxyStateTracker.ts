@@ -58,13 +58,6 @@ export interface ProxyStateTrackerConstructor {
 export interface IProxyStateTracker {
   [TRACKER]: ProxyStateTrackerInterface;
 
-  // getProps(args: Array<keyof ProxyStateTrackerInterface>): any;
-  // getProp(args: keyof ProxyStateTrackerInterface): any;
-  // setProp(key: keyof ProxyStateTrackerInterface, value: any): boolean;
-  // runFn(key: keyof ProxyStateTrackerFunctions, ...rest: Array<any>): any;
-  // unlink(): any;
-  // createChild(): any;
-  // revoke(): void;
   enter(): void;
   leave(): void;
   getContext(): StateTrackerContext;
