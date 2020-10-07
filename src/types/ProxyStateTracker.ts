@@ -48,6 +48,7 @@ export type ProxyStateTrackerFunctions = {
   getBase(): {
     [key: string]: any;
   };
+  setBase(value: any): void;
   getParentProxy(): IProxyStateTracker;
   getChildProxies(): {
     [key: string]: IProxyStateTracker;
@@ -85,5 +86,7 @@ export interface IProxyStateTracker {
   unlink(): any;
   hydrate(path: Array<String>, value: any): void;
   getContext(): StateTrackerContext;
+  getTracker(): ProxyStateTrackerInterface;
+  peek(path: Array<string>): IProxyStateTracker;
   [key: string]: any;
 }

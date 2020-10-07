@@ -55,6 +55,8 @@ function produce(state: State, options?: Options): IProxyStateTracker {
     'relink',
     'unlink',
     'hydrate',
+    'peek',
+    'getTracker',
   ];
 
   const handler = {
@@ -63,6 +65,9 @@ function produce(state: State, options?: Options): IProxyStateTracker {
         return Reflect.get(target, prop, receiver);
 
       let tracker = Reflect.get(target, TRACKER) as ProxyStateTrackerInterface;
+      // Note: `getBase` can get the latest value, Maybe it's the dispatched value.
+      // It means if you call relink to update a key's value, then we can get the
+      // value here...
       let base = tracker.getBase();
       const childProxies = tracker.getChildProxies();
       const accessPath = tracker.getAccessPath();
@@ -98,7 +103,7 @@ function produce(state: State, options?: Options): IProxyStateTracker {
 
             if (retryProxy) {
               tracker = peek(retryProxy, retryPaths)[TRACKER];
-              base = tracker._base;
+              base = tracker.getBase();
             }
           }
         }
@@ -160,19 +165,14 @@ function produce(state: State, options?: Options): IProxyStateTracker {
 
         if (candidateTracker && candidateProxy) {
           childProxies[prop as string] = candidateProxy;
-          const toRemovedTracker = candidateProxy[TRACKER];
           candidateProxy[TRACKER] = candidateTracker;
-          candidateProxy[TRACKER]._base = value;
+          candidateProxy[TRACKER].setBase(value);
           candidateTracker.setFocusKey(prop as string);
           /**
            * pay attention, TRACKER should not be shared...
            * Reason to delete, remove -> append which may cause data conflict..
            */
-          const toRemovedTrackerKey = generateTrackerMapKey(
-            toRemovedTracker.getAccessPath()
-          );
           delete childProxies[matched];
-          trackerContext.removeTracker(toRemovedTrackerKey);
           return childProxies[prop as string];
         }
       }
@@ -270,7 +270,16 @@ function produce(state: State, options?: Options): IProxyStateTracker {
   });
   createHiddenProperty(proxy, 'unlink', function(this: IProxyStateTracker) {
     const tracker = this[TRACKER];
-    return tracker._base;
+    return tracker.getBase();
+  });
+  createHiddenProperty(proxy, 'getTracker', function(this: IProxyStateTracker) {
+    return this[TRACKER];
+  });
+  createHiddenProperty(proxy, 'peek', function(
+    this: IProxyStateTracker,
+    path: Array<string>
+  ) {
+    return peek(this, path);
   });
   createHiddenProperty(proxy, 'hydrate', function(
     this: IProxyStateTracker,

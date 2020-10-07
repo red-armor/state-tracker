@@ -34,12 +34,15 @@ class StateTrackerContext {
     this._trackerMap.set(key, tracker);
   }
 
+  /**
+   *
+   * @param key registered tracker key
+   *
+   * Registered tracker should not be deleted !!!
+   *
+   */
   getTracker(key: string): ProxyStateTrackerInterface | undefined {
     return this._trackerMap.get(key);
-  }
-
-  removeTracker(key: string): boolean {
-    return this._trackerMap.delete(key);
   }
 
   updateTime() {

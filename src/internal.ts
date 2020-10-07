@@ -5,7 +5,7 @@ const proto = internal.prototype;
 
 proto.update = function(newBaseValue: any) {
   const _tracker = this;
-  _tracker._base = newBaseValue;
+  this.setBase(newBaseValue);
   _tracker._updateTimes = _tracker._updateTimes + 1;
 };
 
@@ -23,6 +23,10 @@ proto.getId = function() {
 
 proto.getBase = function() {
   return this._base;
+};
+
+proto.setBase = function(value: any) {
+  this._base = value;
 };
 
 proto.getParentProxy = function() {
