@@ -30,7 +30,7 @@ const map = {} as {
   [key: string]: any;
 };
 
-const peek = (proxyState: IProxyStateTracker, accessPath: Array<string>) => { // eslint-disable-line
+const peek = (proxyState: IProxyStateTracker, accessPath: Array<string>) => {
   return accessPath.reduce((nextProxyState, cur: string) => {
     const tracker = nextProxyState[TRACKER];
     tracker.isPeeking = true;
@@ -70,19 +70,13 @@ function produce(state: State, options?: Options): IProxyStateTracker {
         return Reflect.get(target, prop, receiver);
 
       let tracker = Reflect.get(target, TRACKER);
-      // console.log('get prop ', prop, tracker)
       let base = tracker._base;
       const childProxies = tracker.childProxies;
-      // const k = Object.keys(childProxies)
-      // for(let i = 0; i < k.length; i++) {
-      //   console.log('pre mayReusedTracker key before ', childProxies[k[i]][TRACKER].id)
-      // }
 
       const accessPath = tracker.accessPath;
       const nextAccessPath = accessPath.concat(prop as string);
       const isPeeking = tracker.isPeeking;
 
-      // console.log('get prop ', prop)
       if (!isPeeking) {
         if (trackerContext.getCurrent()) {
           trackerContext.getCurrent().reportPaths(nextAccessPath);
@@ -95,24 +89,28 @@ function produce(state: State, options?: Options): IProxyStateTracker {
 
           if (context !== internalContext) {
             let _proxy = target;
+            let pathCopy = accessPath.slice();
+            let retryPaths = [];
+            let retryProxy = null;
             while (
               _proxy[TRACKER].parentProxy &&
               _proxy[TRACKER]._lastUpdateAt < lastUpdateAt
             ) {
+              retryProxy = _proxy[TRACKER].parentProxy;
+              const pop = pathCopy.pop();
+              retryPaths.unshift(pop);
+
               _proxy[TRACKER]._lastUpdateAt = lastUpdateAt;
               _proxy = _proxy[TRACKER].parentProxy;
             }
 
-            if (!_proxy[TRACKER].parentProxy) {
-              tracker = peek(_proxy, accessPath)[TRACKER];
+            if (retryProxy) {
+              tracker = peek(retryProxy, retryPaths)[TRACKER];
               base = tracker._base;
-              // console.log('new base ', base)
             }
           }
         }
       }
-
-      // console.log('tracker------', tracker, base)
 
       const value = base[prop as string];
 
@@ -131,11 +129,15 @@ function produce(state: State, options?: Options): IProxyStateTracker {
         childProxyTracker = childProxy[TRACKER];
         const childProxyBase = childProxyTracker._base;
         if (childProxyBase === value) {
-          childProxyTracker._context = tracker._context;
+          if (tracker._context) childProxyTracker._context = tracker._context;
           return childProxy;
         }
       }
 
+      /**
+       * To reuse already created proxy object as possible.
+       * On swap condition, it may has not value
+       */
       if (typeof value[TRACKER] !== 'undefined') {
         const keys = Object.keys(childProxies);
         let maybe = null;
@@ -156,28 +158,30 @@ function produce(state: State, options?: Options): IProxyStateTracker {
           childProxies[prop] = maybe;
           maybe[TRACKER] = trackerCandidate;
           maybe[TRACKER]._base = value;
+          /**
+           * pay attention, TRACKER should not be shared...
+           * Reason to delete, remove -> append which may cause data conflict..
+           */
           delete childProxies[matched];
+          return childProxies[prop];
         }
-      } else {
-        childProxies[prop as string] = produce(
-          // Array.isArray(value) ? value.slice() : { ...value },
-          value,
-          {
-            accessPath: nextAccessPath,
-            parentProxy: proxy as IProxyStateTracker,
-            rootPath,
-            useRevoke,
-            useScope,
-            mayReusedTracker: childProxyTracker,
-            stateTrackerContext: trackerContext,
-            context: tracker._context,
-          }
-        );
       }
 
-      // for(let i = 0; i < keys.length; i++) {
-      //   console.log('pre mayReusedTracker key after ', childProxies[keys[i]][TRACKER].id, prop)
-      // }
+      childProxies[prop as string] = produce(
+        // only new value should create new proxy object..
+        // Array.isArray(value) ? value.slice() : { ...value },
+        value,
+        {
+          accessPath: nextAccessPath,
+          parentProxy: proxy as IProxyStateTracker,
+          rootPath,
+          useRevoke,
+          useScope,
+          mayReusedTracker: childProxyTracker,
+          stateTrackerContext: trackerContext,
+          context: tracker._context,
+        }
+      );
 
       return childProxies[prop];
     },
@@ -210,8 +214,6 @@ function produce(state: State, options?: Options): IProxyStateTracker {
     mayReusedTracker.update(state);
     // mayReusedTracker._context = context
   }
-
-  // console.log('may reuse ', state, mayReusedTracker)
 
   const str = accessPath.join(', ');
 
@@ -252,7 +254,6 @@ function produce(state: State, options?: Options): IProxyStateTracker {
     const last = copy.pop();
     const front = copy;
     const parentState = peek(this, front);
-    // console.log('value --------', value)
     parentState[last!] = value;
     lastUpdateAt = Date.now();
   });
