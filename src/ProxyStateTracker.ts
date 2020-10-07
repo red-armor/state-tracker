@@ -16,36 +16,31 @@ const ProxyStateTracker = (function(
     accessPath,
     parentProxy,
     rootPath,
-    _base,
-    useRevoke,
-    useScope,
+    base,
     stateTrackerContext,
     context,
     lastUpdateAt,
   }: ProxyStateTrackerConstructorProps
 ) {
-  createHiddenProperty(this, 'id', `ProxyStateTracker_${count++}`) // eslint-disable-line
+  createHiddenProperty(this, '_id', `ProxyStateTracker_${count++}`) // eslint-disable-line
   createHiddenProperty(this, '_updateTimes', 0);
   createHiddenProperty(this, '_stateTrackerContext', stateTrackerContext);
   createHiddenProperty(this, '_context', context);
   createHiddenProperty(this, '_lastUpdateAt', lastUpdateAt);
 
-  createHiddenProperty(this, 'accessPath', accessPath);
-  createHiddenProperty(this, 'rootPath', rootPath);
+  createHiddenProperty(this, '_accessPath', accessPath);
+  createHiddenProperty(this, '_rootPath', rootPath);
   createHiddenProperty(
     this,
-    'type',
-    Array.isArray(_base) ? Type.Array : Type.Object
+    '_type',
+    Array.isArray(base) ? Type.Array : Type.Object
   );
-  createHiddenProperty(this, '_base', _base);
+  createHiddenProperty(this, '_base', base);
 
-  createHiddenProperty(this, 'parentProxy', parentProxy);
-  createHiddenProperty(this, 'childProxies', {} as any);
+  createHiddenProperty(this, '_parentProxy', parentProxy);
+  createHiddenProperty(this, '_childProxies', {} as any);
 
-  createHiddenProperty(this, 'isPeeking', false);
-
-  createHiddenProperty(this, 'useRevoke', useRevoke);
-  createHiddenProperty(this, 'useScope', useScope);
+  createHiddenProperty(this, '_isPeeking', false);
   // function constructor https://stackoverflow.com/a/43624326/2006805
 } as any) as ProxyStateTrackerConstructor;
 

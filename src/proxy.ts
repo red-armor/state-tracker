@@ -17,25 +17,17 @@ interface Options {
   accessPath: Array<string>;
   parentProxy?: IProxyStateTracker;
   rootPath: Array<string>;
-  useRevoke: boolean;
-  useScope: boolean;
   stateTrackerContext: StateTrackerContext;
   mayReusedTracker: null | ProxyStateTrackerInterface;
   context?: string;
 }
 
-let lastUpdateAt = Date.now();
-
-const map = {} as {
-  [key: string]: any;
-};
-
 const peek = (proxyState: IProxyStateTracker, accessPath: Array<string>) => {
   return accessPath.reduce((nextProxyState, cur: string) => {
     const tracker = nextProxyState[TRACKER];
-    tracker.isPeeking = true;
+    tracker.setPeeking(true);
     const nextProxy = nextProxyState[cur];
-    tracker.isPeeking = false;
+    tracker.setPeeking(false);
     return nextProxy;
   }, proxyState);
 };
@@ -45,8 +37,6 @@ function produce(state: State, options?: Options): IProxyStateTracker {
     parentProxy = null,
     accessPath = [],
     rootPath = [],
-    useRevoke = false,
-    useScope = false,
     stateTrackerContext,
     mayReusedTracker,
     context = '',
@@ -69,13 +59,13 @@ function produce(state: State, options?: Options): IProxyStateTracker {
       if (internalKeys.indexOf(prop as string | symbol) !== -1)
         return Reflect.get(target, prop, receiver);
 
-      let tracker = Reflect.get(target, TRACKER);
-      let base = tracker._base;
-      const childProxies = tracker.childProxies;
+      let tracker = Reflect.get(target, TRACKER) as ProxyStateTrackerInterface;
+      let base = tracker.getBase();
+      const childProxies = tracker.getChildProxies();
 
-      const accessPath = tracker.accessPath;
+      const accessPath = tracker.getAccessPath();
       const nextAccessPath = accessPath.concat(prop as string);
-      const isPeeking = tracker.isPeeking;
+      const isPeeking = tracker.getPeeking();
 
       if (!isPeeking) {
         if (trackerContext.getCurrent()) {
@@ -85,23 +75,23 @@ function produce(state: State, options?: Options): IProxyStateTracker {
         if (trackerContext.getCurrent()) {
           const stateContextNode = trackerContext.getCurrent();
           const { context } = stateContextNode;
-          const internalContext = tracker._context;
+          const internalContext = tracker.getContext();
 
           if (context !== internalContext) {
             let _proxy = target;
             let pathCopy = accessPath.slice();
-            let retryPaths = [];
+            let retryPaths: Array<string> = [];
             let retryProxy = null;
             while (
-              _proxy[TRACKER].parentProxy &&
-              _proxy[TRACKER]._lastUpdateAt < lastUpdateAt
+              _proxy[TRACKER].getParentProxy() &&
+              _proxy[TRACKER].getTime() < trackerContext.getTime()
             ) {
-              retryProxy = _proxy[TRACKER].parentProxy;
+              retryProxy = _proxy[TRACKER].getParentProxy();
               const pop = pathCopy.pop();
-              retryPaths.unshift(pop);
+              if (typeof pop !== 'undefined') retryPaths.unshift(pop);
 
-              _proxy[TRACKER]._lastUpdateAt = lastUpdateAt;
-              _proxy = _proxy[TRACKER].parentProxy;
+              _proxy[TRACKER].setTime(trackerContext.getTime());
+              _proxy = _proxy[TRACKER].getParentProxy();
             }
 
             if (retryProxy) {
@@ -116,20 +106,19 @@ function produce(state: State, options?: Options): IProxyStateTracker {
 
       if (!isTrackable(value)) {
         // delete childProxies[prop] if it set to unTrackable value.
-        if (childProxies[prop]) delete childProxies[prop];
+        if (childProxies[prop as string]) delete childProxies[prop as string];
         return value;
       }
       const childProxy = childProxies[prop as string];
 
-      // for rebase value, if base value change, the childProxy should
-      // be replaced
+      // for rebase value, if base value change, the childProxy should be replaced
       let childProxyTracker = null;
 
       if (childProxy) {
         childProxyTracker = childProxy[TRACKER];
-        const childProxyBase = childProxyTracker._base;
+        const childProxyBase = childProxyTracker.getBase();
         if (childProxyBase === value) {
-          if (tracker._context) childProxyTracker._context = tracker._context;
+          if (tracker._context) childProxyTracker.setContext(tracker._context);
           return childProxy;
         }
       }
@@ -144,7 +133,7 @@ function produce(state: State, options?: Options): IProxyStateTracker {
         let i = 0;
         let matched = '';
         for (i; i < keys.length; i++) {
-          if (value === childProxies[keys[i]][TRACKER]._base) {
+          if (value === childProxies[keys[i]][TRACKER].getBase()) {
             maybe = childProxies[keys[i]];
             matched = keys[i];
             break;
@@ -152,10 +141,10 @@ function produce(state: State, options?: Options): IProxyStateTracker {
         }
 
         const str = nextAccessPath.join(', ');
-        const trackerCandidate = map[str];
+        const trackerCandidate = trackerContext.getTracker(str);
 
         if (trackerCandidate && maybe) {
-          childProxies[prop] = maybe;
+          childProxies[prop as string] = maybe;
           maybe[TRACKER] = trackerCandidate;
           maybe[TRACKER]._base = value;
           /**
@@ -163,7 +152,7 @@ function produce(state: State, options?: Options): IProxyStateTracker {
            * Reason to delete, remove -> append which may cause data conflict..
            */
           delete childProxies[matched];
-          return childProxies[prop];
+          return childProxies[prop as string];
         }
       }
 
@@ -175,15 +164,13 @@ function produce(state: State, options?: Options): IProxyStateTracker {
           accessPath: nextAccessPath,
           parentProxy: proxy as IProxyStateTracker,
           rootPath,
-          useRevoke,
-          useScope,
           mayReusedTracker: childProxyTracker,
           stateTrackerContext: trackerContext,
           context: tracker._context,
         }
       );
 
-      return childProxies[prop];
+      return childProxies[prop as string];
     },
     set: (
       target: IProxyStateTracker,
@@ -191,14 +178,17 @@ function produce(state: State, options?: Options): IProxyStateTracker {
       newValue: any,
       receiver: any
     ) => {
-      const tracker = Reflect.get(target, TRACKER);
-      const childProxies = tracker.childProxies;
-      const base = tracker._base[prop];
+      const tracker = Reflect.get(
+        target,
+        TRACKER
+      ) as ProxyStateTrackerInterface;
+      const childProxies = tracker.getChildProxies();
+      const base = tracker.getBase()[prop as string];
       const childProxiesKeys = Object.keys(childProxies);
       const len = childProxiesKeys.length;
 
       if (!isTypeEqual(base, newValue) || !len) {
-        tracker.childProxies = [];
+        tracker.setChildProxies([]);
         return Reflect.set(target, prop, newValue, receiver);
       }
 
@@ -220,18 +210,15 @@ function produce(state: State, options?: Options): IProxyStateTracker {
   const tracker =
     mayReusedTracker ||
     new ProxyStateTracker({
-      _base: state,
+      base: state,
       parentProxy,
       accessPath,
       rootPath,
-      useRevoke,
-      useScope,
       stateTrackerContext: trackerContext,
       context,
       lastUpdateAt: Date.now(),
     });
-
-  map[str] = tracker;
+  trackerContext.setTracker(str, tracker);
 
   const proxy = new Proxy(state, handler);
 
@@ -255,7 +242,9 @@ function produce(state: State, options?: Options): IProxyStateTracker {
     const front = copy;
     const parentState = peek(this, front);
     parentState[last!] = value;
-    lastUpdateAt = Date.now();
+    const tracker = this[TRACKER];
+    const stateContext = tracker._stateTrackerContext;
+    stateContext.updateTime();
   });
   createHiddenProperty(proxy, 'unlink', function(this: IProxyStateTracker) {
     const tracker = this[TRACKER];
@@ -271,14 +260,14 @@ function produce(state: State, options?: Options): IProxyStateTracker {
     const front = copy;
     const parentState = peek(this, front);
     const parentTracker = parentState[TRACKER];
-    parentTracker.isPeeking = true;
+    parentTracker.setPeeking(true);
     invariant(
       typeof parentState[last!] === 'undefined',
       `'hydrate' should be only used on initial stage, please ensure '${path}' is ` +
         `not defined already.`
     );
     parentState[last!] = value;
-    parentTracker.isPeeking = false;
+    parentTracker.setPeeking(false);
   });
 
   return proxy as IProxyStateTracker;

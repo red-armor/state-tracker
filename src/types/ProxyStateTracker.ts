@@ -7,43 +7,58 @@ export interface ProxyStateTrackerConfig {
   accessPath?: Array<string>;
   parentProxy?: IProxyStateTracker;
   rootPath: Array<string>;
-  useRevoke: boolean;
-  useScope: boolean;
 }
 
 export interface ProxyStateTrackerConstructorProps {
   accessPath: Array<string>;
   parentProxy: IProxyStateTracker | null;
   rootPath: Array<string>;
-  _base: any;
-  useRevoke: boolean;
-  useScope: boolean;
+  base: any;
   stateTrackerContext: StateTrackerContext;
   context: string;
   lastUpdateAt: number;
 }
 
 export interface ProxyStateTrackerProperties {
-  id: string;
-  accessPath: Array<string>;
-  rootPath: Array<string>;
-  type: Type.Array | Type.Object;
+  _id: string;
+  _accessPath: Array<string>;
+  _rootPath: Array<string>;
+  _type: Type.Array | Type.Object;
   _base: {
     [key: string]: any;
   };
-  parentProxy: IProxyStateTracker;
-  childProxies: {
+  _parentProxy: IProxyStateTracker;
+  _childProxies: {
     [key: string]: IProxyStateTracker;
   };
-  isPeeking: boolean;
-  paths: Array<Array<string>>;
-  useRevoke: boolean;
-  useScope: boolean;
+  _isPeeking: boolean;
   _updateTimes: number;
   _context: string;
   _lastUpdateAt: number;
+  _stateTrackerContext: StateTrackerContext;
 }
-export type ProxyStateTrackerFunctions = any;
+
+export type ProxyStateTrackerFunctions = {
+  update(newValue: any): void;
+  setContext(context: string): void;
+  getContext(): string;
+  getId(): string;
+  getBase(): {
+    [key: string]: any;
+  };
+  getParentProxy(): IProxyStateTracker;
+  getChildProxies(): {
+    [key: string]: IProxyStateTracker;
+  };
+  setChildProxies(value: Array<IProxyStateTracker>): void;
+  getPeeking(): boolean;
+  setPeeking(falsy: boolean): void;
+  getRootPath(): Array<string>;
+  getAccessPath(): Array<string>;
+  getStateTrackerContext(): StateTrackerContext;
+  getTime(): number;
+  setTime(time: number): void;
+};
 
 export type ProxyStateTrackerInterface = ProxyStateTrackerProperties &
   ProxyStateTrackerFunctions;
@@ -53,9 +68,7 @@ export interface ProxyStateTrackerConstructor {
     accessPath,
     parentProxy,
     rootPath,
-    _base,
-    useRevoke,
-    useScope,
+    base,
   }: ProxyStateTrackerConstructorProps): ProxyStateTrackerInterface;
 }
 
