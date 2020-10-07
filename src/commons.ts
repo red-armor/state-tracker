@@ -103,3 +103,7 @@ export const hideProperty = (target: object, prop: PropertyKey) => {
     configurable: false,
   });
 };
+
+export const generateTrackerMapKey = (accessPath: Array<string>): string => {
+  return accessPath.join(', ');
+};

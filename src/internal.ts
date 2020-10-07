@@ -65,4 +65,12 @@ proto.setTime = function(time: number) {
   this._lastUpdateAt = time;
 };
 
+proto.getFocusKey = function() {
+  return this._focusKey;
+};
+
+proto.setFocusKey = function(key: string) {
+  this._focusKey = key;
+};
+
 export default internal;

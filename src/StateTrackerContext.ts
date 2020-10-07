@@ -38,6 +38,10 @@ class StateTrackerContext {
     return this._trackerMap.get(key);
   }
 
+  removeTracker(key: string): boolean {
+    return this._trackerMap.delete(key);
+  }
+
   updateTime() {
     this._lastUpdateAt = Date.now();
   }

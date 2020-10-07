@@ -17,6 +17,7 @@ export interface ProxyStateTrackerConstructorProps {
   stateTrackerContext: StateTrackerContext;
   context: string;
   lastUpdateAt: number;
+  focusKey: string | null;
 }
 
 export interface ProxyStateTrackerProperties {
@@ -36,6 +37,7 @@ export interface ProxyStateTrackerProperties {
   _context: string;
   _lastUpdateAt: number;
   _stateTrackerContext: StateTrackerContext;
+  _focusKey: string | null;
 }
 
 export type ProxyStateTrackerFunctions = {
@@ -58,6 +60,8 @@ export type ProxyStateTrackerFunctions = {
   getStateTrackerContext(): StateTrackerContext;
   getTime(): number;
   setTime(time: number): void;
+  getFocusKey(): string | null;
+  setFocusKey(key: string): void;
 };
 
 export type ProxyStateTrackerInterface = ProxyStateTrackerProperties &
@@ -77,6 +81,9 @@ export interface IProxyStateTracker {
 
   enter(): void;
   leave(): void;
+  relink(path: Array<String>, value: any): void;
+  unlink(): any;
+  hydrate(path: Array<String>, value: any): void;
   getContext(): StateTrackerContext;
   [key: string]: any;
 }
