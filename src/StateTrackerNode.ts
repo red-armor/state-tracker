@@ -120,15 +120,22 @@ class Graph {
 class StateTrackerNode {
   public context: string;
   public graph: Graph;
+  private _paths: Array<Array<string>>;
 
   constructor(context: string) {
     this.context = context;
     this.graph = new Graph('root', []);
+    this._paths = [];
   }
 
   reportPaths(path: Array<string>) {
     const node = new Node(path);
+    this._paths.push(path);
     this.graph.access(node);
+  }
+
+  getPaths(): Array<Array<string>> {
+    return this._paths;
   }
 
   getRemarkable() {

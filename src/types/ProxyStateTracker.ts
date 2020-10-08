@@ -63,6 +63,8 @@ export type ProxyStateTrackerFunctions = {
   setTime(time: number): void;
   getFocusKey(): string | null;
   setFocusKey(key: string): void;
+  getUpdateTimes(): number;
+  incrementUpdateTimes(): number;
 };
 
 export type ProxyStateTrackerInterface = ProxyStateTrackerProperties &
