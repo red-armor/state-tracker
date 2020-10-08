@@ -29,7 +29,7 @@ describe('child proxies', () => {
 
     expect(proxyState.a).toEqual({ a1: 1, a2: 2 });
     expect(proxyState.c).toEqual(3);
-    const childProxies = tracker.childProxies;
+    const childProxies = tracker.getChildProxies();
     const keys = Object.keys(childProxies);
     expect(keys).toEqual(['a']);
   });
@@ -51,7 +51,7 @@ describe('child proxies', () => {
 
     expect(proxyState.a).toEqual([2, 3, 4]);
     expect(proxyState.c).toEqual(3);
-    const childProxies = tracker.childProxies;
+    const childProxies = tracker.getChildProxies();
     const keys = Object.keys(childProxies);
     expect(keys).toEqual(['a']);
   });
@@ -69,12 +69,12 @@ describe('child proxies', () => {
       c: 3,
     };
     const proxyState = produce(state);
-    const tracker = proxyState[TRACKER];
+    const tracker = proxyState.getTracker();
 
     expect(proxyState.a).toEqual([2, 3, 4]);
     expect(proxyState.c).toEqual(3);
     proxyState.a = { a1: 1 };
-    const childProxies = tracker.childProxies;
+    const childProxies = tracker.getChildProxies();
     const keys = Object.keys(childProxies);
     expect(keys).toEqual([]);
   });
@@ -92,12 +92,12 @@ describe('child proxies', () => {
       c: 3,
     };
     const proxyState = produce(state);
-    const tracker = proxyState.b[TRACKER];
+    const tracker = proxyState.b.getTracker();
 
     expect(proxyState.b.b1).toEqual({ b11: 1, b12: 2 });
     expect(proxyState.c).toEqual(3);
     proxyState.b = { b1: 1 };
-    const childProxies = tracker.childProxies;
+    const childProxies = tracker.getChildProxies();
     const keys = Object.keys(childProxies);
     expect(keys).toEqual(['b1']);
     expect(proxyState.b.b1).toEqual(1);
@@ -130,7 +130,7 @@ describe('access path', () => {
     const paths = trackerNode.getPaths();
     expect(paths).toEqual([['a'], ['a'], ['a', 'a1'], ['a'], ['a', 'a2']]);
     const remarkable = trackerNode.getRemarkable();
-    expect(remarkable).toEqual([['a', 'a2'], ['a', 'a1'], ['a']]);
+    expect(remarkable).toEqual([['a', 'a1'], ['a', 'a2'], ['a']]);
     proxyState.leave();
   });
 
@@ -168,8 +168,8 @@ describe('access path', () => {
       ['b', 'b1', 'b12'],
     ])
     expect(subRemarkable).toEqual([
-      ['b', 'b1', 'b12'],
       ['b', 'b1', 'b11'],
+      ['b', 'b1', 'b12'],
     ])
     proxyState.leave()
     /* eslint-enable */
@@ -186,7 +186,7 @@ describe('access path', () => {
       ['b', 'b1'],
     ]);
     const remarkable = trackerNode.getRemarkable();
-    expect(remarkable).toEqual([['b', 'b1'], ['a', 'a2'], ['a', 'a1'], ['a']]);
+    expect(remarkable).toEqual([['a', 'a1'], ['a', 'a2'], ['a'], ['b', 'b1']]);
     proxyState.leave();
   });
 });
@@ -212,9 +212,9 @@ describe('return a proxy state with TRACKER prop', () => {
     const bp = proxyState.b;
     const b1p = proxyState.b.b1;
 
-    expect(ap[TRACKER]).toEqual(expect.any(ProxyStateTracker));
-    expect(bp[TRACKER]).toEqual(expect.any(ProxyStateTracker));
-    expect(b1p[TRACKER]).toEqual(expect.any(ProxyStateTracker));
+    expect(ap.getTracker()).toEqual(expect.any(ProxyStateTracker));
+    expect(bp.getTracker()).toEqual(expect.any(ProxyStateTracker));
+    expect(b1p.getTracker()).toEqual(expect.any(ProxyStateTracker));
   });
 
   it('If value is an array, then it should be a proxy state with TRACKER prop', () => {
@@ -232,9 +232,9 @@ describe('return a proxy state with TRACKER prop', () => {
     const bp = proxyState.b;
     const b1p = proxyState.b[0];
 
-    expect(ap[TRACKER]).toEqual(expect.any(ProxyStateTracker));
-    expect(bp[TRACKER]).toEqual(expect.any(ProxyStateTracker));
-    expect(b1p[TRACKER]).toEqual(expect.any(ProxyStateTracker));
+    expect(ap.getTracker()).toEqual(expect.any(ProxyStateTracker));
+    expect(bp.getTracker()).toEqual(expect.any(ProxyStateTracker));
+    expect(b1p.getTracker()).toEqual(expect.any(ProxyStateTracker));
   });
 });
 
@@ -254,9 +254,9 @@ describe('change value', () => {
       },
     };
     const proxyState = produce(state);
-    const id1 = getTrackerId(proxyState.a[TRACKER].id);
+    const id1 = getTrackerId(proxyState.a.getTracker().getId());
     proxyState.a = state.a;
-    const id2 = getTrackerId(proxyState.a[TRACKER].id);
+    const id2 = getTrackerId(proxyState.a.getTracker().getId());
     expect(id1).toBe(id2);
   });
 
@@ -275,22 +275,22 @@ describe('change value', () => {
       },
     };
     const proxyState = produce(state);
-    const id1 = getTrackerId(proxyState.a[TRACKER].id);
+    const id1 = getTrackerId(proxyState.a.getTracker().getId());
 
     proxyState.a = {
       a1: 3,
       a2: 4,
     };
 
-    const id2 = getTrackerId(proxyState.a[TRACKER].id);
+    const id2 = getTrackerId(proxyState.a.getTracker().getId());
     expect(id1).toBe(id2);
-    expect(proxyState.a[TRACKER]._updateTimes).toBe(1);
+    expect(proxyState.a.getTracker().getUpdateTimes()).toBe(1);
 
     proxyState.a = {
       a1: 3,
       a2: 4,
     };
-    expect(proxyState.a[TRACKER]._updateTimes).toBe(2);
+    expect(proxyState.a.getTracker().getUpdateTimes()).toBe(2);
   });
 
   it('Tracker base value will be updated after try to access it value', () => {
@@ -306,7 +306,7 @@ describe('change value', () => {
       a: old,
     };
     const proxyState = produce(state);
-    const tracker = proxyState.a[TRACKER];
+    const tracker = proxyState.a.getTracker();
 
     proxyState.a = next;
     expect(tracker._base).toBe(old);
@@ -329,8 +329,8 @@ describe('tracker id', () => {
       },
     };
     const proxyState = produce(state);
-    const id1 = getTrackerId(proxyState.b.b2[TRACKER].id);
-    const id2 = getTrackerId(proxyState.b.b1[TRACKER].id);
+    const id1 = getTrackerId(proxyState.b.b2.getTracker().getId());
+    const id2 = getTrackerId(proxyState.b.b1.getTracker().getId());
     expect(id2).toBeGreaterThan(id1);
   });
 });
@@ -368,8 +368,8 @@ describe('relink', () => {
       a2: 4,
     });
 
-    const childProxies = proxyState['a'][TRACKER].childProxies;
-    expect(Object.keys(childProxies)).toEqual(['a1']);
+    const childProxies = proxyState['a'].getTracker().getChildProxies();
+    expect(Object.keys(childProxies)).toEqual(['a1', 'a2']);
     expect(proxyState['a']['a2']).toBe(4);
     expect(Object.keys(childProxies)).toEqual(['a1']);
 
@@ -377,6 +377,6 @@ describe('relink', () => {
       a1: 5,
       a2: 6,
     });
-    expect(proxyState['a'][TRACKER]._updateTimes).toBe(2);
+    expect(proxyState['a'].getTracker().getUpdateTimes()).toBe(2);
   });
 });

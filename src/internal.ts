@@ -4,9 +4,17 @@ function internal() {}
 const proto = internal.prototype;
 
 proto.update = function(newBaseValue: any) {
-  const _tracker = this;
   this.setBase(newBaseValue);
-  _tracker._updateTimes = _tracker._updateTimes + 1;
+  this.incrementUpdateTimes();
+};
+
+proto.getUpdateTimes = function() {
+  return this._updateTimes;
+};
+
+proto.incrementUpdateTimes = function() {
+  this._updateTimes += 1;
+  return this._updateTimes;
 };
 
 proto.setContext = function(context: string) {
