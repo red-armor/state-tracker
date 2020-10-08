@@ -1,40 +1,22 @@
 import invariant from 'invariant';
 import {
+  peek,
   TRACKER,
-  createHiddenProperty,
   isTrackable,
   isTypeEqual,
+  createHiddenProperty,
   generateTrackerMapKey,
 } from './commons';
-import ProxyStateTracker from './ProxyStateTracker';
-import { IProxyStateTracker, ProxyStateTrackerInterface } from './types';
+import StateTracker from './StateTracker';
+import {
+  IStateTracker,
+  ProduceOptions,
+  ProduceState,
+  StateTrackerInterface,
+} from './types';
 import StateTrackerContext from './StateTrackerContext';
 
-interface State {
-  [key: string]: any;
-}
-
-interface Options {
-  accessPath: Array<string>;
-  parentProxy?: IProxyStateTracker;
-  rootPath: Array<string>;
-  stateTrackerContext: StateTrackerContext;
-  mayReusedTracker: null | ProxyStateTrackerInterface;
-  context?: string;
-  focusKey: string | null;
-}
-
-const peek = (proxyState: IProxyStateTracker, accessPath: Array<string>) => {
-  return accessPath.reduce((nextProxyState, cur: string) => {
-    const tracker = nextProxyState[TRACKER];
-    tracker.setPeeking(true);
-    const nextProxy = nextProxyState[cur];
-    tracker.setPeeking(false);
-    return nextProxy;
-  }, proxyState);
-};
-
-function produce(state: State, options?: Options): IProxyStateTracker {
+function produce(state: ProduceState, options?: ProduceOptions): IStateTracker {
   const {
     parentProxy = null,
     accessPath = [],
@@ -60,11 +42,11 @@ function produce(state: State, options?: Options): IProxyStateTracker {
   ];
 
   const handler = {
-    get: (target: IProxyStateTracker, prop: PropertyKey, receiver: any) => {
+    get: (target: IStateTracker, prop: PropertyKey, receiver: any) => {
       if (internalKeys.indexOf(prop as string | symbol) !== -1)
         return Reflect.get(target, prop, receiver);
 
-      let tracker = Reflect.get(target, TRACKER) as ProxyStateTrackerInterface;
+      let tracker = Reflect.get(target, TRACKER) as StateTrackerInterface;
       // Note: `getBase` can get the latest value, Maybe it's the dispatched value.
       // It means if you call relink to update a key's value, then we can get the
       // value here...
@@ -183,7 +165,7 @@ function produce(state: State, options?: Options): IProxyStateTracker {
         value,
         {
           accessPath: nextAccessPath,
-          parentProxy: proxy as IProxyStateTracker,
+          parentProxy: proxy as IStateTracker,
           rootPath,
           mayReusedTracker: childProxyTracker,
           stateTrackerContext: trackerContext,
@@ -195,15 +177,12 @@ function produce(state: State, options?: Options): IProxyStateTracker {
       return childProxies[prop as string];
     },
     set: (
-      target: IProxyStateTracker,
+      target: IStateTracker,
       prop: PropertyKey,
       newValue: any,
       receiver: any
     ) => {
-      const tracker = Reflect.get(
-        target,
-        TRACKER
-      ) as ProxyStateTrackerInterface;
+      const tracker = Reflect.get(target, TRACKER) as StateTrackerInterface;
       const childProxies = tracker.getChildProxies();
       const base = tracker.getBase()[prop as string];
       const childProxiesKeys = Object.keys(childProxies);
@@ -230,7 +209,7 @@ function produce(state: State, options?: Options): IProxyStateTracker {
 
   const tracker =
     mayReusedTracker ||
-    new ProxyStateTracker({
+    new StateTracker({
       base: state,
       parentProxy,
       accessPath,
@@ -255,7 +234,7 @@ function produce(state: State, options?: Options): IProxyStateTracker {
     return trackerContext;
   });
   createHiddenProperty(proxy, 'relink', function(
-    this: IProxyStateTracker,
+    this: IStateTracker,
     path: Array<string>,
     value: any
   ) {
@@ -268,21 +247,21 @@ function produce(state: State, options?: Options): IProxyStateTracker {
     const stateContext = tracker._stateTrackerContext;
     stateContext.updateTime();
   });
-  createHiddenProperty(proxy, 'unlink', function(this: IProxyStateTracker) {
+  createHiddenProperty(proxy, 'unlink', function(this: IStateTracker) {
     const tracker = this[TRACKER];
     return tracker.getBase();
   });
-  createHiddenProperty(proxy, 'getTracker', function(this: IProxyStateTracker) {
+  createHiddenProperty(proxy, 'getTracker', function(this: IStateTracker) {
     return this[TRACKER];
   });
   createHiddenProperty(proxy, 'peek', function(
-    this: IProxyStateTracker,
+    this: IStateTracker,
     path: Array<string>
   ) {
     return peek(this, path);
   });
   createHiddenProperty(proxy, 'hydrate', function(
-    this: IProxyStateTracker,
+    this: IStateTracker,
     path: Array<string>,
     value: any
   ) {
@@ -301,7 +280,7 @@ function produce(state: State, options?: Options): IProxyStateTracker {
     parentTracker.setPeeking(false);
   });
 
-  return proxy as IProxyStateTracker;
+  return proxy as IStateTracker;
 }
 
 export { produce };
