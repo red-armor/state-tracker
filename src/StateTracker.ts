@@ -1,8 +1,8 @@
 import { createHiddenProperty, inherit } from './commons';
 import internal from './internal';
 import {
-  ProxyStateTrackerConstructor,
-  ProxyStateTrackerConstructorProps,
+  StateTrackerConstructor,
+  StateTrackerConstructorProps,
   Type,
 } from './types';
 
@@ -10,8 +10,8 @@ let count = 0;
 
 // 'this' implicitly has type 'any'
 // https://stackoverflow.com/questions/52431074/how-to-solve-this-implicitly-has-type-any-when-typescript-checking-classic
-const ProxyStateTracker = (function(
-  this: ProxyStateTrackerConstructor,
+const StateTracker = (function(
+  this: StateTrackerConstructor,
   {
     accessPath,
     parentProxy,
@@ -21,7 +21,7 @@ const ProxyStateTracker = (function(
     context,
     lastUpdateAt,
     focusKey,
-  }: ProxyStateTrackerConstructorProps
+  }: StateTrackerConstructorProps
 ) {
   createHiddenProperty(this, '_id', `ProxyStateTracker_${count++}`) // eslint-disable-line
   createHiddenProperty(this, '_updateTimes', 0);
@@ -44,8 +44,8 @@ const ProxyStateTracker = (function(
 
   createHiddenProperty(this, '_isPeeking', false);
   // function constructor https://stackoverflow.com/a/43624326/2006805
-} as any) as ProxyStateTrackerConstructor;
+} as any) as StateTrackerConstructor;
 
-inherit(ProxyStateTracker, internal);
+inherit(StateTracker, internal);
 
-export default ProxyStateTracker;
+export default StateTracker;

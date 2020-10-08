@@ -1,6 +1,6 @@
 import { TRACKER } from '../src/commons';
 import produce from '../src';
-import ProxyStateTracker from '../src/ProxyStateTracker';
+import StateTracker from '../src/StateTracker';
 
 const getTrackerId = (str: string): number => {
   const matched = str.match(/(\d*)$/);
@@ -212,9 +212,9 @@ describe('return a proxy state with TRACKER prop', () => {
     const bp = proxyState.b;
     const b1p = proxyState.b.b1;
 
-    expect(ap.getTracker()).toEqual(expect.any(ProxyStateTracker));
-    expect(bp.getTracker()).toEqual(expect.any(ProxyStateTracker));
-    expect(b1p.getTracker()).toEqual(expect.any(ProxyStateTracker));
+    expect(ap.getTracker()).toEqual(expect.any(StateTracker));
+    expect(bp.getTracker()).toEqual(expect.any(StateTracker));
+    expect(b1p.getTracker()).toEqual(expect.any(StateTracker));
   });
 
   it('If value is an array, then it should be a proxy state with TRACKER prop', () => {
@@ -232,9 +232,9 @@ describe('return a proxy state with TRACKER prop', () => {
     const bp = proxyState.b;
     const b1p = proxyState.b[0];
 
-    expect(ap.getTracker()).toEqual(expect.any(ProxyStateTracker));
-    expect(bp.getTracker()).toEqual(expect.any(ProxyStateTracker));
-    expect(b1p.getTracker()).toEqual(expect.any(ProxyStateTracker));
+    expect(ap.getTracker()).toEqual(expect.any(StateTracker));
+    expect(bp.getTracker()).toEqual(expect.any(StateTracker));
+    expect(b1p.getTracker()).toEqual(expect.any(StateTracker));
   });
 });
 

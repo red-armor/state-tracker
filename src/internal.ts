@@ -1,4 +1,4 @@
-import { IProxyStateTracker } from './types';
+import { IStateTracker } from './types';
 
 function internal() {}
 const proto = internal.prototype;
@@ -45,7 +45,7 @@ proto.getChildProxies = function() {
   return this._childProxies;
 };
 
-proto.setChildProxies = function(value: Array<IProxyStateTracker>) {
+proto.setChildProxies = function(value: Array<IStateTracker>) {
   this._childProxies = value;
 };
 

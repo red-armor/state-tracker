@@ -1,9 +1,9 @@
 import StateTrackerNode from './StateTrackerNode';
-import { ProxyStateTrackerInterface } from './types';
+import { StateTrackerInterface } from './types';
 
 class StateTrackerContext {
   private queue: Array<StateTrackerNode>;
-  private _trackerMap: Map<string, ProxyStateTrackerInterface>;
+  private _trackerMap: Map<string, StateTrackerInterface>;
   private _lastUpdateAt: number;
 
   constructor() {
@@ -30,7 +30,7 @@ class StateTrackerContext {
     return this.queue[length - 1];
   }
 
-  setTracker(key: string, tracker: ProxyStateTrackerInterface) {
+  setTracker(key: string, tracker: StateTrackerInterface) {
     this._trackerMap.set(key, tracker);
   }
 
@@ -41,7 +41,7 @@ class StateTrackerContext {
    * Registered tracker should not be deleted !!!
    *
    */
-  getTracker(key: string): ProxyStateTrackerInterface | undefined {
+  getTracker(key: string): StateTrackerInterface | undefined {
     return this._trackerMap.get(key);
   }
 

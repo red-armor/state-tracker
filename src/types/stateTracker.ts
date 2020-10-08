@@ -5,13 +5,13 @@ import StateTrackerContext from '../StateTrackerContext';
 
 export interface ProxyStateTrackerConfig {
   accessPath?: Array<string>;
-  parentProxy?: IProxyStateTracker;
+  parentProxy?: IStateTracker;
   rootPath: Array<string>;
 }
 
-export interface ProxyStateTrackerConstructorProps {
+export interface StateTrackerConstructorProps {
   accessPath: Array<string>;
-  parentProxy: IProxyStateTracker | null;
+  parentProxy: IStateTracker | null;
   rootPath: Array<string>;
   base: any;
   stateTrackerContext: StateTrackerContext;
@@ -20,7 +20,7 @@ export interface ProxyStateTrackerConstructorProps {
   focusKey: string | null;
 }
 
-export interface ProxyStateTrackerProperties {
+export interface StateTrackerProperties {
   _id: string;
   _accessPath: Array<string>;
   _rootPath: Array<string>;
@@ -28,9 +28,9 @@ export interface ProxyStateTrackerProperties {
   _base: {
     [key: string]: any;
   };
-  _parentProxy: IProxyStateTracker;
+  _parentProxy: IStateTracker;
   _childProxies: {
-    [key: string]: IProxyStateTracker;
+    [key: string]: IStateTracker;
   };
   _isPeeking: boolean;
   _updateTimes: number;
@@ -40,7 +40,7 @@ export interface ProxyStateTrackerProperties {
   _focusKey: string | null;
 }
 
-export type ProxyStateTrackerFunctions = {
+export type StateTrackerFunctions = {
   update(newValue: any): void;
   setContext(context: string): void;
   getContext(): string;
@@ -49,11 +49,11 @@ export type ProxyStateTrackerFunctions = {
     [key: string]: any;
   };
   setBase(value: any): void;
-  getParentProxy(): IProxyStateTracker;
+  getParentProxy(): IStateTracker;
   getChildProxies(): {
-    [key: string]: IProxyStateTracker;
+    [key: string]: IStateTracker;
   };
-  setChildProxies(value: Array<IProxyStateTracker>): void;
+  setChildProxies(value: Array<IStateTracker>): void;
   getPeeking(): boolean;
   setPeeking(falsy: boolean): void;
   getRootPath(): Array<string>;
@@ -67,20 +67,20 @@ export type ProxyStateTrackerFunctions = {
   incrementUpdateTimes(): number;
 };
 
-export type ProxyStateTrackerInterface = ProxyStateTrackerProperties &
-  ProxyStateTrackerFunctions;
+export type StateTrackerInterface = StateTrackerProperties &
+  StateTrackerFunctions;
 
-export interface ProxyStateTrackerConstructor {
+export interface StateTrackerConstructor {
   new ({
     accessPath,
     parentProxy,
     rootPath,
     base,
-  }: ProxyStateTrackerConstructorProps): ProxyStateTrackerInterface;
+  }: StateTrackerConstructorProps): StateTrackerInterface;
 }
 
-export interface IProxyStateTracker {
-  [TRACKER]: ProxyStateTrackerInterface;
+export interface IStateTracker {
+  [TRACKER]: StateTrackerInterface;
 
   enter(): void;
   leave(): void;
@@ -88,7 +88,7 @@ export interface IProxyStateTracker {
   unlink(): any;
   hydrate(path: Array<String>, value: any): void;
   getContext(): StateTrackerContext;
-  getTracker(): ProxyStateTrackerInterface;
-  peek(path: Array<string>): IProxyStateTracker;
+  getTracker(): StateTrackerInterface;
+  peek(path: Array<string>): IStateTracker;
   [key: string]: any;
 }
