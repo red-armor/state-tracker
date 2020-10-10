@@ -380,3 +380,47 @@ describe('relink', () => {
     expect(proxyState['a'].getTracker().getUpdateTimes()).toBe(2);
   });
 });
+
+describe('proxy handler', () => {
+  it('symbol should not be reported', () => {
+    const state = {
+      a: {
+        a1: 1,
+      },
+    };
+    const proxyState = produce(state);
+    /* eslint-disable */
+    proxyState.enter()
+    Object.prototype.toString.call(proxyState.a)
+    /* eslint-enable */
+    const trackerNode = proxyState.getContext().getCurrent();
+    expect(trackerNode.getPaths()).toEqual([['a']]);
+    proxyState.leave();
+  });
+
+  it('`isPeekingStrictly` to avoid getter loop', () => {
+    type Item = { value: number };
+    const state: { a: Array<Item> } = {
+      a: [{ value: 1 }, { value: 2 }],
+    };
+    const proxyState = produce(state);
+    proxyState.enter();
+    proxyState.a
+      .sort((a: Item, b: Item) => a.value - b.value)
+      .filter((v: Item) => v.value > 1);
+    proxyState.leave();
+  });
+
+  it('unConfigurable property should not be delete', () => {
+    const state = {
+      a: {
+        a1: null,
+      },
+    };
+    const proxyState = produce(state);
+    proxyState.enter();
+    proxyState.a.a1 = [{ a11: 1 }];
+    proxyState.a.a1.map((v: any) => v.a11);
+    proxyState.leave();
+  });
+});
