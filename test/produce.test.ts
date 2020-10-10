@@ -380,3 +380,21 @@ describe('relink', () => {
     expect(proxyState['a'].getTracker().getUpdateTimes()).toBe(2);
   });
 });
+
+describe('getter', () => {
+  it('symbol should not be reported', () => {
+    const state = {
+      a: {
+        a1: 1,
+      },
+    };
+    const proxyState = produce(state);
+    /* eslint-disable */
+    proxyState.enter()
+    Object.prototype.toString.call(proxyState.a)
+    /* eslint-enable */
+    const trackerNode = proxyState.getContext().getCurrent();
+    expect(trackerNode.getPaths()).toEqual([['a']]);
+    proxyState.leave();
+  });
+});

@@ -46,6 +46,8 @@ function produce(state: ProduceState, options?: ProduceOptions): IStateTracker {
       try {
         if (internalKeys.indexOf(prop as string | symbol) !== -1)
           return Reflect.get(target, prop, receiver);
+        if (typeof prop === 'symbol')
+          return Reflect.get(target, prop, receiver);
 
         let tracker = Reflect.get(target, TRACKER) as StateTrackerInterface;
         // Note: `getBase` can get the latest value, Maybe it's the dispatched value.
