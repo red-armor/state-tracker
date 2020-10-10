@@ -50,6 +50,10 @@ function produce(state: ProduceState, options?: ProduceOptions): IStateTracker {
           return Reflect.get(target, prop, receiver);
 
         let tracker = Reflect.get(target, TRACKER) as StateTrackerInterface;
+
+        if (tracker.getStrictPeeking())
+          return Reflect.get(target, prop, receiver);
+
         // Note: `getBase` can get the latest value, Maybe it's the dispatched value.
         // It means if you call relink to update a key's value, then we can get the
         // value here...
@@ -94,7 +98,15 @@ function produce(state: ProduceState, options?: ProduceOptions): IStateTracker {
           }
         }
 
-        const value = base[prop as string];
+        let value;
+        let baseTracker;
+        if (typeof (baseTracker = base.getTracker()) !== 'undefined') {
+          baseTracker.setStrictPeeking(true);
+          value = base[prop];
+          baseTracker.setStrictPeeking(false);
+        } else {
+          value = base[prop];
+        }
 
         if (!isTrackable(value)) {
           // delete childProxies[prop] if it set to unTrackable value.

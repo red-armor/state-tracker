@@ -57,6 +57,14 @@ proto.setPeeking = function(falsy: boolean) {
   this._isPeeking = falsy;
 };
 
+proto.getStrictPeeking = function() {
+  return this._isStrictPeeking;
+};
+
+proto.setStrictPeeking = function(falsy: boolean) {
+  this._isStrictPeeking = falsy;
+};
+
 proto.getRootPath = function() {
   return this._rootPath;
 };

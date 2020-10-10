@@ -33,6 +33,7 @@ export interface StateTrackerProperties {
     [key: string]: IStateTracker;
   };
   _isPeeking: boolean;
+  _isStrictPeeking: boolean;
   _updateTimes: number;
   _context: string;
   _lastUpdateAt: number;
@@ -56,6 +57,8 @@ export type StateTrackerFunctions = {
   setChildProxies(value: Array<IStateTracker>): void;
   getPeeking(): boolean;
   setPeeking(falsy: boolean): void;
+  getStrictPeeking(): boolean;
+  setStrictPeeking(falsy: boolean): void;
   getRootPath(): Array<string>;
   getAccessPath(): Array<string>;
   getStateTrackerContext(): StateTrackerContext;

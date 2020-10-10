@@ -43,6 +43,7 @@ const StateTracker = (function(
   createHiddenProperty(this, '_focusKey', focusKey);
 
   createHiddenProperty(this, '_isPeeking', false);
+  createHiddenProperty(this, '_isStrictPeeking', false);
   // function constructor https://stackoverflow.com/a/43624326/2006805
 } as any) as StateTrackerConstructor;
 
