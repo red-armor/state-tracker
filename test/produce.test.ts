@@ -410,4 +410,17 @@ describe('proxy handler', () => {
       .filter((v: Item) => v.value > 1);
     proxyState.leave();
   });
+
+  it('unConfigurable property should not be delete', () => {
+    const state = {
+      a: {
+        a1: null,
+      },
+    };
+    const proxyState = produce(state);
+    proxyState.enter();
+    proxyState.a.a1 = [{ a11: 1 }];
+    proxyState.a.a1.map((v: any) => v.a11);
+    proxyState.leave();
+  });
 });

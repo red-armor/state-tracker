@@ -111,8 +111,12 @@ function produce(state: ProduceState, options?: ProduceOptions): IStateTracker {
         if (!isTrackable(value)) {
           // delete childProxies[prop] if it set to unTrackable value.
           if (childProxies[prop as string]) {
-            // TODO: may not be deleted.
-            delete childProxies[prop as string];
+            const descriptor = Object.getOwnPropertyDescriptor(
+              childProxies,
+              prop
+            );
+            if (descriptor && descriptor.configurable)
+              delete childProxies[prop as string];
           }
           return value;
         }
