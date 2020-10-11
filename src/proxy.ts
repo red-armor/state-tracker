@@ -213,7 +213,10 @@ function produce(state: ProduceState, options?: ProduceOptions): IStateTracker {
       const len = childProxiesKeys.length;
 
       if (!isTypeEqual(base, newValue) || !len) {
-        tracker.setChildProxies([]);
+        // childProxies should be an object! or `delete childProxies[prop as string];` may cause
+        // error. such as delete `length` in array
+        // https://github.com/ryuever/state-tracker/issues/5
+        tracker.setChildProxies({});
         return Reflect.set(target, prop, newValue, receiver);
       }
 

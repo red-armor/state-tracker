@@ -1,5 +1,4 @@
 import { Type } from './';
-// import { InternalFunction } from './';
 import { TRACKER } from '../commons';
 import StateTrackerContext from '../StateTrackerContext';
 
@@ -7,6 +6,14 @@ export interface ProxyStateTrackerConfig {
   accessPath?: Array<string>;
   parentProxy?: IStateTracker;
   rootPath: Array<string>;
+}
+
+export interface ChildProxies {
+  [key: string]: IStateTracker;
+}
+
+export interface Base {
+  [key: string]: any;
 }
 
 export interface StateTrackerConstructorProps {
@@ -25,13 +32,9 @@ export interface StateTrackerProperties {
   _accessPath: Array<string>;
   _rootPath: Array<string>;
   _type: Type.Array | Type.Object;
-  _base: {
-    [key: string]: any;
-  };
+  _base: Base;
   _parentProxy: IStateTracker;
-  _childProxies: {
-    [key: string]: IStateTracker;
-  };
+  _childProxies: ChildProxies;
   _isPeeking: boolean;
   _isStrictPeeking: boolean;
   _updateTimes: number;
@@ -46,15 +49,11 @@ export type StateTrackerFunctions = {
   setContext(context: string): void;
   getContext(): string;
   getId(): string;
-  getBase(): {
-    [key: string]: any;
-  };
+  getBase(): Base;
   setBase(value: any): void;
   getParentProxy(): IStateTracker;
-  getChildProxies(): {
-    [key: string]: IStateTracker;
-  };
-  setChildProxies(value: Array<IStateTracker>): void;
+  getChildProxies(): ChildProxies;
+  setChildProxies(value: ChildProxies): void;
   getPeeking(): boolean;
   setPeeking(falsy: boolean): void;
   getStrictPeeking(): boolean;
