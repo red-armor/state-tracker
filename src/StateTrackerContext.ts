@@ -12,8 +12,8 @@ class StateTrackerContext {
     this._lastUpdateAt = Date.now();
   }
 
-  enter(mark: string) {
-    const node = new StateTrackerNode(mark);
+  enter(context?: string) {
+    const node = new StateTrackerNode(context);
     this.queue.push(node);
   }
 

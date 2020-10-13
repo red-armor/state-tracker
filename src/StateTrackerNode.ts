@@ -122,8 +122,8 @@ class StateTrackerNode {
   public graph: Graph;
   private _paths: Array<Array<string>>;
 
-  constructor(context: string) {
-    this.context = context;
+  constructor(context?: string) {
+    this.context = context || 'default';
     this.graph = new Graph('root', []);
     this._paths = [];
   }

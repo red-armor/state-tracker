@@ -84,7 +84,7 @@ export interface StateTrackerConstructor {
 export interface IStateTracker {
   [TRACKER]: StateTrackerInterface;
 
-  enter(): void;
+  enter(context?: string): void;
   leave(): void;
   relink(path: Array<String>, value: any): void;
   unlink(): any;
@@ -94,3 +94,5 @@ export interface IStateTracker {
   peek(path: Array<string>): IStateTracker;
   [key: string]: any;
 }
+
+export type ProxyState = IStateTracker;
