@@ -21,6 +21,7 @@ const StateTracker = (function(
     context,
     lastUpdateAt,
     focusKey,
+    shadowBase,
   }: StateTrackerConstructorProps
 ) {
   createHiddenProperty(this, '_id', `ProxyStateTracker_${count++}`) // eslint-disable-line
@@ -44,6 +45,7 @@ const StateTracker = (function(
 
   createHiddenProperty(this, '_isPeeking', false);
   createHiddenProperty(this, '_isStrictPeeking', false);
+  createHiddenProperty(this, '_shadowBase', shadowBase);
   // function constructor https://stackoverflow.com/a/43624326/2006805
 } as any) as StateTrackerConstructor;
 

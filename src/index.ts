@@ -2,8 +2,6 @@ import { produce as ES5Produce } from './es5';
 import { produce as ES6Produce } from './proxy';
 import { canIUseProxy } from './commons';
 
-export * from './types';
-
 let produce;
 
 if (canIUseProxy()) {
@@ -12,4 +10,5 @@ if (canIUseProxy()) {
   produce = ES5Produce;
 }
 
-export { produce };
+export default produce;
+export * from './types';

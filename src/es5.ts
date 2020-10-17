@@ -29,6 +29,7 @@ function produce(state: ProduceState, options?: ProduceOptions): IStateTracker {
   } = options || {};
 
   const trackerContext = stateTrackerContext || new StateTrackerContext();
+  const shadowBase = Array.isArray(state) ? state.slice() : { ...state };
 
   function createES5ProxyProperty({
     target,
@@ -88,9 +89,8 @@ function produce(state: ProduceState, options?: ProduceOptions): IStateTracker {
         let value;
         let baseTracker;
         if (typeof (baseTracker = base.getTracker()) !== 'undefined') {
-          baseTracker.setStrictPeeking(true);
-          value = base[prop as IndexType];
-          baseTracker.setStrictPeeking(false);
+          const shadowBase = baseTracker.getShadowBase();
+          value = shadowBase[prop];
         } else {
           value = base[prop as IndexType];
         }
@@ -184,6 +184,11 @@ function produce(state: ProduceState, options?: ProduceOptions): IStateTracker {
 
         return childProxies[prop as string];
       },
+      set(this: IStateTracker, value: any) {
+        const tracker = this[TRACKER];
+        const shadowBase = tracker.getShadowBase();
+        shadowBase[prop as IndexType] = value;
+      },
     };
 
     Object.defineProperty(target, prop, description);
@@ -192,11 +197,15 @@ function produce(state: ProduceState, options?: ProduceOptions): IStateTracker {
   each(state as Array<any>, (prop: PropertyKey) => {
     const desc = Object.getOwnPropertyDescriptor(state, prop);
     const enumerable = desc?.enumerable || false;
-    createES5ProxyProperty({
-      target: state,
-      prop,
-      enumerable,
-    });
+
+    // may cause `TypeError: can not redefine property issue`
+    if (desc!.configurable) {
+      createES5ProxyProperty({
+        target: state,
+        prop: prop,
+        enumerable: enumerable,
+      });
+    }
   });
 
   // Tracker is just like an assistant, it could be reused.
@@ -204,91 +213,80 @@ function produce(state: ProduceState, options?: ProduceOptions): IStateTracker {
   if (mayReusedTracker) {
     // baseValue should be update on each time or `childProxyBase === value` will
     // be always false.
-    mayReusedTracker.update(state);
+    mayReusedTracker.updateShadowBase(shadowBase);
   }
 
   const mapKey = generateTrackerMapKey(accessPath);
 
-  // if (Array.isArray(state)) {
-  //   const descriptors = Object.getPrototypeOf([]);
-  //   const keys = Object.getOwnPropertyNames(descriptors);
+  if (Array.isArray(state)) {
+    const descriptors = Object.getPrototypeOf([]);
+    const keys = Object.getOwnPropertyNames(descriptors);
 
-  //   const handler = (
-  //     func: Function,
-  //     functionContext: IES5Tracker,
-  //     lengthGetter = true
-  //   ) =>
-  //     function(this: IES5Tracker) {
-  //     const args = Array.prototype.slice.call(arguments) // eslint-disable-line
-  //       this.runFn('assertRevoke');
-  //       if (lengthGetter) {
-  //         const accessPath = this.getProp('accessPath');
-  //         const isPeeking = this.getProp('isPeeking');
-  //         const nextAccessPath = accessPath.concat('length');
+    const handler = (
+      func: Function,
+      functionContext: IStateTracker,
+      lengthGetter = true
+    ) =>
+      function(this: IStateTracker) {
+        const args = Array.prototype.slice.call(arguments) // eslint-disable-line
+        if (lengthGetter) {
+          const tracker = this[TRACKER];
+          const accessPath = tracker.getAccessPath();
+          const isPeeking = tracker.getPeeking();
+          const nextAccessPath = accessPath.concat('length');
 
-  //         if (!isPeeking) {
-  //           if (
-  //             context.trackerNode &&
-  //             trackerNode.id !== context.trackerNode.id
-  //           ) {
-  //             const contextProxy = context.trackerNode.proxy;
-  //             const propProperties = contextProxy?.getProp('propProperties');
-  //             propProperties.push({
-  //               path: nextAccessPath,
-  //               source: trackerNode.proxy,
-  //             });
+          if (!isPeeking) {
+            if (trackerContext.getCurrent()) {
+              trackerContext.getCurrent().reportPaths(nextAccessPath);
+            }
+          }
+        }
 
-  //             this.setProp('propProperties', propProperties);
-  //           }
-  //           this.runFn('reportAccessPath', nextAccessPath);
-  //         }
-  //       }
+        return func.apply(functionContext, args);
+      };
 
-  //       return func.apply(functionContext, args);
-  //     };
-
-  //   keys.forEach(key => {
-  //     const func = descriptors[key];
-  //     if (typeof func === 'function') {
-  //       const notRemarkLengthPropKeys = ['concat', 'copyWith'];
-  //       const remarkLengthPropKeys = [
-  //         'concat',
-  //         'copyWith',
-  //         'fill',
-  //         'find',
-  //         'findIndex',
-  //         'lastIndexOf',
-  //         'pop',
-  //         'push',
-  //         'reverse',
-  //         'shift',
-  //         'unshift',
-  //         'slice',
-  //         'sort',
-  //         'splice',
-  //         'includes',
-  //         'indexOf',
-  //         'join',
-  //         'keys',
-  //         'entries',
-  //         'forEach',
-  //         'filter',
-  //         'flat',
-  //         'flatMap',
-  //         'map',
-  //         'every',
-  //         'some',
-  //         'reduce',
-  //         'reduceRight',
-  //       ];
-  //       if (notRemarkLengthPropKeys.indexOf(key) !== -1) {
-  //         createHiddenProperty(proxy, key, handler(func, proxy, false));
-  //       } else if (remarkLengthPropKeys.indexOf(key) !== -1) {
-  //         createHiddenProperty(proxy, key, handler(func, proxy));
-  //       }
-  //     }
-  //   });
-  // }
+    keys.forEach(key => {
+      const func = descriptors[key];
+      if (typeof func === 'function') {
+        const notRemarkLengthPropKeys = ['concat', 'copyWith'];
+        const remarkLengthPropKeys = [
+          'concat',
+          'copyWith',
+          'fill',
+          'find',
+          'findIndex',
+          'lastIndexOf',
+          'pop',
+          'push',
+          'reverse',
+          'shift',
+          'unshift',
+          'slice',
+          'sort',
+          'splice',
+          'includes',
+          'indexOf',
+          'join',
+          'keys',
+          'entries',
+          'forEach',
+          'filter',
+          'flat',
+          'flatMap',
+          'map',
+          'every',
+          'some',
+          'reduce',
+          'reduceRight',
+        ];
+        if (notRemarkLengthPropKeys.indexOf(key) !== -1) {
+          createHiddenProperty(state, key, handler(func, state as any, false));
+        } else if (remarkLengthPropKeys.indexOf(key) !== -1) {
+          createHiddenProperty(state, key, handler(func, state as any));
+        }
+      }
+    });
+  }
 
   const tracker =
     mayReusedTracker ||
@@ -301,12 +299,15 @@ function produce(state: ProduceState, options?: ProduceOptions): IStateTracker {
       context,
       lastUpdateAt: Date.now(),
       focusKey,
+      // shadowBase: Array.isArray(state) ? state.slice() : {...state}
+      shadowBase,
     });
   trackerContext.setTracker(mapKey, tracker);
   // TODO: Cannot add property x, object is not extensible
   // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Errors/Cant_define_property_object_not_extensible
   // if property value is not extensible, it will cause error. such as a ref value..
   createHiddenProperty(state, TRACKER, tracker);
+
   createHiddenProperty(state, 'enter', function(mark: string) {
     trackerContext.enter(mark);
   });

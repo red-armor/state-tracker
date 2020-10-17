@@ -8,6 +8,11 @@ proto.update = function(newBaseValue: any) {
   this.incrementUpdateTimes();
 };
 
+proto.updateShadowBase = function(newBaseValue: any) {
+  this.setShadowBase(newBaseValue);
+  this.incrementUpdateTimes();
+};
+
 proto.getUpdateTimes = function() {
   return this._updateTimes;
 };
@@ -35,6 +40,14 @@ proto.getBase = function(): Base {
 
 proto.setBase = function(value: any) {
   this._base = value;
+};
+
+proto.getShadowBase = function(): Base {
+  return this._shadowBase;
+};
+
+proto.setShadowBase = function(value: any) {
+  this._shadowBase = value;
 };
 
 proto.getParentProxy = function() {
