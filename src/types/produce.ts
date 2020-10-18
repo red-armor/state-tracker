@@ -14,3 +14,8 @@ export interface ProduceOptions {
   context?: string;
   focusKey: string | null;
 }
+
+export type Produce = (
+  state: ProduceState,
+  options?: ProduceOptions
+) => IStateTracker;

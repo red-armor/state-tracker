@@ -21,6 +21,7 @@ export interface StateTrackerConstructorProps {
   parentProxy: IStateTracker | null;
   rootPath: Array<string>;
   base: any;
+  shadowBase?: any;
   stateTrackerContext: StateTrackerContext;
   context: string;
   lastUpdateAt: number;
@@ -33,6 +34,7 @@ export interface StateTrackerProperties {
   _rootPath: Array<string>;
   _type: Type.Array | Type.Object;
   _base: Base;
+  _shadowBase: Base;
   _parentProxy: IStateTracker;
   _childProxies: ChildProxies;
   _isPeeking: boolean;
@@ -46,11 +48,16 @@ export interface StateTrackerProperties {
 
 export type StateTrackerFunctions = {
   update(newValue: any): void;
+  updateShadowBase(newValue: any): void;
   setContext(context: string): void;
   getContext(): string;
   getId(): string;
   getBase(): Base;
   setBase(value: any): void;
+  getShadowBase(): Base;
+  setShadowBase(value: any): void;
+  getTrackedProperties(): Array<string>;
+  updateTrackedProperties(prop: string): void;
   getParentProxy(): IStateTracker;
   getChildProxies(): ChildProxies;
   setChildProxies(value: ChildProxies): void;

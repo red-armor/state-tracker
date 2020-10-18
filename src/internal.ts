@@ -1,10 +1,15 @@
-import { ChildProxies, Base } from './types';
+import { ChildProxies, Base, IndexType } from './types';
 
 function internal() {}
 const proto = internal.prototype;
 
 proto.update = function(newBaseValue: any) {
   this.setBase(newBaseValue);
+  this.incrementUpdateTimes();
+};
+
+proto.updateShadowBase = function(newBaseValue: any) {
+  this.setShadowBase(newBaseValue);
   this.incrementUpdateTimes();
 };
 
@@ -35,6 +40,24 @@ proto.getBase = function(): Base {
 
 proto.setBase = function(value: any) {
   this._base = value;
+};
+
+proto.getShadowBase = function(): Base {
+  return this._shadowBase;
+};
+
+proto.setShadowBase = function(value: any) {
+  this._shadowBase = value;
+};
+
+proto.getTrackedProperties = function(): Array<string> {
+  return this._trackedProperties;
+};
+
+proto.updateTrackedProperties = function(prop: IndexType): void {
+  if (this._trackedProperties.indexOf(prop) !== -1) {
+    this._trackedProperties.push(prop);
+  }
 };
 
 proto.getParentProxy = function() {
