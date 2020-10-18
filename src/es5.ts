@@ -199,8 +199,11 @@ function produce(state: ProduceState, options?: ProduceOptions): IStateTracker {
           // https://github.com/ryuever/state-tracker/issues/5
           tracker.setChildProxies({});
         }
-
-        shadowBase[prop as IndexType] = newValue;
+        if (typeof newValue === 'object' && newValue.getTracker) {
+          shadowBase[prop as IndexType] = newValue.getTracker().getShadowBase();
+        } else {
+          shadowBase[prop as IndexType] = newValue;
+        }
       },
     };
 
@@ -318,19 +321,26 @@ function produce(state: ProduceState, options?: ProduceOptions): IStateTracker {
     // to avoid redefine property, such `getTracker`, `enter` etc.
     if (!configurable) return;
 
-    if (isObject(state) && state.getTracker) {
-      const tracker = state.getTracker();
-      const trackedProperties = tracker.getTrackedProperties();
-      if (trackedProperties.indexOf(prop) === -1) {
-        createES5ProxyProperty({
-          target: state,
-          prop: prop,
-          enumerable,
-          configurable,
-        });
-        tracker.updateTrackedProperties(prop);
-      }
-    }
+    createES5ProxyProperty({
+      target: state,
+      prop: prop,
+      enumerable,
+      configurable,
+    });
+
+    // if (isObject(state) && state.getTracker) {
+    //   const tracker = state.getTracker();
+    //   const trackedProperties = tracker.getTrackedProperties();
+    //   if (trackedProperties.indexOf(prop) === -1) {
+    //     createES5ProxyProperty({
+    //       target: state,
+    //       prop: prop,
+    //       enumerable,
+    //       configurable,
+    //     });
+    //     tracker.updateTrackedProperties(prop);
+    //   }
+    // }
   });
 
   createHiddenProperty(state, 'enter', function(mark: string) {
