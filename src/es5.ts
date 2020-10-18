@@ -330,30 +330,7 @@ function produce(state: ProduceState, options?: ProduceOptions): IStateTracker {
         });
         tracker.updateTrackedProperties(prop);
       }
-    } else {
-      console.log('not match', isObject(state));
     }
-
-    // // createES5ProxyProperty({
-    // //   target: state,
-    // //   prop: prop,
-    // //   enumerable,
-    // //   configurable,
-    // // });
-
-    // // may cause `TypeError: can not redefine property issue`
-    // if (desc!.configurable) {
-    //   try {
-    //     createES5ProxyProperty({
-    //       target: state,
-    //       prop: prop,
-    //       enumerable,
-    //       configurable,
-    //     });
-    //   } catch (err) {
-    //     console.log('[ES5 error] ', err);
-    //   }
-    // }
   });
 
   createHiddenProperty(state, 'enter', function(mark: string) {
