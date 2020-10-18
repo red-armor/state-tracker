@@ -56,6 +56,8 @@ export type StateTrackerFunctions = {
   setBase(value: any): void;
   getShadowBase(): Base;
   setShadowBase(value: any): void;
+  getTrackedProperties(): Array<string>;
+  updateTrackedProperties(prop: string): void;
   getParentProxy(): IStateTracker;
   getChildProxies(): ChildProxies;
   setChildProxies(value: ChildProxies): void;

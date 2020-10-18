@@ -1,4 +1,4 @@
-import { createHiddenProperty, inherit } from './commons';
+import { createHiddenProperty, inherit, canIUseProxy } from './commons';
 import internal from './internal';
 import {
   StateTrackerConstructor,
@@ -24,7 +24,14 @@ const StateTracker = (function(
     shadowBase,
   }: StateTrackerConstructorProps
 ) {
-  createHiddenProperty(this, '_id', `ProxyStateTracker_${count++}`) // eslint-disable-line
+  createHiddenProperty(
+    this,
+    '_id',
+    canIUseProxy()
+      ? `ProxyStateTracker_${count++}`
+      : `ES5StateTracker_${count++}`
+  );
+  createHiddenProperty(this, '_useProxy', canIUseProxy());
   createHiddenProperty(this, '_updateTimes', 0);
   createHiddenProperty(this, '_stateTrackerContext', stateTrackerContext);
   createHiddenProperty(this, '_context', context);
@@ -46,6 +53,7 @@ const StateTracker = (function(
   createHiddenProperty(this, '_isPeeking', false);
   createHiddenProperty(this, '_isStrictPeeking', false);
   createHiddenProperty(this, '_shadowBase', shadowBase);
+  createHiddenProperty(this, '_trackedProperties', []);
   // function constructor https://stackoverflow.com/a/43624326/2006805
 } as any) as StateTrackerConstructor;
 

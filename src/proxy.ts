@@ -217,7 +217,6 @@ function produce(state: ProduceState, options?: ProduceOptions): IStateTracker {
         // error. such as delete `length` in array
         // https://github.com/ryuever/state-tracker/issues/5
         tracker.setChildProxies({});
-        return Reflect.set(target, prop, newValue, receiver);
       }
 
       return Reflect.set(target, prop, newValue, receiver);
