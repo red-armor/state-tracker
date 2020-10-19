@@ -1,3 +1,4 @@
+import { isObject } from './commons';
 import { ChildProxies, Base, IndexType } from './types';
 
 function internal() {}
@@ -47,7 +48,11 @@ proto.getShadowBase = function(): Base {
 };
 
 proto.setShadowBase = function(value: any) {
-  this._shadowBase = value;
+  if (isObject(value) && typeof value.getTracker !== 'undefined') {
+    this._shadowBase = value.getTracker().getShadowBase();
+  } else {
+    this._shadowBase = value;
+  }
 };
 
 proto.getTrackedProperties = function(): Array<string> {
