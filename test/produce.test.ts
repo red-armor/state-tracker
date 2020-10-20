@@ -438,4 +438,47 @@ function testTracker(useProxy: boolean) {
       proxyState.leave();
     });
   });
+
+  describe(decorateDesc('operations'), () => {
+    it('update an empty object', () => {
+      // console.log('update -------')
+
+      const model = {
+        promotionInfo: {
+          header: {
+            presellDeposit: {},
+          },
+        },
+      };
+
+      const state = produce(model);
+
+      state.enter('level1');
+      const promotionInfo = state.peek(['promotionInfo']);
+      const promotionInfoTracker = promotionInfo.getTracker();
+      promotionInfoTracker.setContext('level1');
+      const header = promotionInfo.header;
+
+      state.enter('level2');
+      expect(header.presellDeposit).toEqual({});
+
+      state.leave();
+
+      state.leave();
+
+      state.relink(['promotionInfo'], {
+        header: {
+          presellDeposit: {
+            deposit: 2,
+            deduction: 3,
+          },
+        },
+      });
+
+      state.enter('level2');
+      expect(header.presellDeposit.deposit).toEqual(2);
+      expect(header.presellDeposit.deduction).toEqual(3);
+      state.leave();
+    });
+  });
 }
