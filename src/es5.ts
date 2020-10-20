@@ -120,6 +120,11 @@ function produce(state: ProduceState, options?: ProduceOptions): IStateTracker {
             if (tracker._context)
               childProxyTracker.setContext(tracker._context);
             return childProxy;
+          } else {
+            childProxyTracker =
+              trackerContext.getTracker(
+                generateTrackerMapKey(nextAccessPath)
+              ) || null;
           }
         }
 
@@ -157,7 +162,11 @@ function produce(state: ProduceState, options?: ProduceOptions): IStateTracker {
           if (candidateTracker && candidateProxy) {
             childProxies[prop as string] = candidateProxy;
             candidateProxy[TRACKER] = candidateTracker;
-            candidateProxy[TRACKER].setBase(value);
+
+            // candidateProxy[TRACKER].setShadowBase(Array.isArray(value) ? value.slice() : { ...value });
+
+            // not work....
+            candidateProxy[TRACKER].setShadowBase(value);
             candidateTracker.setFocusKey(prop as string);
             /**
              * pay attention, TRACKER should not be shared...
@@ -200,7 +209,11 @@ function produce(state: ProduceState, options?: ProduceOptions): IStateTracker {
           tracker.setChildProxies({});
         }
 
-        shadowBase[prop as IndexType] = newValue;
+        if (typeof newValue === 'object' && newValue.getTracker) {
+          shadowBase[prop as IndexType] = newValue.getTracker().getShadowBase();
+        } else {
+          shadowBase[prop as IndexType] = newValue;
+        }
       },
     };
 
@@ -310,6 +323,32 @@ function produce(state: ProduceState, options?: ProduceOptions): IStateTracker {
     return this[TRACKER];
   });
 
+  const pending = [] as Array<Function>;
+
+  each(state as Array<any>, (prop: PropertyKey) => {
+    const value = state[prop as IndexType];
+
+    if (isObject(value) && value.getTracker) {
+      const tracker = value.getTracker();
+      // const accessPath = tracker.getAccessPath()
+      const trackerPath = accessPath.concat(prop as string);
+      const trackerKey = generateTrackerMapKey(trackerPath);
+
+      const candidateTracker = trackerContext.getTracker(trackerKey);
+      if (candidateTracker && tracker && candidateTracker !== tracker) {
+        createHiddenProperty(value, TRACKER, candidateTracker);
+        const shadowBase = tracker.getShadowBase();
+        pending.push(() => {
+          candidateTracker.setShadowBase(shadowBase);
+        });
+      }
+    }
+  });
+
+  if (pending.length) {
+    pending.forEach(fn => fn());
+  }
+
   each(state as Array<any>, (prop: PropertyKey) => {
     const desc = Object.getOwnPropertyDescriptor(state, prop);
     const enumerable = desc?.enumerable || false;
@@ -318,19 +357,26 @@ function produce(state: ProduceState, options?: ProduceOptions): IStateTracker {
     // to avoid redefine property, such `getTracker`, `enter` etc.
     if (!configurable) return;
 
-    if (isObject(state) && state.getTracker) {
-      const tracker = state.getTracker();
-      const trackedProperties = tracker.getTrackedProperties();
-      if (trackedProperties.indexOf(prop) === -1) {
-        createES5ProxyProperty({
-          target: state,
-          prop: prop,
-          enumerable,
-          configurable,
-        });
-        tracker.updateTrackedProperties(prop);
-      }
-    }
+    createES5ProxyProperty({
+      target: state,
+      prop: prop,
+      enumerable,
+      configurable,
+    });
+
+    // if (isObject(state) && state.getTracker) {
+    //   const tracker = state.getTracker();
+    //   const trackedProperties = tracker.getTrackedProperties();
+    //   if (trackedProperties.indexOf(prop) === -1) {
+    //     createES5ProxyProperty({
+    //       target: state,
+    //       prop: prop,
+    //       enumerable,
+    //       configurable,
+    //     });
+    //     tracker.updateTrackedProperties(prop);
+    //   }
+    // }
   });
 
   createHiddenProperty(state, 'enter', function(mark: string) {

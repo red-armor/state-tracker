@@ -12,6 +12,10 @@ class StateTrackerContext {
     this._lastUpdateAt = Date.now();
   }
 
+  getTrackerMap(): Map<string, StateTrackerInterface> {
+    return this._trackerMap;
+  }
+
   enter(context?: string) {
     const node = new StateTrackerNode(context);
     this.queue.push(node);
