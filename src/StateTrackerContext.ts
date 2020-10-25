@@ -1,15 +1,22 @@
 import StateTrackerNode from './StateTrackerNode';
 import { StateTrackerInterface } from './types';
+import { generateRandomKey } from './commons';
 
 class StateTrackerContext {
   private queue: Array<StateTrackerNode>;
   private _trackerMap: Map<string, StateTrackerInterface>;
   private _lastUpdateAt: number;
+  private _id: string;
 
   constructor() {
     this.queue = [];
+    this._id = generateRandomKey();
     this._trackerMap = new Map();
     this._lastUpdateAt = Date.now();
+  }
+
+  getId() {
+    return this._id;
   }
 
   getTrackerMap(): Map<string, StateTrackerInterface> {

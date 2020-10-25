@@ -1,6 +1,7 @@
 import { Type } from './';
 import { TRACKER } from '../commons';
 import StateTrackerContext from '../StateTrackerContext';
+import { RelinkValue } from './produce';
 
 export interface ProxyStateTrackerConfig {
   accessPath?: Array<string>;
@@ -94,6 +95,7 @@ export interface IStateTracker {
   enter(context?: string): void;
   leave(): void;
   relink(path: Array<String>, value: any): void;
+  batchRelink(values: Array<RelinkValue>): IStateTracker;
   unlink(): any;
   hydrate(path: Array<String>, value: any): void;
   getContext(): StateTrackerContext;

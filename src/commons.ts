@@ -1,4 +1,4 @@
-import { IStateTracker } from './types';
+import { IStateTracker, SeenKeys } from './types';
 
 const toString = Function.call.bind<Function>(Object.prototype.toString);
 const ownKeys = (o: any) =>
@@ -118,4 +118,18 @@ export const peek = (proxyState: IStateTracker, accessPath: Array<string>) => {
     tracker.setPeeking(false);
     return nextProxy;
   }, proxyState);
+};
+
+const seenKeys: SeenKeys = {};
+const MULTIPLIER = Math.pow(2, 24) // eslint-disable-line
+
+export const generateRandomKey = () => {
+  let key;
+
+  while (key === undefined || seenKeys.hasOwnProperty(key) || !isNaN(+key)) { // eslint-disable-line
+    key = Math.floor(Math.random() * MULTIPLIER).toString(32);
+  }
+
+  seenKeys[key] = true;
+  return key;
 };
