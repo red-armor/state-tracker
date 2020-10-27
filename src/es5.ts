@@ -16,6 +16,7 @@ import {
   ProduceOptions,
   ProduceState,
   IndexType,
+  RelinkValue,
 } from './types';
 import StateTrackerContext from './StateTrackerContext';
 
@@ -401,6 +402,52 @@ function produce(state: ProduceState, options?: ProduceOptions): IStateTracker {
     const tracker = this[TRACKER];
     const stateContext = tracker._stateTrackerContext;
     stateContext.updateTime();
+  });
+  createHiddenProperty(state, 'batchRelink', function(
+    this: IStateTracker,
+    values: Array<RelinkValue>
+  ) {
+    const tracker = this[TRACKER];
+    const baseValue = Object.assign({}, tracker.getBase());
+    const stackerTrackerContext = new StateTrackerContext();
+
+    // should create a new object....
+    const newTracker = new StateTracker({
+      base: baseValue,
+      parentProxy: tracker.getParentProxy(),
+      accessPath: tracker.getAccessPath(),
+      rootPath: tracker.getRootPath(),
+      stateTrackerContext: stackerTrackerContext,
+      context: tracker.getContext(),
+      lastUpdateAt: Date.now(),
+      focusKey: null,
+    });
+
+    const proxyStateCopy = produce(
+      { ...baseValue },
+      {
+        // parentProxy: null,
+        accessPath: [],
+        rootPath: [],
+        stateTrackerContext: stackerTrackerContext,
+        mayReusedTracker: newTracker,
+        context: tracker.getContext(),
+        focusKey: null,
+      }
+    );
+
+    const childProxies = Object.assign({}, tracker.getChildProxies());
+
+    values.forEach(({ path, value }) => {
+      this.relink(path, value);
+
+      // unchanged object's proxy object will be preserved.
+      delete childProxies[path[0]];
+    });
+
+    newTracker.setChildProxies(childProxies);
+
+    return proxyStateCopy;
   });
   createHiddenProperty(state, 'unlink', function(this: IStateTracker) {
     const tracker = this[TRACKER];
