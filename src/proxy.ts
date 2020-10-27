@@ -70,8 +70,9 @@ function produce(state: ProduceState, options?: ProduceOptions): IStateTracker {
           if (trackerContext.getCurrent()) {
             trackerContext.getCurrent().reportPaths(nextAccessPath);
           }
+          const currentTrackerContext = trackerContext.getCurrent();
 
-          if (trackerContext.getCurrent()) {
+          if (currentTrackerContext && trackerContext.getBackTrackingState()) {
             const stateContextNode = trackerContext.getCurrent();
             const { context } = stateContextNode;
             const internalContext = tracker.getContext();

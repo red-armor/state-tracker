@@ -7,12 +7,14 @@ class StateTrackerContext {
   private _trackerMap: Map<string, StateTrackerInterface>;
   private _lastUpdateAt: number;
   private _id: string;
+  private _backTrackingEnabled: boolean;
 
   constructor() {
     this.queue = [];
     this._id = generateRandomKey();
     this._trackerMap = new Map();
     this._lastUpdateAt = Date.now();
+    this._backTrackingEnabled = true;
   }
 
   getId() {
@@ -62,6 +64,18 @@ class StateTrackerContext {
 
   getTime(): number {
     return this._lastUpdateAt;
+  }
+
+  enableBackTracking() {
+    this._backTrackingEnabled = true;
+  }
+
+  disableBackTracking() {
+    this._backTrackingEnabled = false;
+  }
+
+  getBackTrackingState(): boolean {
+    return this._backTrackingEnabled;
   }
 }
 
