@@ -113,12 +113,24 @@ proto.setTime = function(time: number) {
   this._lastUpdateAt = time;
 };
 
+proto.getMask = function(): string {
+  return this._mask;
+};
+
+proto.setMask = function(value: string) {
+  this._mask = value;
+};
+
 proto.getFocusKey = function(): string {
   return this._focusKey;
 };
 
 proto.setFocusKey = function(key: string) {
   this._focusKey = key;
+};
+
+proto.getType = function() {
+  return this._type;
 };
 
 export default internal;

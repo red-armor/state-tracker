@@ -2,10 +2,15 @@ import invariant from 'invariant';
 import {
   peek,
   TRACKER,
+  isObject,
   isTrackable,
   isTypeEqual,
   createHiddenProperty,
-  isObject,
+  generateRandomKey,
+  generateRandomContextKey,
+  arrayProtoOwnKeys,
+  objectProtoOwnKeys,
+  Type,
 } from './commons';
 import StateTracker from './StateTracker';
 import {
@@ -26,6 +31,7 @@ function produce(state: ProduceState, options?: ProduceOptions): IStateTracker {
     mayReusedTracker,
     context = '',
     focusKey = null,
+    mask = '',
   } = options || {};
 
   const trackerContext = stateTrackerContext || new StateTrackerContext();
@@ -33,6 +39,7 @@ function produce(state: ProduceState, options?: ProduceOptions): IStateTracker {
   const internalKeys = [
     TRACKER,
     'enter',
+    'strictEnter',
     'leave',
     'getContext',
     'relink',
@@ -49,8 +56,19 @@ function produce(state: ProduceState, options?: ProduceOptions): IStateTracker {
           return Reflect.get(target, prop, receiver);
         if (typeof prop === 'symbol')
           return Reflect.get(target, prop, receiver);
-
         let tracker = Reflect.get(target, TRACKER) as StateTrackerInterface;
+        const targetType = tracker.getType();
+
+        switch (targetType) {
+          case Type.Array:
+            if (prop !== 'length' && ~arrayProtoOwnKeys().indexOf(prop))
+              return Reflect.get(target, prop, receiver);
+            break;
+          case Type.Object:
+            if (~objectProtoOwnKeys().indexOf(prop))
+              return Reflect.get(target, prop, receiver);
+            break;
+        }
 
         if (tracker.getStrictPeeking())
           return Reflect.get(target, prop, receiver);
@@ -63,6 +81,8 @@ function produce(state: ProduceState, options?: ProduceOptions): IStateTracker {
         const accessPath = tracker.getAccessPath();
         const nextAccessPath = accessPath.concat(prop as string);
         const isPeeking = tracker.getPeeking();
+        let trackerMask = tracker.getMask();
+        let retryProxy = null;
 
         if (!isPeeking) {
           if (trackerContext.getCurrent()) {
@@ -78,20 +98,31 @@ function produce(state: ProduceState, options?: ProduceOptions): IStateTracker {
               let _proxy = target;
               let pathCopy = accessPath.slice();
               let retryPaths: Array<string> = [];
-              let retryProxy = null;
+              const contextMask = trackerContext.getMask();
+              // const contextTime = trackerContext.getTime();
+
+              // console.log(
+              //   '_proxy[TRACKER].getParentProxy() ',
+              //   _proxy[TRACKER].getParentProxy(),
+              //   _proxy[TRACKER].getMask(),
+              //   contextMask
+              // );
               while (
                 _proxy[TRACKER].getParentProxy() &&
-                _proxy[TRACKER].getTime() < trackerContext.getTime()
+                _proxy[TRACKER].getMask() !== contextMask
               ) {
                 retryProxy = _proxy[TRACKER].getParentProxy();
                 const pop = pathCopy.pop();
                 if (typeof pop !== 'undefined') retryPaths.unshift(pop);
 
-                _proxy[TRACKER].setTime(trackerContext.getTime());
+                // _proxy[TRACKER].setMask(contextMask);
                 _proxy = _proxy[TRACKER].getParentProxy();
               }
 
               if (retryProxy) {
+                // refer to test case:
+                //   Mask should be setting if retryProxy exist, it could prevent next fetch from retry again
+                trackerMask = contextMask;
                 tracker = peek(retryProxy, retryPaths)[TRACKER];
                 base = tracker.getBase();
               }
@@ -114,6 +145,15 @@ function produce(state: ProduceState, options?: ProduceOptions): IStateTracker {
           value = base[prop];
         }
 
+        // refer to test case:
+        //   If retryProxy exist, childProxies[prop] base should be update
+        if (retryProxy) {
+          if (childProxies[prop]) {
+            // TODO: will cause basic example render list failed.
+            childProxies[prop].getTracker().setBase(value);
+          }
+        }
+
         if (!isTrackable(value)) {
           // delete childProxies[prop] if it set to unTrackable value.
           if (childProxies[prop as string]) {
@@ -131,6 +171,7 @@ function produce(state: ProduceState, options?: ProduceOptions): IStateTracker {
           if (childProxyBase === value) {
             if (tracker._context)
               childProxyTracker.setContext(tracker._context);
+            childProxy.getTracker().setMask(trackerMask);
             return childProxy;
           }
         }
@@ -147,6 +188,7 @@ function produce(state: ProduceState, options?: ProduceOptions): IStateTracker {
             stateTrackerContext: trackerContext,
             context: tracker._context,
             focusKey: prop as string,
+            mask: trackerMask,
           }
         );
 
@@ -206,6 +248,7 @@ function produce(state: ProduceState, options?: ProduceOptions): IStateTracker {
     context,
     lastUpdateAt: Date.now(),
     focusKey,
+    mask,
   });
   if (reusedSubProxies) tracker.setChildProxies(reusedSubProxies);
   const proxy = new Proxy(nextState, handler) as IStateTracker;
@@ -215,7 +258,13 @@ function produce(state: ProduceState, options?: ProduceOptions): IStateTracker {
   // if property value is not extensible, it will cause error. such as a ref value..
   createHiddenProperty(proxy, TRACKER, tracker);
   createHiddenProperty(proxy, 'enter', function(mark: string) {
-    trackerContext.enter(mark);
+    const contextKey = mark || generateRandomContextKey();
+    trackerContext.enter(contextKey);
+  });
+  createHiddenProperty(proxy, 'strictEnter', function(mark: string) {
+    const contextKey = mark || generateRandomContextKey();
+    trackerContext.enter(contextKey);
+    tracker.setContext(contextKey);
   });
   createHiddenProperty(proxy, 'leave', function() {
     trackerContext.leave();
@@ -229,14 +278,14 @@ function produce(state: ProduceState, options?: ProduceOptions): IStateTracker {
     value: any
     // proxyState?: IStateTracker
   ) {
+    const tracker = this[TRACKER];
+    const stateContext = tracker._stateTrackerContext;
+    stateContext.setMask(generateRandomKey());
+    stateContext.updateTime();
     const copy = path.slice();
     const last = copy.pop();
     const front = copy;
     const parentState = peek(this, front);
-
-    const tracker = this[TRACKER];
-    const stateContext = tracker._stateTrackerContext;
-    stateContext.updateTime();
     parentState[last!] = value;
   });
 
@@ -258,6 +307,7 @@ function produce(state: ProduceState, options?: ProduceOptions): IStateTracker {
       context: tracker.getContext(),
       lastUpdateAt: Date.now(),
       focusKey: null,
+      mask: '',
     });
 
     const proxyStateCopy = produce(

@@ -13,6 +13,7 @@ export interface ProduceOptions {
   mayReusedTracker: null | StateTrackerInterface;
   context?: string;
   focusKey: string | null;
+  mask?: string;
 }
 
 export type Produce = (

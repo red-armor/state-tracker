@@ -10,6 +10,9 @@ const ownKeys = (o: any) =>
       )
     : Object.getOwnPropertyNames(o);
 
+export const arrayProtoOwnKeys = () => ownKeys(Object.getPrototypeOf([]));
+export const objectProtoOwnKeys = () => ownKeys(Object.getPrototypeOf({}));
+
 export const emptyFunction = () => {};
 export const isObject = (o: any) => o ? (typeof o === 'object' || typeof o === 'function') : false // eslint-disable-line
 export const hasSymbol = typeof Symbol !== 'undefined';
@@ -133,3 +136,6 @@ export const generateRandomKey = () => {
   seenKeys[key] = true;
   return key;
 };
+
+export const generateRandomContextKey = () =>
+  `__context_${generateRandomKey()}`;

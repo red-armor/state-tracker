@@ -8,6 +8,7 @@ class StateTrackerContext {
   private _lastUpdateAt: number;
   private _id: string;
   private _backTrackingEnabled: boolean;
+  private _mask: string;
 
   constructor() {
     this.queue = [];
@@ -15,6 +16,7 @@ class StateTrackerContext {
     this._trackerMap = new Map();
     this._lastUpdateAt = Date.now();
     this._backTrackingEnabled = true;
+    this._mask = '$$';
   }
 
   getId() {
@@ -64,6 +66,14 @@ class StateTrackerContext {
 
   getTime(): number {
     return this._lastUpdateAt;
+  }
+
+  getMask(): string {
+    return this._mask;
+  }
+
+  setMask(value: string) {
+    this._mask = value;
   }
 
   enableBackTracking() {

@@ -32,6 +32,7 @@ export interface StateTrackerConstructorProps {
   context: string;
   lastUpdateAt: number;
   focusKey: string | null;
+  mask: string;
 }
 
 export interface StateTrackerProperties {
@@ -50,6 +51,7 @@ export interface StateTrackerProperties {
   _lastUpdateAt: number;
   _stateTrackerContext: StateTrackerContext;
   _focusKey: string | null;
+  _mask: string;
 }
 
 export type StateTrackerFunctions = {
@@ -67,8 +69,6 @@ export type StateTrackerFunctions = {
   getParentProxy(): IStateTracker;
   getChildProxies(): ChildProxies;
   setChildProxies(value: ChildProxies): void;
-  // getSubProxies(): SubProxies;
-  // setSubProxies(value: SubProxies): void;
   getPeeking(): boolean;
   setPeeking(falsy: boolean): void;
   getStrictPeeking(): boolean;
@@ -78,10 +78,13 @@ export type StateTrackerFunctions = {
   getStateTrackerContext(): StateTrackerContext;
   getTime(): number;
   setTime(time: number): void;
+  getMask(): string;
+  setMask(value: string): void;
   getFocusKey(): string | null;
   setFocusKey(key: string): void;
   getUpdateTimes(): number;
   incrementUpdateTimes(): number;
+  getType(): string;
 };
 
 export type StateTrackerInterface = StateTrackerProperties &
@@ -100,6 +103,7 @@ export interface IStateTracker {
   [TRACKER]: StateTrackerInterface;
 
   enter(context?: string): void;
+  strictEnter(context?: string): void;
   leave(): void;
   relink(path: Array<String>, value: any): void;
   batchRelink(values: Array<RelinkValue>): IStateTracker;

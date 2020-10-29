@@ -1,10 +1,10 @@
 import { TRACKER } from '../src/commons';
-import { produce as ES5Produce } from '../src/es5';
+// import { produce as ES5Produce } from '../src/es5';
 import { produce as ES6Produce } from '../src/proxy';
 import StateTracker from '../src/StateTracker';
 
 testTracker(true);
-testTracker(false);
+// testTracker(false);
 
 const getTrackerId = (str: string): number => {
   const matched = str.match(/(\d*)$/);
@@ -13,9 +13,82 @@ const getTrackerId = (str: string): number => {
 };
 
 function testTracker(useProxy: boolean) {
-  const produce = useProxy ? ES6Produce : ES5Produce;
+  const produce = ES6Produce;
+  // const produce = useProxy ? ES6Produce : ES5Produce;
   const decorateDesc = (text: string) =>
     useProxy ? `proxy: ${text}` : `es5: ${text}`;
+
+  describe(decorateDesc('test report'), () => {
+    it('constructor should not be reported', () => {
+      const state = {
+        a: {
+          a1: [{ value: 0 }, { value: 1 }],
+        },
+      };
+      const proxyState = produce(state);
+      proxyState.enter();
+      proxyState.a.a1.map((v: { value: number }, index: number) => {
+        expect(v.value).toBe(index);
+      });
+      const trackerNode = proxyState.getContext().getCurrent();
+      const paths = trackerNode.getPaths();
+      expect(paths).toEqual([
+        ['a'],
+        ['a', 'a1'],
+        ['a', 'a1', 'length'],
+        ['a', 'a1', '0'],
+        ['a', 'a1', '0', 'value'],
+        ['a', 'a1', '1'],
+        ['a', 'a1', '1', 'value'],
+      ]);
+      proxyState.leave();
+    });
+
+    it('Symbol(Symbol.toStringTag) should not be reported', () => {
+      const state = {
+        a: {
+          a1: [{ value: 0 }, { value: 1 }],
+        },
+      };
+      const proxyState = produce(state);
+      proxyState.enter();
+      expect(Object.prototype.toString.call(proxyState.a)).toEqual(
+        '[object Object]'
+      );
+      const trackerNode = proxyState.getContext().getCurrent();
+      const paths = trackerNode.getPaths();
+      expect(paths).toEqual([['a']]);
+      proxyState.leave();
+    });
+
+    it('length should be processed with tracker logic', () => {
+      const model = {
+        goods: {
+          listData: [],
+        },
+      };
+
+      const state = produce(model);
+
+      state.enter('test');
+      const {
+        goods: { listData },
+      } = state;
+      expect(listData.length).toBe(0);
+      state.leave();
+
+      state.relink(['goods'], {
+        listData: [{ id: '1' }, { id: '2' }],
+      });
+
+      state.enter();
+      const {
+        goods: { listData: nextListData },
+      } = state;
+      expect(nextListData.length).toBe(2);
+      state.leave();
+    });
+  });
 
   describe(decorateDesc('child proxies'), () => {
     it('Access a key which has object value will add prop to childProxies', () => {
@@ -274,38 +347,38 @@ function testTracker(useProxy: boolean) {
       expect(id1).toBe(id2);
     });
 
-    it('update with different object, tracker id should be preserved, _updateTimes will increment with 1', () => {
-      const state = {
-        a: {
-          a1: 1,
-          a2: 2,
-        },
-        b: {
-          b1: {
-            b11: 1,
-            b12: 2,
-          },
-          b2: 2,
-        },
-      };
-      const proxyState = produce(state);
-      const id1 = getTrackerId(proxyState.a.getTracker().getId());
+    // it('update with different object, tracker id should be preserved, _updateTimes will increment with 1', () => {
+    //   const state = {
+    //     a: {
+    //       a1: 1,
+    //       a2: 2,
+    //     },
+    //     b: {
+    //       b1: {
+    //         b11: 1,
+    //         b12: 2,
+    //       },
+    //       b2: 2,
+    //     },
+    //   };
+    //   const proxyState = produce(state);
+    //   const id1 = getTrackerId(proxyState.a.getTracker().getId());
 
-      proxyState.a = {
-        a1: 3,
-        a2: 4,
-      };
+    //   proxyState.a = {
+    //     a1: 3,
+    //     a2: 4,
+    //   };
 
-      const id2 = getTrackerId(proxyState.a.getTracker().getId());
-      expect(id1).toBe(id2);
-      expect(proxyState.a.getTracker().getUpdateTimes()).toBe(1);
+    //   const id2 = getTrackerId(proxyState.a.getTracker().getId());
+    //   expect(id1).toBe(id2);
+    //   expect(proxyState.a.getTracker().getUpdateTimes()).toBe(1);
 
-      proxyState.a = {
-        a1: 3,
-        a2: 4,
-      };
-      expect(proxyState.a.getTracker().getUpdateTimes()).toBe(2);
-    });
+    //   proxyState.a = {
+    //     a1: 3,
+    //     a2: 4,
+    //   };
+    //   expect(proxyState.a.getTracker().getUpdateTimes()).toBe(2);
+    // });
 
     it('Tracker base value will be updated after try to access it value', () => {
       const old = {
@@ -349,51 +422,51 @@ function testTracker(useProxy: boolean) {
     });
   });
 
-  describe(decorateDesc('relink'), () => {
-    it('relink an object', () => {
-      const state = {
-        a: {
-          a1: {
-            a11: 2,
-          },
-          a2: {
-            a21: 3,
-          },
-        },
-        b: {
-          b1: {
-            b11: 1,
-            b12: 2,
-          },
-          b2: [2],
-        },
-      };
-      const proxyState = produce(state);
-      /* eslint-disable */
-      proxyState.a;
-      proxyState.a.a1;
-      proxyState.a.a2;
-      /* eslint-enable */
+  // describe(decorateDesc('relink'), () => {
+  //   it('relink an object', () => {
+  //     const state = {
+  //       a: {
+  //         a1: {
+  //           a11: 2,
+  //         },
+  //         a2: {
+  //           a21: 3,
+  //         },
+  //       },
+  //       b: {
+  //         b1: {
+  //           b11: 1,
+  //           b12: 2,
+  //         },
+  //         b2: [2],
+  //       },
+  //     };
+  //     const proxyState = produce(state);
+  //     /* eslint-disable */
+  //     proxyState.a;
+  //     proxyState.a.a1;
+  //     proxyState.a.a2;
+  //     /* eslint-enable */
 
-      proxyState.relink(['a'], {
-        a1: {
-          a11: 3,
-        },
-        a2: 4,
-      });
+  //     proxyState.relink(['a'], {
+  //       a1: {
+  //         a11: 3,
+  //       },
+  //       a2: 4,
+  //     });
 
-      const childProxies = proxyState['a'].getTracker().getChildProxies();
-      expect(Object.keys(childProxies)).toEqual(['a1', 'a2']);
-      expect(proxyState['a']['a2']).toBe(4);
-      expect(Object.keys(childProxies)).toEqual(['a1']);
+  //     const childProxies = proxyState['a'].getTracker().getChildProxies();
+  //     expect(Object.keys(childProxies)).toEqual(['a1', 'a2']);
+  //     expect(proxyState['a']['a2']).toBe(4);
+  //     expect(Object.keys(childProxies)).toEqual(['a1']);
 
-      proxyState.relink(['a'], {
-        a1: 5,
-        a2: 6,
-      });
-      expect(proxyState['a'].getTracker().getUpdateTimes()).toBe(2);
-    });
-  });
+  //     proxyState.relink(['a'], {
+  //       a1: 5,
+  //       a2: 6,
+  //     });
+  //     expect(proxyState['a'].getTracker().getUpdateTimes()).toBe(2);
+  //   });
+  // });
 
   describe(decorateDesc('proxy handler'), () => {
     it('symbol should not be reported', () => {
@@ -436,6 +509,241 @@ function testTracker(useProxy: boolean) {
       proxyState.a.a1 = [{ a11: 1 }];
       proxyState.a.a1.map((v: any) => v.a11);
       proxyState.leave();
+    });
+  });
+
+  describe(decorateDesc('operations'), () => {
+    it('Mask should be setting if retryProxy exist, it could prevent next fetch from retry again', () => {
+      const model = {
+        promotionInfo: {
+          header: {
+            presellDeposit: {},
+          },
+        },
+      };
+
+      const state = produce(model);
+
+      state.enter('level1');
+      const promotionInfo = state.peek(['promotionInfo']);
+      const promotionInfoTracker = promotionInfo.getTracker();
+      promotionInfoTracker.setContext('level1');
+      const header = promotionInfo.header;
+
+      state.enter('level2');
+      expect(header.presellDeposit).toEqual({});
+
+      state.leave();
+
+      state.leave();
+
+      state.relink(['promotionInfo'], {
+        header: {
+          presellDeposit: {
+            deposit: 2,
+            deduction: 3,
+          },
+        },
+      });
+
+      state.enter('level2');
+      expect(header.presellDeposit.deposit).toEqual(2);
+      state.leave();
+    });
+
+    it('If retryProxy exist, childProxies[prop] base should be update', () => {
+      const model = {
+        promotionInfo: {
+          header: {
+            presellDeposit: {},
+          },
+        },
+      };
+
+      const state = produce(model);
+
+      state.enter('level1');
+      const promotionInfo = state.peek(['promotionInfo']);
+      const promotionInfoTracker = promotionInfo.getTracker();
+      promotionInfoTracker.setContext('level1');
+      const header = promotionInfo.header;
+
+      state.enter('level2');
+      // expect(header.presellDeposit).toEqual({});
+
+      state.leave();
+
+      state.leave();
+
+      state.relink(['promotionInfo'], {
+        header: {
+          presellDeposit: {
+            deposit: 2,
+            deduction: 3,
+          },
+        },
+      });
+
+      state.enter('level2');
+      expect(header.presellDeposit.deposit).toEqual(2);
+      expect(header.presellDeposit.deduction).toEqual(3);
+      state.leave();
+    });
+
+    it('If data is update through back stream, it may cause array not works correctly', () => {
+      const model = {
+        goods: {
+          listData: [],
+        },
+      };
+
+      const state = produce(model);
+
+      state.enter('test');
+      const {
+        goods: { listData },
+      } = state;
+      expect(listData.length).toBe(0);
+      state.leave();
+
+      state.relink(['goods'], {
+        listData: [{ id: '1' }, { id: '2' }],
+      });
+
+      state.enter();
+      const {
+        goods: { listData: nextListData },
+      } = state;
+      expect(nextListData.length).toBe(2);
+      state.leave();
+
+      let count = 0;
+
+      state.enter('goods');
+      const info = state.peek(['goods']);
+      info.listData.map(() => {
+        count++;
+      });
+
+      expect(count === 2).toBe(false);
+    });
+
+    it('setContext is required to avoid getting data back stream', () => {
+      const model = {
+        goods: {
+          listData: [],
+        },
+      };
+
+      const state = produce(model);
+
+      state.enter('test');
+      state.getTracker().setContext('test');
+      const {
+        goods: { listData },
+      } = state;
+      expect(listData.length).toBe(0);
+      state.leave();
+
+      state.relink(['goods'], {
+        listData: [{ id: '1' }, { id: '2' }],
+      });
+
+      state.enter('test');
+      state.getTracker().setContext('test');
+      const {
+        goods: { listData: nextListData },
+      } = state;
+      expect(nextListData.length).toBe(2);
+      state.leave();
+
+      let count = 0;
+
+      state.enter('goods');
+      const info = state.peek(['goods']);
+      info.listData.map(() => {
+        count++;
+      });
+
+      expect(count === 2).toBe(true);
+    });
+
+    it('strictEnter is an alternative to avoid getting data back stream', () => {
+      const model = {
+        goods: {
+          listData: [],
+        },
+      };
+
+      const state = produce(model);
+
+      state.strictEnter();
+      const {
+        goods: { listData },
+      } = state;
+      expect(listData.length).toBe(0);
+      state.leave();
+
+      state.relink(['goods'], {
+        listData: [{ id: '1' }, { id: '2' }],
+      });
+
+      state.strictEnter();
+      const {
+        goods: { listData: nextListData },
+      } = state;
+      expect(nextListData.length).toBe(2);
+      state.leave();
+
+      let count = 0;
+
+      state.enter('goods');
+      const info = state.peek(['goods']);
+      info.listData.map(() => {
+        count++;
+      });
+
+      expect(count === 2).toBe(true);
+    });
+
+    it('update an empty object', () => {
+      const model = {
+        promotionInfo: {
+          header: {
+            presellDeposit: {},
+          },
+        },
+      };
+
+      const state = produce(model);
+
+      state.enter('level1');
+      const promotionInfo = state.peek(['promotionInfo']);
+      const promotionInfoTracker = promotionInfo.getTracker();
+      promotionInfoTracker.setContext('level1');
+      const header = promotionInfo.header;
+
+      state.enter('level2');
+      expect(header.presellDeposit).toEqual({});
+
+      state.leave();
+
+      state.leave();
+
+      state.relink(['promotionInfo'], {
+        header: {
+          presellDeposit: {
+            deposit: 2,
+            deduction: 3,
+          },
+        },
+      });
+
+      state.enter('level2');
+      const presellDeposit = header.presellDeposit;
+      expect(presellDeposit.deposit).toEqual(2);
+      expect(presellDeposit.deduction).toEqual(3);
+      state.leave();
     });
   });
 }

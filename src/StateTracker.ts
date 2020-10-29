@@ -22,6 +22,7 @@ const StateTracker = (function(
     lastUpdateAt,
     focusKey,
     shadowBase,
+    mask,
   }: StateTrackerConstructorProps
 ) {
   createHiddenProperty(
@@ -36,6 +37,7 @@ const StateTracker = (function(
   createHiddenProperty(this, '_stateTrackerContext', stateTrackerContext);
   createHiddenProperty(this, '_context', context);
   createHiddenProperty(this, '_lastUpdateAt', lastUpdateAt);
+  createHiddenProperty(this, '_mask', mask);
 
   createHiddenProperty(this, '_accessPath', accessPath);
   createHiddenProperty(this, '_rootPath', rootPath);
@@ -48,7 +50,6 @@ const StateTracker = (function(
 
   createHiddenProperty(this, '_parentProxy', parentProxy);
   createHiddenProperty(this, '_childProxies', {} as any);
-  createHiddenProperty(this, '_subProxies', {});
   createHiddenProperty(this, '_focusKey', focusKey);
 
   createHiddenProperty(this, '_isPeeking', false);
