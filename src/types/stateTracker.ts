@@ -1,6 +1,8 @@
 import { Type } from './';
 import { TRACKER } from '../commons';
 import StateTrackerContext from '../StateTrackerContext';
+// import ChildProxy from '../ChildProxy';
+import { RelinkValue } from './produce';
 
 export interface ProxyStateTrackerConfig {
   accessPath?: Array<string>;
@@ -11,6 +13,10 @@ export interface ProxyStateTrackerConfig {
 export interface ChildProxies {
   [key: string]: IStateTracker;
 }
+
+// export interface SubProxies {
+//   [key: string]: ChildProxy;
+// }
 
 export interface Base {
   [key: string]: any;
@@ -61,6 +67,8 @@ export type StateTrackerFunctions = {
   getParentProxy(): IStateTracker;
   getChildProxies(): ChildProxies;
   setChildProxies(value: ChildProxies): void;
+  // getSubProxies(): SubProxies;
+  // setSubProxies(value: SubProxies): void;
   getPeeking(): boolean;
   setPeeking(falsy: boolean): void;
   getStrictPeeking(): boolean;
@@ -94,6 +102,7 @@ export interface IStateTracker {
   enter(context?: string): void;
   leave(): void;
   relink(path: Array<String>, value: any): void;
+  batchRelink(values: Array<RelinkValue>): IStateTracker;
   unlink(): any;
   hydrate(path: Array<String>, value: any): void;
   getContext(): StateTrackerContext;
