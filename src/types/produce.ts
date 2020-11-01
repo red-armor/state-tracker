@@ -14,6 +14,7 @@ export interface ProduceOptions {
   context?: string;
   focusKey: string | null;
   mask?: string;
+  isDraft?: boolean;
 }
 
 export type Produce = (

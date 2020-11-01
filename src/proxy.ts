@@ -32,6 +32,7 @@ function produce(state: ProduceState, options?: ProduceOptions): IStateTracker {
     context = '',
     focusKey = null,
     mask = '',
+    isDraft = false,
   } = options || {};
 
   const trackerContext = stateTrackerContext || new StateTrackerContext();
@@ -83,6 +84,41 @@ function produce(state: ProduceState, options?: ProduceOptions): IStateTracker {
         const isPeeking = tracker.getPeeking();
         let trackerMask = tracker.getMask();
         let retryProxy = null;
+
+        if (isDraft) {
+          console.log('is draft handler');
+          let value;
+
+          if (isObject(base) && base.getTracker) {
+            const baseTracker = base.getTracker();
+            baseTracker.setStrictPeeking(true);
+            value = base[prop];
+            baseTracker.setStrictPeeking(false);
+          } else {
+            value = base[prop];
+          }
+
+          const produceChildProxy = produce(
+            // only new value should create new proxy object..
+            Array.isArray(value) ? value.slice() : { ...value },
+            // value,
+            {
+              accessPath: nextAccessPath,
+              parentProxy: proxy as IStateTracker,
+              rootPath,
+              mayReusedTracker: null,
+              stateTrackerContext: trackerContext,
+              context: tracker._context,
+              focusKey: prop as string,
+              mask: trackerMask,
+              isDraft,
+            }
+          );
+
+          childProxies[prop as string] = produceChildProxy;
+
+          return produceChildProxy;
+        }
 
         if (!isPeeking) {
           if (trackerContext.getCurrent()) {
@@ -320,6 +356,7 @@ function produce(state: ProduceState, options?: ProduceOptions): IStateTracker {
         mayReusedTracker: newTracker,
         context: tracker.getContext(),
         focusKey: null,
+        isDraft: true,
       }
     );
 
