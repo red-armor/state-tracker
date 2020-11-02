@@ -23,6 +23,15 @@ proto.incrementUpdateTimes = function() {
   return this._updateTimes;
 };
 
+proto.getBackwardAccessCount = function() {
+  return this._backwardAccessCount;
+};
+
+proto.incrementBackwardAccessCount = function() {
+  this._backwardAccessCount += 1;
+  return this._backwardAccessCount;
+};
+
 proto.setContext = function(context: string) {
   this._context = context;
 };

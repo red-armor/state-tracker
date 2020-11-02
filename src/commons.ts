@@ -1,5 +1,6 @@
 import { IStateTracker, SeenKeys } from './types';
 
+export const DEFAULT_MASK = '__mask_$$';
 const toString = Function.call.bind<Function>(Object.prototype.toString);
 const ownKeys = (o: any) =>
   typeof Reflect !== 'undefined' && Reflect.ownKeys

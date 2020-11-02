@@ -746,4 +746,160 @@ function testTracker(useProxy: boolean) {
       state.leave();
     });
   });
+
+  describe(decorateDesc('test backward access'), () => {
+    it('Basically, access an outer variable will not trigger backward access.', () => {
+      const model = {
+        promotionInfo: {
+          header: {
+            presellDeposit: {},
+            price: 3,
+            selected: false,
+          },
+        },
+      };
+
+      const state = produce(model);
+
+      state.strictEnter('level1');
+      const promotionInfo = state.peek(['promotionInfo']);
+      const header = promotionInfo.header;
+      expect(promotionInfo.getTracker().getBackwardAccessCount()).toBe(0);
+      state.strictEnter('level2');
+      expect(header.price).toBe(3);
+      expect(promotionInfo.getTracker().getBackwardAccessCount()).toBe(0);
+      state.leave();
+      state.leave();
+    });
+
+    it('relink will make backward access start', () => {
+      const model = {
+        promotionInfo: {
+          header: {
+            presellDeposit: {},
+            price: 3,
+            selected: false,
+          },
+        },
+      };
+
+      const state = produce(model);
+
+      state.strictEnter('level1');
+      const promotionInfo = state.peek(['promotionInfo']);
+      const header = promotionInfo.header;
+      expect(promotionInfo.getTracker().getBackwardAccessCount()).toBe(0);
+      state.strictEnter('level2');
+      expect(header.price).toBe(3);
+      expect(promotionInfo.getTracker().getBackwardAccessCount()).toBe(0);
+      state.leave();
+      state.leave();
+
+      state.relink(['promotionInfo'], {
+        header: {
+          presellDeposit: {
+            deposit: 2,
+            deduction: 3,
+          },
+          price: 6,
+          selected: true,
+        },
+      });
+
+      state.strictEnter('level2');
+      expect(promotionInfo.getTracker().getBackwardAccessCount()).toBe(0);
+      expect(header.price).toBe(6);
+      expect(promotionInfo.getTracker().getBackwardAccessCount()).toBe(1);
+    });
+
+    it('Destructor an object will trigger an backward access', () => {
+      const model = {
+        promotionInfo: {
+          header: {
+            presellDeposit: {},
+            price: 3,
+            selected: false,
+          },
+        },
+      };
+
+      const state = produce(model);
+
+      state.strictEnter('level1');
+      const promotionInfo = state.peek(['promotionInfo']);
+      const header = promotionInfo.header;
+      expect(promotionInfo.getTracker().getBackwardAccessCount()).toBe(0);
+      state.leave();
+
+      state.relink(['promotionInfo'], {
+        header: {
+          presellDeposit: {
+            deposit: 2,
+            deduction: 3,
+          },
+          price: 6,
+          selected: true,
+        },
+      });
+
+      state.strictEnter('level2');
+      expect(promotionInfo.getTracker().getBackwardAccessCount()).toBe(0);
+      expect(header.presellDeposit.deposit).toBe(2);
+      expect(promotionInfo.getTracker().getBackwardAccessCount()).toBe(1);
+      const { presellDeposit, price, selected } = header;
+      expect(presellDeposit).toEqual({ deposit: 2, deduction: 3 });
+      expect(price).toBe(6);
+      expect(selected).toBe(true);
+      expect(promotionInfo.getTracker().getBackwardAccessCount()).toBe(4);
+      expect(presellDeposit.deposit).toBe(2);
+      expect(promotionInfo.getTracker().getBackwardAccessCount()).toBe(4);
+    });
+
+    it('mask is used to optimize backward access times', () => {
+      const model = {
+        promotionInfo: {
+          header: {
+            presellDeposit: {},
+            price: 3,
+            selected: false,
+          },
+        },
+      };
+
+      const state = produce(model);
+
+      state.enter('level1');
+      const promotionInfo = state.peek(['promotionInfo']);
+      const header = promotionInfo.header;
+      expect(promotionInfo.getTracker().getBackwardAccessCount()).toBe(0);
+      state.leave();
+
+      state.relink(['promotionInfo'], {
+        header: {
+          presellDeposit: {
+            deposit: 2,
+            deduction: 3,
+          },
+          price: 6,
+          selected: true,
+        },
+      });
+
+      state.enter('level2');
+      expect(promotionInfo.getTracker().getBackwardAccessCount()).toBe(0);
+      expect(header.presellDeposit.deposit).toBe(2);
+      expect(promotionInfo.getTracker().getBackwardAccessCount()).toBe(1);
+      const { presellDeposit, price, selected } = header;
+      expect(presellDeposit).toEqual({ deposit: 2, deduction: 3 });
+      expect(price).toBe(6);
+      expect(selected).toBe(true);
+      expect(promotionInfo.getTracker().getBackwardAccessCount()).toBe(4);
+
+      expect(presellDeposit.deposit).toBe(2);
+      expect(promotionInfo.getTracker().getBackwardAccessCount()).toBe(4);
+      expect(header.getTracker().getBackwardAccessCount()).toBe(4);
+      expect(presellDeposit.deduction).toBe(3);
+      expect(header.getTracker().getBackwardAccessCount()).toBe(4);
+    });
+  });
 }

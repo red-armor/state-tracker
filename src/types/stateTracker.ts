@@ -47,6 +47,7 @@ export interface StateTrackerProperties {
   _isPeeking: boolean;
   _isStrictPeeking: boolean;
   _updateTimes: number;
+  _backwardAccessCount: number;
   _context: string;
   _lastUpdateAt: number;
   _stateTrackerContext: StateTrackerContext;
@@ -78,6 +79,8 @@ export type StateTrackerFunctions = {
   getStateTrackerContext(): StateTrackerContext;
   getTime(): number;
   setTime(time: number): void;
+  getBackwardAccessCount(): number;
+  incrementBackwardAccessCount(): number;
   getMask(): string;
   setMask(value: string): void;
   getFocusKey(): string | null;

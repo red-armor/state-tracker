@@ -1,6 +1,6 @@
 import StateTrackerNode from './StateTrackerNode';
 import { StateTrackerInterface } from './types';
-import { generateRandomKey } from './commons';
+import { generateRandomKey, DEFAULT_MASK } from './commons';
 
 class StateTrackerContext {
   private queue: Array<StateTrackerNode>;
@@ -16,7 +16,7 @@ class StateTrackerContext {
     this._trackerMap = new Map();
     this._lastUpdateAt = Date.now();
     this._backTrackingEnabled = true;
-    this._mask = '$$';
+    this._mask = DEFAULT_MASK;
   }
 
   getId() {

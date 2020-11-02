@@ -11,6 +11,7 @@ import {
   arrayProtoOwnKeys,
   objectProtoOwnKeys,
   Type,
+  DEFAULT_MASK,
 } from './commons';
 import StateTracker from './StateTracker';
 import {
@@ -31,7 +32,7 @@ function produce(state: ProduceState, options?: ProduceOptions): IStateTracker {
     mayReusedTracker,
     context = '',
     focusKey = null,
-    mask = '',
+    mask = DEFAULT_MASK,
     isDraft = false,
   } = options || {};
 
@@ -134,28 +135,23 @@ function produce(state: ProduceState, options?: ProduceOptions): IStateTracker {
             const internalContext = tracker.getContext();
 
             if (context !== internalContext) {
-              let _proxy = target;
+              const _proxy = target;
               let pathCopy = accessPath.slice();
               let retryPaths: Array<string> = [];
               const contextMask = trackerContext.getMask();
-              // const contextTime = trackerContext.getTime();
+              let _proxyTracker = _proxy.getTracker();
 
-              // console.log(
-              //   '_proxy[TRACKER].getParentProxy() ',
-              //   _proxy[TRACKER].getParentProxy(),
-              //   _proxy[TRACKER].getMask(),
-              //   contextMask
-              // );
               while (
-                _proxy[TRACKER].getParentProxy() &&
-                _proxy[TRACKER].getMask() !== contextMask
+                _proxyTracker.getParentProxy() &&
+                _proxyTracker.getMask() !== contextMask
               ) {
-                retryProxy = _proxy[TRACKER].getParentProxy();
+                retryProxy = _proxyTracker.getParentProxy();
+                _proxyTracker.incrementBackwardAccessCount();
                 const pop = pathCopy.pop();
                 if (typeof pop !== 'undefined') retryPaths.unshift(pop);
 
                 // _proxy[TRACKER].setMask(contextMask);
-                _proxy = _proxy[TRACKER].getParentProxy();
+                _proxyTracker = _proxyTracker.getParentProxy().getTracker();
               }
 
               if (retryProxy) {
@@ -351,7 +347,7 @@ function produce(state: ProduceState, options?: ProduceOptions): IStateTracker {
       context: tracker.getContext(),
       lastUpdateAt: Date.now(),
       focusKey: null,
-      mask: '',
+      mask: DEFAULT_MASK,
     });
 
     const proxyStateCopy = produce(
