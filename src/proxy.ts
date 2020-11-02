@@ -86,39 +86,42 @@ function produce(state: ProduceState, options?: ProduceOptions): IStateTracker {
         let retryProxy = null;
 
         if (isDraft) {
-          console.log('is draft handler');
-          let value;
-
-          if (isObject(base) && base.getTracker) {
-            const baseTracker = base.getTracker();
-            baseTracker.setStrictPeeking(true);
-            value = base[prop];
-            baseTracker.setStrictPeeking(false);
-          } else {
-            value = base[prop];
-          }
-
-          const produceChildProxy = produce(
-            // only new value should create new proxy object..
-            Array.isArray(value) ? value.slice() : { ...value },
-            // value,
-            {
-              accessPath: nextAccessPath,
-              parentProxy: proxy as IStateTracker,
-              rootPath,
-              mayReusedTracker: null,
-              stateTrackerContext: trackerContext,
-              context: tracker._context,
-              focusKey: prop as string,
-              mask: trackerMask,
-              isDraft,
-            }
-          );
-
-          childProxies[prop as string] = produceChildProxy;
-
-          return produceChildProxy;
         }
+
+        // if (isDraft) {
+        //   console.log('is draft handler');
+        //   let value;
+
+        //   if (isObject(base) && base.getTracker) {
+        //     const baseTracker = base.getTracker();
+        //     baseTracker.setStrictPeeking(true);
+        //     value = base[prop];
+        //     baseTracker.setStrictPeeking(false);
+        //   } else {
+        //     value = base[prop];
+        //   }
+
+        //   const produceChildProxy = produce(
+        //     // only new value should create new proxy object..
+        //     Array.isArray(value) ? value.slice() : { ...value },
+        //     // value,
+        //     {
+        //       accessPath: nextAccessPath,
+        //       parentProxy: proxy as IStateTracker,
+        //       rootPath,
+        //       mayReusedTracker: null,
+        //       stateTrackerContext: trackerContext,
+        //       context: tracker._context,
+        //       focusKey: prop as string,
+        //       mask: trackerMask,
+        //       isDraft,
+        //     }
+        //   );
+
+        //   childProxies[prop as string] = produceChildProxy;
+
+        //   return produceChildProxy;
+        // }
 
         if (!isPeeking) {
           if (trackerContext.getCurrent()) {
@@ -204,7 +207,12 @@ function produce(state: ProduceState, options?: ProduceOptions): IStateTracker {
         } else if (!childProxyTracker && childProxy) {
           childProxyTracker = childProxy[TRACKER];
           const childProxyBase = childProxyTracker.getBase();
-          if (childProxyBase === value) {
+          if (
+            childProxyBase === value ||
+            (isObject(value) &&
+              value.getTracker &&
+              childProxyBase === value.getTracker().getBase())
+          ) {
             if (tracker._context)
               childProxyTracker.setContext(tracker._context);
             childProxy.getTracker().setMask(trackerMask);
