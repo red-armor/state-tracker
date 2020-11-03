@@ -347,38 +347,32 @@ function testTracker(useProxy: boolean) {
       expect(id1).toBe(id2);
     });
 
-    // it('update with different object, tracker id should be preserved, _updateTimes will increment with 1', () => {
-    //   const state = {
-    //     a: {
-    //       a1: 1,
-    //       a2: 2,
-    //     },
-    //     b: {
-    //       b1: {
-    //         b11: 1,
-    //         b12: 2,
-    //       },
-    //       b2: 2,
-    //     },
-    //   };
-    //   const proxyState = produce(state);
-    //   const id1 = getTrackerId(proxyState.a.getTracker().getId());
+    it('Set with different value will create new tracker', () => {
+      const state = {
+        a: {
+          a1: 1,
+          a2: 2,
+        },
+        b: {
+          b1: {
+            b11: 1,
+            b12: 2,
+          },
+          b2: 2,
+        },
+      };
+      const proxyState = produce(state);
+      const id1 = getTrackerId(proxyState.a.getTracker().getId());
 
-    //   proxyState.a = {
-    //     a1: 3,
-    //     a2: 4,
-    //   };
+      proxyState.a = {
+        a1: 3,
+        a2: 4,
+      };
+      expect(proxyState.a.a1).toBe(3);
 
-    //   const id2 = getTrackerId(proxyState.a.getTracker().getId());
-    //   expect(id1).toBe(id2);
-    //   expect(proxyState.a.getTracker().getUpdateTimes()).toBe(1);
-
-    //   proxyState.a = {
-    //     a1: 3,
-    //     a2: 4,
-    //   };
-    //   expect(proxyState.a.getTracker().getUpdateTimes()).toBe(2);
-    // });
+      const id2 = getTrackerId(proxyState.a.getTracker().getId());
+      expect(id1 + 1).toBe(id2);
+    });
 
     it('Tracker base value will be updated after try to access it value', () => {
       const old = {
@@ -422,51 +416,86 @@ function testTracker(useProxy: boolean) {
     });
   });
 
-  // describe(decorateDesc('relink'), () => {
-  //   it('relink an object', () => {
-  //     const state = {
-  //       a: {
-  //         a1: {
-  //           a11: 2,
-  //         },
-  //         a2: {
-  //           a21: 3,
-  //         },
-  //       },
-  //       b: {
-  //         b1: {
-  //           b11: 1,
-  //           b12: 2,
-  //         },
-  //         b2: [2],
-  //       },
-  //     };
-  //     const proxyState = produce(state);
-  //     /* eslint-disable */
-  //     proxyState.a;
-  //     proxyState.a.a1;
-  //     proxyState.a.a2;
-  //     /* eslint-enable */
+  describe(decorateDesc('relink'), () => {
+    it('relink an object', () => {
+      const state = {
+        a: {
+          a1: {
+            a11: 2,
+          },
+          a2: {
+            a21: 3,
+          },
+        },
+        b: {
+          b1: {
+            b11: 1,
+            b12: 2,
+          },
+          b2: [2],
+        },
+      };
+      const proxyState = produce(state);
+      /* eslint-disable */
+      proxyState.a;
+      proxyState.a.a1;
+      proxyState.a.a2;
+      /* eslint-enable */
 
-  //     proxyState.relink(['a'], {
-  //       a1: {
-  //         a11: 3,
-  //       },
-  //       a2: 4,
-  //     });
+      proxyState.relink(['a'], {
+        a1: {
+          a11: 3,
+        },
+        a2: 4,
+      });
 
-  //     const childProxies = proxyState['a'].getTracker().getChildProxies();
-  //     expect(Object.keys(childProxies)).toEqual(['a1', 'a2']);
-  //     expect(proxyState['a']['a2']).toBe(4);
-  //     expect(Object.keys(childProxies)).toEqual(['a1']);
+      const childProxies = proxyState.a.getTracker().getChildProxies();
+      expect(Object.keys(childProxies)).toEqual(['a1', 'a2']);
+      expect(proxyState.a.a2).toBe(4);
+      expect(Object.keys(childProxies)).toEqual(['a1']);
 
-  //     proxyState.relink(['a'], {
-  //       a1: 5,
-  //       a2: 6,
-  //     });
-  //     expect(proxyState['a'].getTracker().getUpdateTimes()).toBe(2);
-  //   });
-  // });
+      proxyState.relink(['a'], {
+        a1: 5,
+        a2: 6,
+      });
+      expect(proxyState.a.a1).toBe(5);
+      expect(proxyState.a.a2).toBe(6);
+    });
+
+    it('batchRelink will return a draft object', () => {
+      const state = {
+        a: {
+          a1: {
+            a11: 1,
+          },
+          a2: {
+            a21: 4,
+          },
+        },
+        b: {
+          b1: 2,
+        },
+      };
+
+      const proxyState = produce(state);
+      const draft = proxyState.batchRelink([
+        {
+          path: ['a'],
+          value: {
+            a1: {
+              a11: 3,
+            },
+          },
+        },
+      ]);
+
+      expect(draft.a.a1.a11).toBe(1);
+      expect(proxyState.a.a1.a11).toBe(3);
+      proxyState.b.b1 = 4;
+      // expect(draft.b.b1).toBe(2);
+      expect(proxyState.b.b1).toBe(4);
+    });
+  });
 
   describe(decorateDesc('proxy handler'), () => {
     it('symbol should not be reported', () => {
