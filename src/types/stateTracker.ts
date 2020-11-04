@@ -1,8 +1,9 @@
 import { Type } from './';
-import { TRACKER } from '../commons';
+import { TRACKER, PATH_TRACKER } from '../commons';
 import StateTrackerContext from '../StateTrackerContext';
 // import ChildProxy from '../ChildProxy';
 import { RelinkValue } from './produce';
+import PathTracker from '../PathTracker';
 
 export interface ProxyStateTrackerConfig {
   accessPath?: Array<string>;
@@ -11,6 +12,10 @@ export interface ProxyStateTrackerConfig {
 }
 
 export interface ChildProxies {
+  [key: string]: IStateTracker;
+}
+
+export interface FocusKeyToTrackerMap {
   [key: string]: IStateTracker;
 }
 
@@ -44,6 +49,7 @@ export interface StateTrackerProperties {
   _shadowBase: Base;
   _parentProxy: IStateTracker;
   _childProxies: ChildProxies;
+  _focusKeyToTrackerMap: FocusKeyToTrackerMap;
   _isPeeking: boolean;
   _isStrictPeeking: boolean;
   _updateTimes: number;
@@ -70,6 +76,8 @@ export type StateTrackerFunctions = {
   getParentProxy(): IStateTracker;
   getChildProxies(): ChildProxies;
   setChildProxies(value: ChildProxies): void;
+  getFocusKeyToTrackerMap(): FocusKeyToTrackerMap;
+  setFocusKeyToTrackerMap(value: FocusKeyToTrackerMap): void;
   getPeeking(): boolean;
   setPeeking(falsy: boolean): void;
   getStrictPeeking(): boolean;
@@ -104,6 +112,7 @@ export interface StateTrackerConstructor {
 
 export interface IStateTracker {
   [TRACKER]: StateTrackerInterface;
+  [PATH_TRACKER]: PathTracker;
 
   enter(context?: string): void;
   strictEnter(context?: string): void;

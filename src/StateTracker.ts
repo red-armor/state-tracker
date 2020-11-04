@@ -51,6 +51,8 @@ const StateTracker = (function(
 
   createHiddenProperty(this, '_parentProxy', parentProxy);
   createHiddenProperty(this, '_childProxies', {} as any);
+  createHiddenProperty(this, '_focusKeyToTrackerMap', {} as any);
+
   createHiddenProperty(this, '_focusKey', focusKey);
 
   createHiddenProperty(this, '_isPeeking', false);

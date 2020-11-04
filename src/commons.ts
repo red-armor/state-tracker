@@ -20,6 +20,9 @@ export const hasSymbol = typeof Symbol !== 'undefined';
 export const TRACKER: unique symbol = hasSymbol
   ? Symbol.for('tracker')
   : ('__tracker__' as any);
+export const PATH_TRACKER: unique symbol = hasSymbol
+  ? Symbol.for('path_tracker')
+  : ('__path_tracker__' as any);
 
 export const canIUseProxy = () => {
   try {
@@ -127,16 +130,18 @@ export const peek = (proxyState: IStateTracker, accessPath: Array<string>) => {
 const seenKeys: SeenKeys = {};
 const MULTIPLIER = Math.pow(2, 24) // eslint-disable-line
 
-export const generateRandomKey = () => {
+export const generateRandomKey = (prefix = '') => {
   let key;
 
   while (key === undefined || seenKeys.hasOwnProperty(key) || !isNaN(+key)) { // eslint-disable-line
     key = Math.floor(Math.random() * MULTIPLIER).toString(32);
   }
 
-  seenKeys[key] = true;
-  return key;
+  const nextKey = `${prefix}${key}`;
+
+  seenKeys[nextKey] = true;
+  return nextKey;
 };
 
-export const generateRandomContextKey = () =>
-  `__context_${generateRandomKey()}`;
+export const generateRandomContextKey = () => generateRandomKey('__context_');
+export const generateRandomFocusKey = () => generateRandomKey('__focus_');

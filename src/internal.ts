@@ -1,5 +1,5 @@
 import { isObject } from './commons';
-import { ChildProxies, Base, IndexType } from './types';
+import { ChildProxies, Base, IndexType, FocusKeyToTrackerMap } from './types';
 
 function internal() {}
 const proto = internal.prototype;
@@ -84,6 +84,14 @@ proto.getChildProxies = function(): ChildProxies {
 
 proto.setChildProxies = function(value: ChildProxies) {
   this._childProxies = value;
+};
+
+proto.setFocusKeyToTrackerMap = function(value: FocusKeyToTrackerMap) {
+  this._focusKeyToTrackerMap = value;
+};
+
+proto.getFocusKeyToTrackerMap = function(): FocusKeyToTrackerMap {
+  return this._focusKeyToTrackerMap;
 };
 
 proto.getPeeking = function(): boolean {
