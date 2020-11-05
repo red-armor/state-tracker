@@ -27,9 +27,9 @@ function testTracker(useProxy: boolean) {
       };
       const proxyState = produce(state);
       proxyState.enter();
-      proxyState.a.a1.map((v: { value: number }, index: number) => {
-        expect(v.value).toBe(index);
-      });
+      proxyState.a.a1.map((v: { value: number }, index: number) =>
+        expect(v.value).toBe(index)
+      );
       const trackerNode = proxyState.getContext().getCurrent();
       const paths = trackerNode.getPaths();
       expect(paths).toEqual([
@@ -650,9 +650,7 @@ function testTracker(useProxy: boolean) {
 
       state.enter('goods');
       const info = state.peek(['goods']);
-      info.listData.map(() => {
-        count++;
-      });
+      info.listData.map(() => count++);
 
       expect(count === 2).toBe(false);
     });
@@ -690,9 +688,7 @@ function testTracker(useProxy: boolean) {
 
       state.enter('goods');
       const info = state.peek(['goods']);
-      info.listData.map(() => {
-        count++;
-      });
+      info.listData.map(() => count++);
 
       expect(count === 2).toBe(true);
     });
@@ -728,9 +724,7 @@ function testTracker(useProxy: boolean) {
 
       state.enter('goods');
       const info = state.peek(['goods']);
-      info.listData.map(() => {
-        count++;
-      });
+      info.listData.map(() => count++);
 
       expect(count === 2).toBe(true);
     });
