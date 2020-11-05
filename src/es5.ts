@@ -4,11 +4,13 @@ import {
   peek,
   each,
   TRACKER,
+  PATH_TRACKER,
   isTrackable,
   isTypeEqual,
   createHiddenProperty,
   generateTrackerMapKey,
   isObject,
+  DEFAULT_MASK,
 } from './commons';
 import StateTracker from './StateTracker';
 import {
@@ -18,6 +20,7 @@ import {
   IndexType,
 } from './types';
 import StateTrackerContext from './StateTrackerContext';
+import PathTracker from './PathTracker';
 
 function produce(state: ProduceState, options?: ProduceOptions): IStateTracker {
   const {
@@ -313,12 +316,18 @@ function produce(state: ProduceState, options?: ProduceOptions): IStateTracker {
       focusKey,
       // shadowBase: Array.isArray(state) ? state.slice() : {...state}
       shadowBase,
+      mask: DEFAULT_MASK,
     });
+  const pathTracker = new PathTracker({
+    path: accessPath,
+  });
   trackerContext.setTracker(mapKey, tracker);
   // TODO: Cannot add property x, object is not extensible
   // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Errors/Cant_define_property_object_not_extensible
   // if property value is not extensible, it will cause error. such as a ref value..
   createHiddenProperty(state, TRACKER, tracker);
+  createHiddenProperty(state, PATH_TRACKER, pathTracker);
+
   createHiddenProperty(state, 'getTracker', function(this: IStateTracker) {
     return this[TRACKER];
   });

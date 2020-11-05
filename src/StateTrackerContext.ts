@@ -1,15 +1,26 @@
 import StateTrackerNode from './StateTrackerNode';
 import { StateTrackerInterface } from './types';
+import { generateRandomKey, DEFAULT_MASK } from './commons';
 
 class StateTrackerContext {
   private queue: Array<StateTrackerNode>;
   private _trackerMap: Map<string, StateTrackerInterface>;
   private _lastUpdateAt: number;
+  private _id: string;
+  private _backTrackingEnabled: boolean;
+  private _mask: string;
 
   constructor() {
     this.queue = [];
+    this._id = generateRandomKey();
     this._trackerMap = new Map();
     this._lastUpdateAt = Date.now();
+    this._backTrackingEnabled = true;
+    this._mask = DEFAULT_MASK;
+  }
+
+  getId() {
+    return this._id;
   }
 
   getTrackerMap(): Map<string, StateTrackerInterface> {
@@ -55,6 +66,26 @@ class StateTrackerContext {
 
   getTime(): number {
     return this._lastUpdateAt;
+  }
+
+  getMask(): string {
+    return this._mask;
+  }
+
+  setMask(value: string) {
+    this._mask = value;
+  }
+
+  enableBackTracking() {
+    this._backTrackingEnabled = true;
+  }
+
+  disableBackTracking() {
+    this._backTrackingEnabled = false;
+  }
+
+  getBackTrackingState(): boolean {
+    return this._backTrackingEnabled;
   }
 }
 

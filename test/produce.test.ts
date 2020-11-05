@@ -1,10 +1,10 @@
 import { TRACKER } from '../src/commons';
-import { produce as ES5Produce } from '../src/es5';
+// import { produce as ES5Produce } from '../src/es5';
 import { produce as ES6Produce } from '../src/proxy';
 import StateTracker from '../src/StateTracker';
 
 testTracker(true);
-testTracker(false);
+// testTracker(false);
 
 const getTrackerId = (str: string): number => {
   const matched = str.match(/(\d*)$/);
@@ -13,9 +13,82 @@ const getTrackerId = (str: string): number => {
 };
 
 function testTracker(useProxy: boolean) {
-  const produce = useProxy ? ES6Produce : ES5Produce;
+  const produce = ES6Produce;
+  // const produce = useProxy ? ES6Produce : ES5Produce;
   const decorateDesc = (text: string) =>
     useProxy ? `proxy: ${text}` : `es5: ${text}`;
+
+  describe(decorateDesc('test report'), () => {
+    it('constructor should not be reported', () => {
+      const state = {
+        a: {
+          a1: [{ value: 0 }, { value: 1 }],
+        },
+      };
+      const proxyState = produce(state);
+      proxyState.enter();
+      proxyState.a.a1.map((v: { value: number }, index: number) =>
+        expect(v.value).toBe(index)
+      );
+      const trackerNode = proxyState.getContext().getCurrent();
+      const paths = trackerNode.getPaths();
+      expect(paths).toEqual([
+        ['a'],
+        ['a', 'a1'],
+        ['a', 'a1', 'length'],
+        ['a', 'a1', '0'],
+        ['a', 'a1', '0', 'value'],
+        ['a', 'a1', '1'],
+        ['a', 'a1', '1', 'value'],
+      ]);
+      proxyState.leave();
+    });
+
+    it('Symbol(Symbol.toStringTag) should not be reported', () => {
+      const state = {
+        a: {
+          a1: [{ value: 0 }, { value: 1 }],
+        },
+      };
+      const proxyState = produce(state);
+      proxyState.enter();
+      expect(Object.prototype.toString.call(proxyState.a)).toEqual(
+        '[object Object]'
+      );
+      const trackerNode = proxyState.getContext().getCurrent();
+      const paths = trackerNode.getPaths();
+      expect(paths).toEqual([['a']]);
+      proxyState.leave();
+    });
+
+    it('length should be processed with tracker logic', () => {
+      const model = {
+        goods: {
+          listData: [],
+        },
+      };
+
+      const state = produce(model);
+
+      state.enter('test');
+      const {
+        goods: { listData },
+      } = state;
+      expect(listData.length).toBe(0);
+      state.leave();
+
+      state.relink(['goods'], {
+        listData: [{ id: '1' }, { id: '2' }],
+      });
+
+      state.enter();
+      const {
+        goods: { listData: nextListData },
+      } = state;
+      expect(nextListData.length).toBe(2);
+      state.leave();
+    });
+  });
 
   describe(decorateDesc('child proxies'), () => {
     it('Access a key which has object value will add prop to childProxies', () => {
@@ -274,7 +347,7 @@ function testTracker(useProxy: boolean) {
       expect(id1).toBe(id2);
     });
 
-    it('update with different object, tracker id should be preserved, _updateTimes will increment with 1', () => {
+    it('Set with different value will create new tracker', () => {
       const state = {
         a: {
           a1: 1,
@@ -295,16 +368,10 @@ function testTracker(useProxy: boolean) {
         a1: 3,
         a2: 4,
       };
+      expect(proxyState.a.a1).toBe(3);
 
       const id2 = getTrackerId(proxyState.a.getTracker().getId());
-      expect(id1).toBe(id2);
-      expect(proxyState.a.getTracker().getUpdateTimes()).toBe(1);
-
-      proxyState.a = {
-        a1: 3,
-        a2: 4,
-      };
-      expect(proxyState.a.getTracker().getUpdateTimes()).toBe(2);
+      expect(id1 + 1).toBe(id2);
     });
 
     it('Tracker base value will be updated after try to access it value', () => {
@@ -382,16 +449,51 @@ function testTracker(useProxy: boolean) {
         a2: 4,
       });
 
-      const childProxies = proxyState['a'].getTracker().getChildProxies();
+      const childProxies = proxyState.a.getTracker().getChildProxies();
       expect(Object.keys(childProxies)).toEqual(['a1', 'a2']);
-      expect(proxyState['a']['a2']).toBe(4);
+      expect(proxyState.a.a2).toBe(4);
       expect(Object.keys(childProxies)).toEqual(['a1']);
 
       proxyState.relink(['a'], {
         a1: 5,
         a2: 6,
       });
-      expect(proxyState['a'].getTracker().getUpdateTimes()).toBe(2);
+      expect(proxyState.a.a1).toBe(5);
+      expect(proxyState.a.a2).toBe(6);
+    });
+
+    it('batchRelink will return a draft object', () => {
+      const state = {
+        a: {
+          a1: {
+            a11: 1,
+          },
+          a2: {
+            a21: 4,
+          },
+        },
+        b: {
+          b1: 2,
+        },
+      };
+
+      const proxyState = produce(state);
+      const draft = proxyState.batchRelink([
+        {
+          path: ['a'],
+          value: {
+            a1: {
+              a11: 3,
+            },
+          },
+        },
+      ]);
+
+      expect(draft.a.a1.a11).toBe(1);
+      expect(proxyState.a.a1.a11).toBe(3);
+      proxyState.b.b1 = 4;
+      // expect(draft.b.b1).toBe(2);
+      expect(proxyState.b.b1).toBe(4);
     });
   });
 
@@ -436,6 +538,391 @@ function testTracker(useProxy: boolean) {
       proxyState.a.a1 = [{ a11: 1 }];
       proxyState.a.a1.map((v: any) => v.a11);
       proxyState.leave();
+    });
+  });
+
+  describe(decorateDesc('operations'), () => {
+    it('Mask should be setting if retryProxy exist, it could prevent next fetch from retry again', () => {
+      const model = {
+        promotionInfo: {
+          header: {
+            presellDeposit: {},
+          },
+        },
+      };
+
+      const state = produce(model);
+
+      state.enter('level1');
+      const promotionInfo = state.peek(['promotionInfo']);
+      const promotionInfoTracker = promotionInfo.getTracker();
+      promotionInfoTracker.setContext('level1');
+      const header = promotionInfo.header;
+
+      state.enter('level2');
+      expect(header.presellDeposit).toEqual({});
+
+      state.leave();
+
+      state.leave();
+
+      state.relink(['promotionInfo'], {
+        header: {
+          presellDeposit: {
+            deposit: 2,
+            deduction: 3,
+          },
+        },
+      });
+
+      state.enter('level2');
+      expect(header.presellDeposit.deposit).toEqual(2);
+      state.leave();
+    });
+
+    it('If retryProxy exist, childProxies[prop] base should be update', () => {
+      const model = {
+        promotionInfo: {
+          header: {
+            presellDeposit: {},
+          },
+        },
+      };
+
+      const state = produce(model);
+
+      state.enter('level1');
+      const promotionInfo = state.peek(['promotionInfo']);
+      const promotionInfoTracker = promotionInfo.getTracker();
+      promotionInfoTracker.setContext('level1');
+      const header = promotionInfo.header;
+
+      state.enter('level2');
+      // expect(header.presellDeposit).toEqual({});
+
+      state.leave();
+
+      state.leave();
+
+      state.relink(['promotionInfo'], {
+        header: {
+          presellDeposit: {
+            deposit: 2,
+            deduction: 3,
+          },
+        },
+      });
+
+      state.enter('level2');
+      expect(header.presellDeposit.deposit).toEqual(2);
+      expect(header.presellDeposit.deduction).toEqual(3);
+      state.leave();
+    });
+
+    it('If data is update through back stream, it may cause array not works correctly', () => {
+      const model = {
+        goods: {
+          listData: [],
+        },
+      };
+
+      const state = produce(model);
+
+      state.enter('test');
+      const {
+        goods: { listData },
+      } = state;
+      expect(listData.length).toBe(0);
+      state.leave();
+
+      state.relink(['goods'], {
+        listData: [{ id: '1' }, { id: '2' }],
+      });
+
+      state.enter();
+      const {
+        goods: { listData: nextListData },
+      } = state;
+      expect(nextListData.length).toBe(2);
+      state.leave();
+
+      let count = 0;
+
+      state.enter('goods');
+      const info = state.peek(['goods']);
+      info.listData.map(() => count++);
+
+      expect(count === 2).toBe(false);
+    });
+
+    it('setContext is required to avoid getting data back stream', () => {
+      const model = {
+        goods: {
+          listData: [],
+        },
+      };
+
+      const state = produce(model);
+
+      state.enter('test');
+      state.getTracker().setContext('test');
+      const {
+        goods: { listData },
+      } = state;
+      expect(listData.length).toBe(0);
+      state.leave();
+
+      state.relink(['goods'], {
+        listData: [{ id: '1' }, { id: '2' }],
+      });
+
+      state.enter('test');
+      state.getTracker().setContext('test');
+      const {
+        goods: { listData: nextListData },
+      } = state;
+      expect(nextListData.length).toBe(2);
+      state.leave();
+
+      let count = 0;
+
+      state.enter('goods');
+      const info = state.peek(['goods']);
+      info.listData.map(() => count++);
+
+      expect(count === 2).toBe(true);
+    });
+
+    it('strictEnter is an alternative to avoid getting data back stream', () => {
+      const model = {
+        goods: {
+          listData: [],
+        },
+      };
+
+      const state = produce(model);
+
+      state.strictEnter();
+      const {
+        goods: { listData },
+      } = state;
+      expect(listData.length).toBe(0);
+      state.leave();
+
+      state.relink(['goods'], {
+        listData: [{ id: '1' }, { id: '2' }],
+      });
+
+      state.strictEnter();
+      const {
+        goods: { listData: nextListData },
+      } = state;
+      expect(nextListData.length).toBe(2);
+      state.leave();
+
+      let count = 0;
+
+      state.enter('goods');
+      const info = state.peek(['goods']);
+      info.listData.map(() => count++);
+
+      expect(count === 2).toBe(true);
+    });
+
+    it('update an empty object', () => {
+      const model = {
+        promotionInfo: {
+          header: {
+            presellDeposit: {},
+          },
+        },
+      };
+
+      const state = produce(model);
+
+      state.enter('level1');
+      const promotionInfo = state.peek(['promotionInfo']);
+      const promotionInfoTracker = promotionInfo.getTracker();
+      promotionInfoTracker.setContext('level1');
+      const header = promotionInfo.header;
+
+      state.enter('level2');
+      expect(header.presellDeposit).toEqual({});
+
+      state.leave();
+
+      state.leave();
+
+      state.relink(['promotionInfo'], {
+        header: {
+          presellDeposit: {
+            deposit: 2,
+            deduction: 3,
+          },
+        },
+      });
+
+      state.enter('level2');
+      const presellDeposit = header.presellDeposit;
+      expect(presellDeposit.deposit).toEqual(2);
+      expect(presellDeposit.deduction).toEqual(3);
+      state.leave();
+    });
+  });
+
+  describe(decorateDesc('test backward access'), () => {
+    it('Basically, access an outer variable will not trigger backward access.', () => {
+      const model = {
+        promotionInfo: {
+          header: {
+            presellDeposit: {},
+            price: 3,
+            selected: false,
+          },
+        },
+      };
+
+      const state = produce(model);
+
+      state.strictEnter('level1');
+      const promotionInfo = state.peek(['promotionInfo']);
+      const header = promotionInfo.header;
+      expect(promotionInfo.getTracker().getBackwardAccessCount()).toBe(0);
+      state.strictEnter('level2');
+      expect(header.price).toBe(3);
+      expect(promotionInfo.getTracker().getBackwardAccessCount()).toBe(0);
+      state.leave();
+      state.leave();
+    });
+
+    it('relink will make backward access start', () => {
+      const model = {
+        promotionInfo: {
+          header: {
+            presellDeposit: {},
+            price: 3,
+            selected: false,
+          },
+        },
+      };
+
+      const state = produce(model);
+
+      state.strictEnter('level1');
+      const promotionInfo = state.peek(['promotionInfo']);
+      const header = promotionInfo.header;
+      expect(promotionInfo.getTracker().getBackwardAccessCount()).toBe(0);
+      state.strictEnter('level2');
+      expect(header.price).toBe(3);
+      expect(promotionInfo.getTracker().getBackwardAccessCount()).toBe(0);
+      state.leave();
+      state.leave();
+
+      state.relink(['promotionInfo'], {
+        header: {
+          presellDeposit: {
+            deposit: 2,
+            deduction: 3,
+          },
+          price: 6,
+          selected: true,
+        },
+      });
+
+      state.strictEnter('level2');
+      expect(promotionInfo.getTracker().getBackwardAccessCount()).toBe(0);
+      expect(header.price).toBe(6);
+      expect(promotionInfo.getTracker().getBackwardAccessCount()).toBe(1);
+    });
+
+    it('Destructor an object will trigger an backward access', () => {
+      const model = {
+        promotionInfo: {
+          header: {
+            presellDeposit: {},
+            price: 3,
+            selected: false,
+          },
+        },
+      };
+
+      const state = produce(model);
+
+      state.strictEnter('level1');
+      const promotionInfo = state.peek(['promotionInfo']);
+      const header = promotionInfo.header;
+      expect(promotionInfo.getTracker().getBackwardAccessCount()).toBe(0);
+      state.leave();
+
+      state.relink(['promotionInfo'], {
+        header: {
+          presellDeposit: {
+            deposit: 2,
+            deduction: 3,
+          },
+          price: 6,
+          selected: true,
+        },
+      });
+
+      state.strictEnter('level2');
+      expect(promotionInfo.getTracker().getBackwardAccessCount()).toBe(0);
+      expect(header.presellDeposit.deposit).toBe(2);
+      expect(promotionInfo.getTracker().getBackwardAccessCount()).toBe(1);
+      const { presellDeposit, price, selected } = header;
+      expect(presellDeposit).toEqual({ deposit: 2, deduction: 3 });
+      expect(price).toBe(6);
+      expect(selected).toBe(true);
+      expect(promotionInfo.getTracker().getBackwardAccessCount()).toBe(4);
+      expect(presellDeposit.deposit).toBe(2);
+      expect(promotionInfo.getTracker().getBackwardAccessCount()).toBe(4);
+    });
+
+    it('mask is used to optimize backward access times', () => {
+      const model = {
+        promotionInfo: {
+          header: {
+            presellDeposit: {},
+            price: 3,
+            selected: false,
+          },
+        },
+      };
+
+      const state = produce(model);
+
+      state.enter('level1');
+      const promotionInfo = state.peek(['promotionInfo']);
+      const header = promotionInfo.header;
+      expect(promotionInfo.getTracker().getBackwardAccessCount()).toBe(0);
+      state.leave();
+
+      state.relink(['promotionInfo'], {
+        header: {
+          presellDeposit: {
+            deposit: 2,
+            deduction: 3,
+          },
+          price: 6,
+          selected: true,
+        },
+      });
+
+      state.enter('level2');
+      expect(promotionInfo.getTracker().getBackwardAccessCount()).toBe(0);
+      expect(header.presellDeposit.deposit).toBe(2);
+      expect(promotionInfo.getTracker().getBackwardAccessCount()).toBe(1);
+      const { presellDeposit, price, selected } = header;
+      expect(presellDeposit).toEqual({ deposit: 2, deduction: 3 });
+      expect(price).toBe(6);
+      expect(selected).toBe(true);
+      expect(promotionInfo.getTracker().getBackwardAccessCount()).toBe(4);
+
+      expect(presellDeposit.deposit).toBe(2);
+      expect(promotionInfo.getTracker().getBackwardAccessCount()).toBe(4);
+      expect(header.getTracker().getBackwardAccessCount()).toBe(4);
+      expect(presellDeposit.deduction).toBe(3);
+      expect(header.getTracker().getBackwardAccessCount()).toBe(4);
     });
   });
 }

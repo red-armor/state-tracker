@@ -2,3 +2,6 @@
 .DS_Store
 node_modules
 dist
+
+# Coverage directory used by tools like istanbul
+coverage

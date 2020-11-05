@@ -13,9 +13,16 @@ export interface ProduceOptions {
   mayReusedTracker: null | StateTrackerInterface;
   context?: string;
   focusKey: string | null;
+  mask?: string;
+  isDraft?: boolean;
 }
 
 export type Produce = (
   state: ProduceState,
   options?: ProduceOptions
 ) => IStateTracker;
+
+export type RelinkValue = {
+  path: Array<string>;
+  value: any;
+};

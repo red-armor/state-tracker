@@ -1,5 +1,5 @@
 import { isObject } from './commons';
-import { ChildProxies, Base, IndexType } from './types';
+import { ChildProxies, Base, IndexType, FocusKeyToTrackerMap } from './types';
 
 function internal() {}
 const proto = internal.prototype;
@@ -21,6 +21,15 @@ proto.getUpdateTimes = function() {
 proto.incrementUpdateTimes = function() {
   this._updateTimes += 1;
   return this._updateTimes;
+};
+
+proto.getBackwardAccessCount = function() {
+  return this._backwardAccessCount;
+};
+
+proto.incrementBackwardAccessCount = function() {
+  this._backwardAccessCount += 1;
+  return this._backwardAccessCount;
 };
 
 proto.setContext = function(context: string) {
@@ -77,6 +86,14 @@ proto.setChildProxies = function(value: ChildProxies) {
   this._childProxies = value;
 };
 
+proto.setFocusKeyToTrackerMap = function(value: FocusKeyToTrackerMap) {
+  this._focusKeyToTrackerMap = value;
+};
+
+proto.getFocusKeyToTrackerMap = function(): FocusKeyToTrackerMap {
+  return this._focusKeyToTrackerMap;
+};
+
 proto.getPeeking = function(): boolean {
   return this._isPeeking;
 };
@@ -113,12 +130,24 @@ proto.setTime = function(time: number) {
   this._lastUpdateAt = time;
 };
 
+proto.getMask = function(): string {
+  return this._mask;
+};
+
+proto.setMask = function(value: string) {
+  this._mask = value;
+};
+
 proto.getFocusKey = function(): string {
   return this._focusKey;
 };
 
 proto.setFocusKey = function(key: string) {
   this._focusKey = key;
+};
+
+proto.getType = function() {
+  return this._type;
 };
 
 export default internal;

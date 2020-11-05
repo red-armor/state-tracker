@@ -1,6 +1,9 @@
 import { Type } from './';
-import { TRACKER } from '../commons';
+import { TRACKER, PATH_TRACKER } from '../commons';
 import StateTrackerContext from '../StateTrackerContext';
+// import ChildProxy from '../ChildProxy';
+import { RelinkValue } from './produce';
+import PathTracker from '../PathTracker';
 
 export interface ProxyStateTrackerConfig {
   accessPath?: Array<string>;
@@ -11,6 +14,14 @@ export interface ProxyStateTrackerConfig {
 export interface ChildProxies {
   [key: string]: IStateTracker;
 }
+
+export interface FocusKeyToTrackerMap {
+  [key: string]: IStateTracker;
+}
+
+// export interface SubProxies {
+//   [key: string]: ChildProxy;
+// }
 
 export interface Base {
   [key: string]: any;
@@ -26,6 +37,7 @@ export interface StateTrackerConstructorProps {
   context: string;
   lastUpdateAt: number;
   focusKey: string | null;
+  mask: string;
 }
 
 export interface StateTrackerProperties {
@@ -37,13 +49,16 @@ export interface StateTrackerProperties {
   _shadowBase: Base;
   _parentProxy: IStateTracker;
   _childProxies: ChildProxies;
+  _focusKeyToTrackerMap: FocusKeyToTrackerMap;
   _isPeeking: boolean;
   _isStrictPeeking: boolean;
   _updateTimes: number;
+  _backwardAccessCount: number;
   _context: string;
   _lastUpdateAt: number;
   _stateTrackerContext: StateTrackerContext;
   _focusKey: string | null;
+  _mask: string;
 }
 
 export type StateTrackerFunctions = {
@@ -61,6 +76,8 @@ export type StateTrackerFunctions = {
   getParentProxy(): IStateTracker;
   getChildProxies(): ChildProxies;
   setChildProxies(value: ChildProxies): void;
+  getFocusKeyToTrackerMap(): FocusKeyToTrackerMap;
+  setFocusKeyToTrackerMap(value: FocusKeyToTrackerMap): void;
   getPeeking(): boolean;
   setPeeking(falsy: boolean): void;
   getStrictPeeking(): boolean;
@@ -70,10 +87,15 @@ export type StateTrackerFunctions = {
   getStateTrackerContext(): StateTrackerContext;
   getTime(): number;
   setTime(time: number): void;
+  getBackwardAccessCount(): number;
+  incrementBackwardAccessCount(): number;
+  getMask(): string;
+  setMask(value: string): void;
   getFocusKey(): string | null;
   setFocusKey(key: string): void;
   getUpdateTimes(): number;
   incrementUpdateTimes(): number;
+  getType(): string;
 };
 
 export type StateTrackerInterface = StateTrackerProperties &
@@ -90,10 +112,13 @@ export interface StateTrackerConstructor {
 
 export interface IStateTracker {
   [TRACKER]: StateTrackerInterface;
+  [PATH_TRACKER]: PathTracker;
 
   enter(context?: string): void;
+  strictEnter(context?: string): void;
   leave(): void;
   relink(path: Array<String>, value: any): void;
+  batchRelink(values: Array<RelinkValue>): IStateTracker;
   unlink(): any;
   hydrate(path: Array<String>, value: any): void;
   getContext(): StateTrackerContext;

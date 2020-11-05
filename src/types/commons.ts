@@ -4,3 +4,7 @@ export enum Type {
 }
 
 export type IndexType = string | number;
+
+export interface SeenKeys {
+  [key: string]: boolean;
+}

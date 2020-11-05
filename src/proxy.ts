@@ -2,17 +2,27 @@ import invariant from 'invariant';
 import {
   peek,
   TRACKER,
+  PATH_TRACKER,
+  isObject,
   isTrackable,
   isTypeEqual,
   createHiddenProperty,
-  generateTrackerMapKey,
+  generateRandomKey,
+  generateRandomContextKey,
+  // generateRandomFocusKey,
+  arrayProtoOwnKeys,
+  objectProtoOwnKeys,
+  Type,
+  DEFAULT_MASK,
 } from './commons';
 import StateTracker from './StateTracker';
+import PathTracker from './PathTracker';
 import {
   IStateTracker,
   ProduceOptions,
   ProduceState,
   StateTrackerInterface,
+  RelinkValue,
 } from './types';
 import StateTrackerContext from './StateTrackerContext';
 
@@ -25,13 +35,16 @@ function produce(state: ProduceState, options?: ProduceOptions): IStateTracker {
     mayReusedTracker,
     context = '',
     focusKey = null,
+    mask = DEFAULT_MASK,
   } = options || {};
 
   const trackerContext = stateTrackerContext || new StateTrackerContext();
 
   const internalKeys = [
     TRACKER,
+    PATH_TRACKER,
     'enter',
+    'strictEnter',
     'leave',
     'getContext',
     'relink',
@@ -48,8 +61,20 @@ function produce(state: ProduceState, options?: ProduceOptions): IStateTracker {
           return Reflect.get(target, prop, receiver);
         if (typeof prop === 'symbol')
           return Reflect.get(target, prop, receiver);
-
         let tracker = Reflect.get(target, TRACKER) as StateTrackerInterface;
+        let pathTracker = Reflect.get(target, PATH_TRACKER);
+        const targetType = tracker.getType();
+
+        switch (targetType) {
+          case Type.Array:
+            if (prop !== 'length' && ~arrayProtoOwnKeys().indexOf(prop))
+              return Reflect.get(target, prop, receiver);
+            break;
+          case Type.Object:
+            if (~objectProtoOwnKeys().indexOf(prop))
+              return Reflect.get(target, prop, receiver);
+            break;
+        }
 
         if (tracker.getStrictPeeking())
           return Reflect.get(target, prop, receiver);
@@ -59,9 +84,12 @@ function produce(state: ProduceState, options?: ProduceOptions): IStateTracker {
         // value here...
         let base = tracker.getBase();
         const childProxies = tracker.getChildProxies();
-        const accessPath = tracker.getAccessPath();
+        const focusKeyToTrackerMap = tracker.getFocusKeyToTrackerMap();
+        const accessPath = pathTracker.getPath();
         const nextAccessPath = accessPath.concat(prop as string);
         const isPeeking = tracker.getPeeking();
+        let trackerMask = tracker.getMask();
+        let retryProxy = null;
 
         if (!isPeeking) {
           if (trackerContext.getCurrent()) {
@@ -74,23 +102,29 @@ function produce(state: ProduceState, options?: ProduceOptions): IStateTracker {
             const internalContext = tracker.getContext();
 
             if (context !== internalContext) {
-              let _proxy = target;
+              const _proxy = target;
               let pathCopy = accessPath.slice();
               let retryPaths: Array<string> = [];
-              let retryProxy = null;
+              const contextMask = trackerContext.getMask();
+              let _proxyTracker = _proxy.getTracker();
+
               while (
-                _proxy[TRACKER].getParentProxy() &&
-                _proxy[TRACKER].getTime() < trackerContext.getTime()
+                _proxyTracker.getParentProxy() &&
+                _proxyTracker.getMask() !== contextMask
               ) {
-                retryProxy = _proxy[TRACKER].getParentProxy();
+                retryProxy = _proxyTracker.getParentProxy();
+                _proxyTracker.incrementBackwardAccessCount();
                 const pop = pathCopy.pop();
                 if (typeof pop !== 'undefined') retryPaths.unshift(pop);
 
-                _proxy[TRACKER].setTime(trackerContext.getTime());
-                _proxy = _proxy[TRACKER].getParentProxy();
+                // _proxy[TRACKER].setMask(contextMask);
+                _proxyTracker = _proxyTracker.getParentProxy().getTracker();
               }
 
               if (retryProxy) {
+                // refer to test case:
+                //   Mask should be setting if retryProxy exist, it could prevent next fetch from retry again
+                trackerMask = contextMask;
                 tracker = peek(retryProxy, retryPaths)[TRACKER];
                 base = tracker.getBase();
               }
@@ -99,13 +133,27 @@ function produce(state: ProduceState, options?: ProduceOptions): IStateTracker {
         }
 
         let value;
-        let baseTracker;
-        if (typeof (baseTracker = base.getTracker()) !== 'undefined') {
+        // for rebase value, if base value change, the childProxy should be replaced
+        let childProxyTracker = null;
+        const childProxy = childProxies[prop as string];
+
+        if (isObject(base) && base.getTracker) {
+          const baseTracker = base.getTracker();
           baseTracker.setStrictPeeking(true);
           value = base[prop];
           baseTracker.setStrictPeeking(false);
+          // childProxyTracker = baseTracker;
         } else {
           value = base[prop];
+        }
+
+        // refer to test case:
+        //   If retryProxy exist, childProxies[prop] base should be update
+        if (retryProxy) {
+          if (childProxies[prop]) {
+            // TODO: will cause basic example render list failed.
+            childProxies[prop].getTracker().setBase(value);
+          }
         }
 
         if (!isTrackable(value)) {
@@ -119,68 +167,33 @@ function produce(state: ProduceState, options?: ProduceOptions): IStateTracker {
               delete childProxies[prop as string];
           }
           return value;
-        }
-        const childProxy = childProxies[prop as string];
-
-        // for rebase value, if base value change, the childProxy should be replaced
-        let childProxyTracker = null;
-
-        if (childProxy) {
+        } else if (!childProxyTracker && childProxy) {
           childProxyTracker = childProxy[TRACKER];
           const childProxyBase = childProxyTracker.getBase();
-          if (childProxyBase === value) {
+          if (
+            childProxyBase === value ||
+            (isObject(value) &&
+              value.getTracker &&
+              childProxyBase === value.getTracker().getBase())
+          ) {
             if (tracker._context)
               childProxyTracker.setContext(tracker._context);
+            childProxy.getTracker().setMask(trackerMask);
             return childProxy;
           }
         }
 
-        /**
-         * To reuse already created proxy object as possible.
-         * On swap condition, it may has not value
-         */
-        if (typeof value[TRACKER] !== 'undefined') {
-          const focusKey = value[TRACKER].getFocusKey();
-          let candidateProxy = null;
-          let matched = '';
-
-          if (childProxies[focusKey]) {
-            if (childProxies[focusKey][TRACKER].getBase() === value) {
-              candidateProxy = childProxies[focusKey];
-              matched = focusKey;
-            }
-          }
-
-          if (!candidateProxy) {
-            const keys = Object.keys(childProxies);
-            let i = 0;
-            for (i; i < keys.length; i++) {
-              if (value === childProxies[keys[i]][TRACKER].getBase()) {
-                candidateProxy = childProxies[keys[i]];
-                matched = keys[i];
-                break;
-              }
-            }
-          }
-
-          const mapKey = generateTrackerMapKey(nextAccessPath);
-          const candidateTracker = trackerContext.getTracker(mapKey);
-
-          if (candidateTracker && candidateProxy) {
-            childProxies[prop as string] = candidateProxy;
-            candidateProxy[TRACKER] = candidateTracker;
-            candidateProxy[TRACKER].setBase(value);
-            candidateTracker.setFocusKey(prop as string);
-            /**
-             * pay attention, TRACKER should not be shared...
-             * Reason to delete, remove -> append which may cause data conflict..
-             */
-            delete childProxies[matched];
-            return childProxies[prop as string];
+        if (isObject(value) && value.getTracker) {
+          const focusKey = value.getTracker().getFocusKey();
+          if (focusKeyToTrackerMap[focusKey]) {
+            childProxyTracker = focusKeyToTrackerMap[focusKey].getTracker();
           }
         }
 
-        childProxies[prop as string] = produce(
+        const focusKey = `focus_${prop}`;
+        // const focusKey = generateRandomFocusKey();
+
+        const producedChildProxy = produce(
           // only new value should create new proxy object..
           // Array.isArray(value) ? value.slice() : { ...value },
           value,
@@ -191,11 +204,15 @@ function produce(state: ProduceState, options?: ProduceOptions): IStateTracker {
             mayReusedTracker: childProxyTracker,
             stateTrackerContext: trackerContext,
             context: tracker._context,
-            focusKey: prop as string,
+            focusKey,
+            mask: trackerMask,
           }
         );
 
-        return childProxies[prop as string];
+        childProxies[prop as string] = producedChildProxy;
+        focusKeyToTrackerMap[focusKey] = producedChildProxy;
+
+        return producedChildProxy;
       } catch (err) {
         console.log('[state-tracker] ', err);
       }
@@ -223,20 +240,27 @@ function produce(state: ProduceState, options?: ProduceOptions): IStateTracker {
     },
   };
 
-  // Tracker is just like an assistant, it could be reused.
-  // However, Tracker node should be created as a new now after call of enter context.
-  if (mayReusedTracker) {
-    // baseValue should be update on each time or `childProxyBase === value` will
-    // be always false.
-    mayReusedTracker.update(state);
+  // // Tracker is just like an assistant, it could be reused.
+  // // However, Tracker node should be created as a new now after call of enter context.
+  // if (mayReusedTracker) {
+  //   // baseValue should be update on each time or `childProxyBase === value` will
+  //   // be always false.
+  //   mayReusedTracker.update(state);
+  // }
+
+  let nextState = state;
+
+  if (state.getTracker) {
+    nextState = state.getTracker().getBase();
   }
 
-  const mapKey = generateTrackerMapKey(accessPath);
+  let tracker: StateTrackerInterface;
 
-  const tracker =
-    mayReusedTracker ||
-    new StateTracker({
-      base: state,
+  if (mayReusedTracker && nextState === mayReusedTracker.getBase()) {
+    tracker = mayReusedTracker;
+  } else {
+    tracker = new StateTracker({
+      base: nextState,
       parentProxy,
       accessPath,
       rootPath,
@@ -244,17 +268,34 @@ function produce(state: ProduceState, options?: ProduceOptions): IStateTracker {
       context,
       lastUpdateAt: Date.now(),
       focusKey,
+      mask,
     });
-  trackerContext.setTracker(mapKey, tracker);
+    if (mayReusedTracker) {
+      tracker.setChildProxies(mayReusedTracker.getChildProxies());
+      tracker.setFocusKeyToTrackerMap(
+        mayReusedTracker.getFocusKeyToTrackerMap()
+      );
+    }
+  }
 
-  const proxy = new Proxy(state, handler);
+  const pathTracker = new PathTracker({
+    path: accessPath,
+  });
+  const proxy = new Proxy(nextState, handler) as IStateTracker;
 
   // TODO: Cannot add property x, object is not extensible
   // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Errors/Cant_define_property_object_not_extensible
   // if property value is not extensible, it will cause error. such as a ref value..
   createHiddenProperty(proxy, TRACKER, tracker);
+  createHiddenProperty(proxy, PATH_TRACKER, pathTracker);
   createHiddenProperty(proxy, 'enter', function(mark: string) {
-    trackerContext.enter(mark);
+    const contextKey = mark || generateRandomContextKey();
+    trackerContext.enter(contextKey);
+  });
+  createHiddenProperty(proxy, 'strictEnter', function(mark: string) {
+    const contextKey = mark || generateRandomContextKey();
+    trackerContext.enter(contextKey);
+    tracker.setContext(contextKey);
   });
   createHiddenProperty(proxy, 'leave', function() {
     trackerContext.leave();
@@ -266,16 +307,69 @@ function produce(state: ProduceState, options?: ProduceOptions): IStateTracker {
     this: IStateTracker,
     path: Array<string>,
     value: any
+    // proxyState?: IStateTracker
   ) {
+    const tracker = this[TRACKER];
+    const stateContext = tracker._stateTrackerContext;
+    stateContext.setMask(generateRandomKey());
+    stateContext.updateTime();
     const copy = path.slice();
     const last = copy.pop();
     const front = copy;
     const parentState = peek(this, front);
     parentState[last!] = value;
-    const tracker = this[TRACKER];
-    const stateContext = tracker._stateTrackerContext;
-    stateContext.updateTime();
   });
+
+  createHiddenProperty(proxy, 'batchRelink', function(
+    this: IStateTracker,
+    values: Array<RelinkValue>
+  ) {
+    const tracker = this[TRACKER];
+    const pathTracker = this[PATH_TRACKER];
+    const baseValue = Object.assign({}, tracker.getBase());
+    const stackerTrackerContext = new StateTrackerContext();
+
+    // should create a new object....
+    const newTracker = new StateTracker({
+      base: baseValue,
+      parentProxy: tracker.getParentProxy(),
+      accessPath: pathTracker.getPath(),
+      rootPath: tracker.getRootPath(),
+      stateTrackerContext: stackerTrackerContext,
+      context: tracker.getContext(),
+      lastUpdateAt: Date.now(),
+      focusKey: null,
+      mask: DEFAULT_MASK,
+    });
+
+    const proxyStateCopy = produce(
+      { ...baseValue },
+      {
+        // parentProxy: null,
+        accessPath: [],
+        rootPath: [],
+        stateTrackerContext: stackerTrackerContext,
+        mayReusedTracker: newTracker,
+        context: tracker.getContext(),
+        focusKey: null,
+        isDraft: true,
+      }
+    );
+
+    const childProxies = Object.assign({}, tracker.getChildProxies());
+
+    values.forEach(({ path, value }) => {
+      this.relink(path, value);
+
+      // unchanged object's proxy object will be preserved.
+      delete childProxies[path[0]];
+    });
+
+    newTracker.setChildProxies(childProxies);
+
+    return proxyStateCopy;
+  });
+
   createHiddenProperty(proxy, 'unlink', function(this: IStateTracker) {
     const tracker = this[TRACKER];
     return tracker.getBase();

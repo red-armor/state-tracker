@@ -1,5 +1,6 @@
-import { IStateTracker } from './types';
+import { IStateTracker, SeenKeys } from './types';
 
+export const DEFAULT_MASK = '__mask_$$';
 const toString = Function.call.bind<Function>(Object.prototype.toString);
 const ownKeys = (o: any) =>
   typeof Reflect !== 'undefined' && Reflect.ownKeys
@@ -10,12 +11,18 @@ const ownKeys = (o: any) =>
       )
     : Object.getOwnPropertyNames(o);
 
+export const arrayProtoOwnKeys = () => ownKeys(Object.getPrototypeOf([]));
+export const objectProtoOwnKeys = () => ownKeys(Object.getPrototypeOf({}));
+
 export const emptyFunction = () => {};
 export const isObject = (o: any) => o ? (typeof o === 'object' || typeof o === 'function') : false // eslint-disable-line
 export const hasSymbol = typeof Symbol !== 'undefined';
 export const TRACKER: unique symbol = hasSymbol
   ? Symbol.for('tracker')
   : ('__tracker__' as any);
+export const PATH_TRACKER: unique symbol = hasSymbol
+  ? Symbol.for('path_tracker')
+  : ('__path_tracker__' as any);
 
 export const canIUseProxy = () => {
   try {
@@ -119,3 +126,22 @@ export const peek = (proxyState: IStateTracker, accessPath: Array<string>) => {
     return nextProxy;
   }, proxyState);
 };
+
+const seenKeys: SeenKeys = {};
+const MULTIPLIER = Math.pow(2, 24) // eslint-disable-line
+
+export const generateRandomKey = (prefix = '') => {
+  let key;
+
+  while (key === undefined || seenKeys.hasOwnProperty(key) || !isNaN(+key)) { // eslint-disable-line
+    key = Math.floor(Math.random() * MULTIPLIER).toString(32);
+  }
+
+  const nextKey = `${prefix}${key}`;
+
+  seenKeys[nextKey] = true;
+  return nextKey;
+};
+
+export const generateRandomContextKey = () => generateRandomKey('__context_');
+export const generateRandomFocusKey = () => generateRandomKey('__focus_');
