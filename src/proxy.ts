@@ -37,6 +37,7 @@ function produce(state: ProduceState, options?: ProduceOptions): IStateTracker {
     focusKey = null,
     mask = DEFAULT_MASK,
   } = options || {};
+  const outerAccessPath = accessPath;
 
   const trackerContext = stateTrackerContext || new StateTrackerContext();
 
@@ -62,7 +63,7 @@ function produce(state: ProduceState, options?: ProduceOptions): IStateTracker {
         if (typeof prop === 'symbol')
           return Reflect.get(target, prop, receiver);
         let tracker = Reflect.get(target, TRACKER) as StateTrackerInterface;
-        let pathTracker = Reflect.get(target, PATH_TRACKER);
+        // let pathTracker = Reflect.get(target, PATH_TRACKER);
         const targetType = tracker.getType();
 
         switch (targetType) {
@@ -85,7 +86,7 @@ function produce(state: ProduceState, options?: ProduceOptions): IStateTracker {
         let base = tracker.getBase();
         const childProxies = tracker.getChildProxies();
         const focusKeyToTrackerMap = tracker.getFocusKeyToTrackerMap();
-        const accessPath = pathTracker.getPath();
+        // const accessPath = pathTracker.getPath();
         const nextAccessPath = accessPath.concat(prop as string);
         const isPeeking = tracker.getPeeking();
         let trackerMask = tracker.getMask();
@@ -93,7 +94,9 @@ function produce(state: ProduceState, options?: ProduceOptions): IStateTracker {
 
         if (!isPeeking) {
           if (trackerContext.getCurrent()) {
-            trackerContext.getCurrent().reportPaths(nextAccessPath);
+            trackerContext
+              .getCurrent()
+              .reportPaths(outerAccessPath.concat(prop as string));
           }
 
           if (trackerContext.getCurrent()) {
