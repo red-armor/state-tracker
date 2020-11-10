@@ -1,8 +1,10 @@
 import produce from '../dist/state-tracker.cjs.production.min'
 import immerProduce from 'immer'
 import cloneDeep from 'lodash.clonedeep'
+import { performance } from 'perf_hooks';
 
 let nextId = 1;
+let diff = 0
 
 function buildData(count) {
   const data = new Array(count);
@@ -36,9 +38,20 @@ measureAccess('state-tracker map', (state) => {
 
   // console.log('proxy ', proxyState)
 
+  const perf1 = performance.now()
+
   proxyState.data.map(item => {
-    return { ...item }
+    const start = performance.now()
+    // const result = { ...item }
+    const result = item
+    const end = performance.now()
+    diff += end - start
+    return result
   })
+
+  console.log('diff in data ', diff)
+  const perf2 = performance.now()
+  console.log('diff in perf ', perf2 - perf1)
 })
 
 measureAccess('immer map', (state) => {
