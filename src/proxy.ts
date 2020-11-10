@@ -25,6 +25,14 @@ import {
   RelinkValue,
 } from './types';
 import StateTrackerContext from './StateTrackerContext';
+import { performance } from 'perf_hooks';
+
+let diff = 0;
+let secondDiff = 0;
+let thirdDiff = 0;
+let forth = 0;
+let fifthDiff = 0;
+let count = 0;
 
 function produce(state: ProduceState, options?: ProduceOptions): IStateTracker {
   const {
@@ -57,6 +65,8 @@ function produce(state: ProduceState, options?: ProduceOptions): IStateTracker {
 
   const handler = {
     get: (target: IStateTracker, prop: PropertyKey, receiver: any) => {
+      const start = performance.now();
+      // console.log('prop ', prop)
       try {
         if (internalKeys.indexOf(prop as string | symbol) !== -1)
           return Reflect.get(target, prop, receiver);
@@ -196,6 +206,14 @@ function produce(state: ProduceState, options?: ProduceOptions): IStateTracker {
         const focusKey = `focus_${prop}`;
         // const focusKey = generateRandomFocusKey();
 
+        const end = performance.now();
+
+        secondDiff += end - start;
+
+        if (count > 9998) console.log('second ', secondDiff);
+
+        const fifthStart = performance.now();
+
         const producedChildProxy = produce(
           // only new value should create new proxy object..
           // Array.isArray(value) ? value.slice() : { ...value },
@@ -214,6 +232,10 @@ function produce(state: ProduceState, options?: ProduceOptions): IStateTracker {
 
         childProxies[prop as string] = producedChildProxy;
         focusKeyToTrackerMap[focusKey] = producedChildProxy;
+
+        const fifthEnd = performance.now();
+        fifthDiff += fifthEnd - fifthStart;
+        if (count > 9998) console.log('fifth ', fifthDiff);
 
         return producedChildProxy;
       } catch (err) {
@@ -262,6 +284,7 @@ function produce(state: ProduceState, options?: ProduceOptions): IStateTracker {
   if (mayReusedTracker && nextState === mayReusedTracker.getBase()) {
     tracker = mayReusedTracker;
   } else {
+    const start = performance.now();
     tracker = new StateTracker({
       base: nextState,
       parentProxy,
@@ -273,6 +296,14 @@ function produce(state: ProduceState, options?: ProduceOptions): IStateTracker {
       focusKey,
       mask,
     });
+
+    const end = performance.now();
+
+    diff += end - start;
+    count++;
+
+    if (count > 9998) console.log('diff ', diff);
+
     if (mayReusedTracker) {
       tracker.setChildProxies(mayReusedTracker.getChildProxies());
       tracker.setFocusKeyToTrackerMap(
@@ -281,10 +312,19 @@ function produce(state: ProduceState, options?: ProduceOptions): IStateTracker {
     }
   }
 
+  const forthStart = performance.now();
+
   const pathTracker = new PathTracker({
     path: accessPath,
   });
   const proxy = new Proxy(nextState, handler) as IStateTracker;
+  const forthEnd = performance.now();
+
+  forth += forthEnd - forthStart;
+
+  if (count > 9998) console.log('forth ', forth);
+
+  const thirdStart = performance.now();
 
   // TODO: Cannot add property x, object is not extensible
   // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Errors/Cant_define_property_object_not_extensible
@@ -405,6 +445,11 @@ function produce(state: ProduceState, options?: ProduceOptions): IStateTracker {
     parentState[last!] = value;
     parentTracker.setPeeking(false);
   });
+
+  const thirdEnd = performance.now();
+  thirdDiff += thirdEnd - thirdStart;
+
+  if (count > 9998) console.log('third ', thirdDiff);
 
   return proxy as IStateTracker;
 }

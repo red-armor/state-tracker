@@ -25,18 +25,16 @@ function measureAccess(name, fn) {
   console.log(`${name}: `, end - start)
 }
 
-measureAccess('plain object map', (state) => {
-  state.data.map(item => ({
-    ...item
-  }))
-})
+// measureAccess('plain object map', (state) => {
+//   state.data.map(item => ({
+//     ...item
+//   }))
+// })
 
 measureAccess('state-tracker map', (state) => {
-  const a = Date.now()
   const proxyState = produce(state)
-  const b = Date.now()
 
-  console.log('first ', b - a)
+  // console.log('proxy ', proxyState)
 
   proxyState.data.map(item => {
     return { ...item }
@@ -47,53 +45,55 @@ measureAccess('immer map', (state) => {
   const proxyState = immerProduce(state, draft => draft.data.map(item => ({
     ...item
   })))
+
+  // console.log('proxy ', proxyState)
   proxyState.map(item => ({
     ...item
   }))
 })
 
-measureAccess('plain object remove', (state) => {
-  state.data.map(item => ({
-    ...item
-  }))
+// measureAccess('plain object remove', (state) => {
+//   state.data.map(item => ({
+//     ...item
+//   }))
 
-  const slice = [...state.data]
-  slice.splice(20, 1)
-  for (let i = 20; i < slice.length; i++) {
-    ({ ...slice[i]})
-  }
-})
+//   const slice = [...state.data]
+//   slice.splice(20, 1)
+//   for (let i = 20; i < slice.length; i++) {
+//     ({ ...slice[i]})
+//   }
+// })
 
-measureAccess('state-tracker remove', (state) => {
-  const proxyState = produce(state)
+// measureAccess('state-tracker remove', (state) => {
+//   const proxyState = produce(state)
 
-  proxyState.data.map(item => ({
-    ...item
-  }))
+//   proxyState.data.map(item => ({
+//     ...item
+//   }))
 
-  const slice = [...proxyState.data]
-  slice.splice(20, 1)
+//   const slice = [...proxyState.data]
+//   slice.splice(20, 1)
 
-  proxyState.relink(['data', slice])
-  const data = proxyState.data
+//   proxyState.relink(['data', slice])
+//   const data = proxyState.data
 
-  for (let i = 20; i < slice.length; i++) {
-    ({ ...data[i] })
-  }
-})
+//   for (let i = 20; i < slice.length; i++) {
+//     ({ ...data[i] })
+//   }
+// })
 
-measureAccess('immer remove', (state) => {
-  const slice = immerProduce(state, draft => draft.data.map(item => ({
-    ...item
-  })))
-  for (let i = 0; i < slice.length; i++) {
-    ({ ...slice[i]})
-  }
-  const nextState = immerProduce(state, draft => {
-    draft.data.splice(20, 1)
-  })
+// measureAccess('immer remove', (state) => {
+//   const slice = immerProduce(state, draft => draft.data.map(item => ({
+//     ...item
+//   })))
+//   for (let i = 0; i < slice.length; i++) {
+//     ({ ...slice[i]})
+//   }
+//   const nextState = immerProduce(state, draft => {
+//     draft.data.splice(20, 1)
+//   })
 
-  for (let i = 20; i < nextState.length; i++) {
-    ({ ...nextState[i]})
-  }
-})
+//   for (let i = 20; i < nextState.length; i++) {
+//     ({ ...nextState[i]})
+//   }
+// })
