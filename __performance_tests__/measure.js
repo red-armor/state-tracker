@@ -40,12 +40,20 @@ measureAccess('state-tracker map', (state) => {
 
   const perf1 = performance.now()
 
-  proxyState.data.map(item => {
+  const data = proxyState.data
+  console.log('diff data ', performance.now() - perf1)
+
+  data.map((item, index) => {
     const start = performance.now()
-    // const result = { ...item }
-    const result = item
+    let result = { ...item }
+    // result = { ...item }
+    // result = { ...item }
+    // result = { ...item }
+
+    // const result = item
     const end = performance.now()
     diff += end - start
+    // console.log('index ', index, start)
     return result
   })
 
@@ -55,9 +63,16 @@ measureAccess('state-tracker map', (state) => {
 })
 
 measureAccess('immer map', (state) => {
-  const proxyState = immerProduce(state, draft => draft.data.map(item => ({
-    ...item
-  })))
+  const proxyState = immerProduce(state, draft => {
+    const start = performance.now()
+    const result = draft.data.map(item => ({
+      ...item
+    }))
+    const end = performance.now()
+
+    console.log('immer ', end - start)
+    return result
+  })
 
   // console.log('proxy ', proxyState)
   proxyState.map(item => ({
