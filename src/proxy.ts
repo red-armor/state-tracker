@@ -179,8 +179,8 @@ function produce(state: ProduceState, options?: ProduceOptions): IStateTracker {
               value.getTracker &&
               childProxyBase === value.getTracker().getBase())
           ) {
-            if (tracker._context)
-              childProxyTracker.setContext(tracker._context);
+            // if (tracker._context)
+            //   childProxyTracker.setContext(tracker._context);
             childProxy.getTracker().setMask(trackerMask);
             return childProxy;
           }
