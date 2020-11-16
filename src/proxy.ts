@@ -98,41 +98,6 @@ function produce(state: ProduceState, options?: ProduceOptions): IStateTracker {
               .getCurrent()
               .reportPaths(outerAccessPath.concat(prop as string));
           }
-
-          if (trackerContext.getCurrent()) {
-            const stateContextNode = trackerContext.getCurrent();
-            const { context } = stateContextNode;
-            const internalContext = tracker.getContext();
-
-            if (context !== internalContext) {
-              const _proxy = target;
-              let pathCopy = accessPath.slice();
-              let retryPaths: Array<string> = [];
-              const contextMask = trackerContext.getMask();
-              let _proxyTracker = _proxy.getTracker();
-
-              while (
-                _proxyTracker.getParentProxy() &&
-                _proxyTracker.getMask() !== contextMask
-              ) {
-                retryProxy = _proxyTracker.getParentProxy();
-                _proxyTracker.incrementBackwardAccessCount();
-                const pop = pathCopy.pop();
-                if (typeof pop !== 'undefined') retryPaths.unshift(pop);
-
-                // _proxy[TRACKER].setMask(contextMask);
-                _proxyTracker = _proxyTracker.getParentProxy().getTracker();
-              }
-
-              if (retryProxy) {
-                // refer to test case:
-                //   Mask should be setting if retryProxy exist, it could prevent next fetch from retry again
-                trackerMask = contextMask;
-                tracker = peek(retryProxy, retryPaths)[TRACKER];
-                base = tracker.getBase();
-              }
-            }
-          }
         }
 
         let value;
@@ -379,6 +344,9 @@ function produce(state: ProduceState, options?: ProduceOptions): IStateTracker {
   });
   createHiddenProperty(proxy, 'getTracker', function(this: IStateTracker) {
     return this[TRACKER];
+  });
+  createHiddenProperty(proxy, 'getPathTracker', function(this: IStateTracker) {
+    return this[PATH_TRACKER];
   });
   createHiddenProperty(proxy, 'peek', function(
     this: IStateTracker,
