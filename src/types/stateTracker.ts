@@ -47,7 +47,7 @@ export interface StateTrackerProperties {
   _type: Type.Array | Type.Object;
   _base: Base;
   _shadowBase: Base;
-  _parentProxy: IStateTracker;
+  _parentProxy: IStateTracker | null;
   _childProxies: ChildProxies;
   _focusKeyToTrackerMap: FocusKeyToTrackerMap;
   _isPeeking: boolean;

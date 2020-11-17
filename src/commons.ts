@@ -120,9 +120,9 @@ export const generateTrackerMapKey = (accessPath: Array<string>): string => {
 export const peek = (proxyState: IStateTracker, accessPath: Array<string>) => {
   return accessPath.reduce((nextProxyState, cur: string) => {
     const tracker = nextProxyState[TRACKER];
-    tracker.setPeeking(true);
+    tracker._isPeeking = true;
     const nextProxy = nextProxyState[cur];
-    tracker.setPeeking(false);
+    tracker._isPeeking = false;
     return nextProxy;
   }, proxyState);
 };

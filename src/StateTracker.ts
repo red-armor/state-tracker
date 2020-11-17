@@ -64,4 +64,42 @@ const StateTracker = (function(
 
 inherit(StateTracker, internal);
 
+const createPlainTrackerObject = function({
+  accessPath,
+  parentProxy,
+  rootPath,
+  base,
+  stateTrackerContext,
+  context,
+  lastUpdateAt,
+  focusKey,
+  shadowBase,
+  mask,
+}: StateTrackerConstructorProps) {
+  return {
+    _id: canIUseProxy()
+      ? `ProxyStateTracker_${count++}`
+      : `ES5StateTracker_${count++}`,
+    _useProxy: canIUseProxy(),
+    _updateTimes: 0,
+    _stateTrackerContext: stateTrackerContext,
+    _context: context,
+    _lastUpdateAt: lastUpdateAt,
+    _backwardAccessCount: 0,
+    _mask: mask,
+    _accessPath: accessPath,
+    _rootPath: rootPath,
+    _type: Array.isArray(base) ? Type.Array : Type.Object,
+    _base: base,
+    _parentProxy: parentProxy,
+    _childProxies: {},
+    _focusKeyToTrackerMap: {},
+    _focusKey: focusKey,
+    _isPeeking: false,
+    _isStrictPeeking: false,
+    _shadowBase: shadowBase,
+  };
+};
+
+export { createPlainTrackerObject };
 export default StateTracker;
