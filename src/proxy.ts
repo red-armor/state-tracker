@@ -8,7 +8,6 @@ import {
   arrayProtoOwnKeys,
   objectProtoOwnKeys,
   Type,
-  DEFAULT_MASK,
 } from './commons';
 import { createPlainTrackerObject } from './StateTracker';
 import PathTracker from './PathTracker';
@@ -30,9 +29,7 @@ function produce(
     rootPath = [],
     stateTrackerContext,
     mayReusedTracker,
-    context = '',
     focusKey = null,
-    mask = DEFAULT_MASK,
   } = options || {};
   const outerAccessPath = accessPath;
 
@@ -42,7 +39,6 @@ function produce(
     TRACKER,
     PATH_TRACKER,
     'enter',
-    'strictEnter',
     'leave',
     'getContext',
     'relink',
@@ -84,7 +80,6 @@ function produce(
         const focusKeyToTrackerMap = tracker._focusKeyToTrackerMap;
         const nextAccessPath = accessPath.concat(prop as string);
         const isPeeking = tracker._isPeeking;
-        let trackerMask = tracker._mask;
         let retryProxy = null;
 
         if (!isPeeking) {
@@ -141,7 +136,6 @@ function produce(
           ) {
             // if (tracker._context)
             //   childProxyTracker.setContext(tracker._context);
-            childProxy.getTracker()._mask = trackerMask;
             return childProxy;
           }
         }
@@ -166,9 +160,7 @@ function produce(
             rootPath,
             mayReusedTracker: childProxyTracker,
             stateTrackerContext: trackerContext,
-            context: tracker._context,
             focusKey,
-            mask: trackerMask,
           }
         );
 
@@ -228,10 +220,8 @@ function produce(
       accessPath,
       rootPath,
       stateTrackerContext: trackerContext,
-      context,
       lastUpdateAt: Date.now(),
       focusKey,
-      mask,
     });
     if (mayReusedTracker) {
       tracker._childProxies = mayReusedTracker._childProxies;

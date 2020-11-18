@@ -17,7 +17,6 @@ export interface ProduceProxyOptions {
   mayReusedTracker: null | StateTrackerProperties;
   context?: string;
   focusKey: string | null;
-  mask?: string;
   isDraft?: boolean;
 }
 
@@ -29,7 +28,6 @@ export interface ProduceOptions {
   mayReusedTracker: null | StateTrackerInterface;
   context?: string;
   focusKey: string | null;
-  mask?: string;
   isDraft?: boolean;
 }
 

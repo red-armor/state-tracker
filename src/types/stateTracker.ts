@@ -34,10 +34,8 @@ export interface StateTrackerConstructorProps {
   base: any;
   shadowBase?: any;
   stateTrackerContext: StateTrackerContext;
-  context: string;
   lastUpdateAt: number;
   focusKey: string | null;
-  mask: string;
 }
 
 export interface StateTrackerProperties {
@@ -54,11 +52,9 @@ export interface StateTrackerProperties {
   _isStrictPeeking: boolean;
   _updateTimes: number;
   _backwardAccessCount: number;
-  _context: string;
   _lastUpdateAt: number;
   _stateTrackerContext: StateTrackerContext;
   _focusKey: string | null;
-  _mask: string;
 }
 
 export type StateTrackerFunctions = {
@@ -89,8 +85,6 @@ export type StateTrackerFunctions = {
   setTime(time: number): void;
   getBackwardAccessCount(): number;
   incrementBackwardAccessCount(): number;
-  getMask(): string;
-  setMask(value: string): void;
   getFocusKey(): string | null;
   setFocusKey(key: string): void;
   getUpdateTimes(): number;
@@ -115,7 +109,6 @@ export interface IStateTracker {
   [PATH_TRACKER]: PathTracker;
 
   enter(context?: string): void;
-  strictEnter(context?: string): void;
   leave(): void;
   relink(path: Array<String>, value: any): void;
   batchRelink(values: Array<RelinkValue>): IStateTracker;

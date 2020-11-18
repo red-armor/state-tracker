@@ -1,13 +1,6 @@
-import {
-  peek,
-  PATH_TRACKER,
-  generateRandomKey,
-  generateRandomContextKey,
-  DEFAULT_MASK,
-} from './commons';
+import { peek, PATH_TRACKER, generateRandomContextKey } from './commons';
 import { IStateTracker, RelinkValue } from './types';
 import { createPlainTrackerObject } from './StateTracker';
-import StateTrackerContext from './StateTrackerContext';
 import { produce as ES6Produce } from './proxy';
 
 const StateTrackerUtil = {
@@ -21,19 +14,11 @@ const StateTrackerUtil = {
     }, proxyState);
   },
 
-  enter: function(proxy: IStateTracker, mark: string) {
+  enter: function(proxy: IStateTracker, mark?: string) {
     const tracker = proxy.getTracker();
     const contextKey = mark || generateRandomContextKey();
     const trackerContext = tracker._stateTrackerContext;
     trackerContext.enter(contextKey);
-  },
-
-  strictEnter: function(proxy: IStateTracker, mark: string) {
-    const tracker = proxy.getTracker();
-    const contextKey = mark || generateRandomContextKey();
-    const trackerContext = tracker._stateTrackerContext;
-    trackerContext.enter(contextKey);
-    tracker._context = contextKey;
   },
 
   leave: function(proxy: IStateTracker) {
@@ -50,7 +35,6 @@ const StateTrackerUtil = {
   relink: function(proxy: IStateTracker, path: Array<string>, value: any) {
     const tracker = proxy.getTracker();
     const stateContext = tracker._stateTrackerContext;
-    stateContext.setMask(generateRandomKey());
     stateContext.updateTime();
     const copy = path.slice();
     const last = copy.pop();
@@ -63,7 +47,7 @@ const StateTrackerUtil = {
     const tracker = proxy.getTracker();
     const pathTracker = proxy[PATH_TRACKER];
     const baseValue = Object.assign({}, tracker._base);
-    const stackerTrackerContext = new StateTrackerContext();
+    const stackerTrackerContext = tracker._stateTrackerContext;
 
     // should create a new object....
     const newTracker = createPlainTrackerObject({
@@ -72,10 +56,8 @@ const StateTrackerUtil = {
       accessPath: pathTracker.getPath(),
       rootPath: tracker._rootPath,
       stateTrackerContext: stackerTrackerContext,
-      context: tracker._context,
       lastUpdateAt: Date.now(),
       focusKey: null,
-      mask: DEFAULT_MASK,
     });
 
     const proxyStateCopy = ES6Produce(
@@ -86,7 +68,6 @@ const StateTrackerUtil = {
         rootPath: [],
         stateTrackerContext: stackerTrackerContext,
         mayReusedTracker: newTracker,
-        context: tracker._context,
         focusKey: null,
         isDraft: true,
       }
