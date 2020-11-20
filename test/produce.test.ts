@@ -1,10 +1,10 @@
 import { TRACKER } from '../src/commons';
-// import { produce as ES5Produce } from '../src/es5';
+import { produce as ES5Produce } from '../src/es5';
 import { produce as ES6Produce } from '../src/proxy';
 import StateTrackerUtil from '../src/StateTrackerUtil';
 
 testTracker(true);
-// testTracker(false);
+testTracker(false);
 
 const getTrackerId = (str: string): number => {
   const matched = str.match(/(\d*)$/);
@@ -13,8 +13,7 @@ const getTrackerId = (str: string): number => {
 };
 
 function testTracker(useProxy: boolean) {
-  const produce = ES6Produce;
-  // const produce = useProxy ? ES6Produce : ES5Produce;
+  const produce = useProxy ? ES6Produce : ES5Produce;
   const decorateDesc = (text: string) =>
     useProxy ? `proxy: ${text}` : `es5: ${text}`;
 
@@ -32,15 +31,27 @@ function testTracker(useProxy: boolean) {
       );
       const trackerNode = StateTrackerUtil.getContext(proxyState).getCurrent();
       const paths = trackerNode.getPaths();
-      expect(paths).toEqual([
-        ['a'],
-        ['a', 'a1'],
-        ['a', 'a1', 'length'],
-        ['a', 'a1', '0'],
-        ['a', 'a1', '0', 'value'],
-        ['a', 'a1', '1'],
-        ['a', 'a1', '1', 'value'],
-      ]);
+      if (useProxy) {
+        expect(paths).toEqual([
+          ['a'],
+          ['a', 'a1'],
+          ['a', 'a1', 'length'],
+          ['a', 'a1', '0'],
+          ['a', 'a1', '0', 'value'],
+          ['a', 'a1', '1'],
+          ['a', 'a1', '1', 'value'],
+        ]);
+      } else {
+        expect(paths).toEqual([
+          ['a'],
+          ['a', 'a1'],
+          ['a', 'a1', 'length'],
+          ['a', 'a1', 0],
+          ['a', 'a1', 0, 'value'],
+          ['a', 'a1', 1],
+          ['a', 'a1', 1, 'value'],
+        ]);
+      }
       StateTrackerUtil.leave(proxyState);
     });
 
@@ -151,7 +162,7 @@ function testTracker(useProxy: boolean) {
         c: 3,
       };
       const proxyState = produce(state);
-      const tracker = proxyState.getTracker();
+      const tracker = StateTrackerUtil.getTracker(proxyState);
 
       expect(proxyState.a).toEqual([2, 3, 4]);
       expect(proxyState.c).toEqual(3);
@@ -174,7 +185,7 @@ function testTracker(useProxy: boolean) {
         c: 3,
       };
       const proxyState = produce(state);
-      const tracker = proxyState.b.getTracker();
+      const tracker = StateTrackerUtil.getTracker(proxyState.b);
 
       expect(proxyState.b.b1).toEqual({ b11: 1, b12: 2 });
       expect(proxyState.c).toEqual(3);
@@ -336,10 +347,14 @@ function testTracker(useProxy: boolean) {
         },
       };
       const proxyState = produce(state);
-      const id1 = getTrackerId(proxyState.a.getTracker()._id);
+      const id1 = getTrackerId(StateTrackerUtil.getTracker(proxyState.a)._id);
       proxyState.a = state.a;
-      const id2 = getTrackerId(proxyState.a.getTracker()._id);
-      expect(id1).toBe(id2);
+      const id2 = getTrackerId(StateTrackerUtil.getTracker(proxyState.a)._id);
+      if (useProxy) {
+        expect(id1).toBe(id2);
+      } else {
+        expect(id1).toBe(id2 - 1);
+      }
     });
 
     it('Set with different value will create new tracker', () => {
@@ -357,7 +372,7 @@ function testTracker(useProxy: boolean) {
         },
       };
       const proxyState = produce(state);
-      const id1 = getTrackerId(proxyState.a.getTracker()._id);
+      const id1 = getTrackerId(StateTrackerUtil.getTracker(proxyState.a)._id);
 
       proxyState.a = {
         a1: 3,
@@ -365,7 +380,7 @@ function testTracker(useProxy: boolean) {
       };
       expect(proxyState.a.a1).toBe(3);
 
-      const id2 = getTrackerId(proxyState.a.getTracker()._id);
+      const id2 = getTrackerId(StateTrackerUtil.getTracker(proxyState.a)._id);
       expect(id1 + 1).toBe(id2);
     });
 
@@ -382,7 +397,7 @@ function testTracker(useProxy: boolean) {
         a: old,
       };
       const proxyState = produce(state);
-      const tracker = proxyState.a.getTracker();
+      const tracker = StateTrackerUtil.getTracker(proxyState.a);
 
       proxyState.a = next;
       expect(tracker._base).toBe(old);
@@ -405,8 +420,12 @@ function testTracker(useProxy: boolean) {
         },
       };
       const proxyState = produce(state);
-      const id1 = getTrackerId(proxyState.b.b2.getTracker()._id);
-      const id2 = getTrackerId(proxyState.b.b1.getTracker()._id);
+      const id1 = getTrackerId(
+        StateTrackerUtil.getTracker(proxyState.b.b2)._id
+      );
+      const id2 = getTrackerId(
+        StateTrackerUtil.getTracker(proxyState.b.b1)._id
+      );
       expect(id2).toBeGreaterThan(id1);
     });
   });
@@ -444,7 +463,8 @@ function testTracker(useProxy: boolean) {
         a2: 4,
       });
 
-      const childProxies = proxyState.a.getTracker()._childProxies;
+      const childProxies = StateTrackerUtil.getTracker(proxyState.a)
+        ._childProxies;
       expect(Object.keys(childProxies)).toEqual(['a1', 'a2']);
       expect(proxyState.a.a2).toBe(4);
       expect(Object.keys(childProxies)).toEqual(['a1']);

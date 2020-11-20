@@ -1,4 +1,4 @@
-import { IStateTracker, SeenKeys } from './types';
+import { SeenKeys } from './types';
 
 const toString = Function.call.bind<Function>(Object.prototype.toString);
 const ownKeys = (o: any) =>
@@ -27,10 +27,10 @@ export const canIUseProxy = () => {
   try {
     new Proxy({}, {}) // eslint-disable-line
   } catch (err) {
-    return false;
+    return true;
   }
 
-  return true;
+  return false;
 };
 
 export const hasOwnProperty = (o: object, prop: PropertyKey) => o.hasOwnProperty(prop) // eslint-disable-line
@@ -114,16 +114,6 @@ export const hideProperty = (target: object, prop: PropertyKey) => {
 
 export const generateTrackerMapKey = (accessPath: Array<string>): string => {
   return accessPath.join(', ');
-};
-
-export const peek = (proxyState: IStateTracker, accessPath: Array<string>) => {
-  return accessPath.reduce((nextProxyState, cur: string) => {
-    const tracker = nextProxyState[TRACKER];
-    tracker._isPeeking = true;
-    const nextProxy = nextProxyState[cur];
-    tracker._isPeeking = false;
-    return nextProxy;
-  }, proxyState);
 };
 
 const seenKeys: SeenKeys = {};

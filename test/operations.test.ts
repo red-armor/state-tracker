@@ -44,7 +44,7 @@ function testTracker(useProxy: boolean) {
       StateTrackerUtil.enter(proxyState, 'list');
 
       const trackerList = proxyState.a.a1.map(
-        (item: any) => item.getTracker()._id
+        (item: any) => StateTrackerUtil.getTracker(item)._id
       );
       StateTrackerUtil.leave(proxyState);
       const list = [...proxyState.a.a1];
@@ -54,7 +54,7 @@ function testTracker(useProxy: boolean) {
       StateTrackerUtil.enter(proxyState, 'list');
 
       const nextTrackerList = proxyState.a.a1.map(
-        (item: any) => item.getTracker()._id
+        (item: any) => StateTrackerUtil.getTracker(item)._id
       );
       StateTrackerUtil.leave(proxyState);
 
@@ -75,7 +75,7 @@ function testTracker(useProxy: boolean) {
       StateTrackerUtil.enter(proxyState, 'list');
 
       const trackerList = proxyState.a.a1.map(
-        (item: any) => item.getTracker()._id
+        (item: any) => StateTrackerUtil.getTracker(item)._id
       );
       StateTrackerUtil.leave(proxyState);
 
@@ -86,7 +86,7 @@ function testTracker(useProxy: boolean) {
       StateTrackerUtil.enter(proxyState, 'list');
 
       const nextTrackerList = proxyState.a.a1.map(
-        (item: any) => item.getTracker()._id
+        (item: any) => StateTrackerUtil.getTracker(item)._id
       );
       StateTrackerUtil.leave(proxyState);
 
@@ -110,23 +110,22 @@ function testTracker(useProxy: boolean) {
 
       StateTrackerUtil.enter(proxyState, 'item0');
       expect(data[0].id).toBe(0);
-      const tracker_0_id = data[0].getTracker()._id;
+      const tracker_0_id = StateTrackerUtil.getTracker(data[0])._id;
       StateTrackerUtil.leave(proxyState);
       StateTrackerUtil.enter(proxyState, 'item1');
       expect(data[1].id).toBe(1);
-      const tracker_1_id = data[1].getTracker()._id;
+      const tracker_1_id = StateTrackerUtil.getTracker(data[1])._id;
       StateTrackerUtil.leave(proxyState);
       StateTrackerUtil.enter(proxyState, 'item2');
       expect(data[2].id).toBe(2);
-      // const tracker_2_id = data[2].getTracker()._id
       StateTrackerUtil.leave(proxyState);
       StateTrackerUtil.enter(proxyState, 'item3');
       expect(data[3].id).toBe(3);
-      const tracker_3_id = data[3].getTracker()._id;
+      const tracker_3_id = StateTrackerUtil.getTracker(data[3])._id;
       StateTrackerUtil.leave(proxyState);
       StateTrackerUtil.enter(proxyState, 'item4');
       expect(data[4].id).toBe(4);
-      const tracker_4_id = data[4].getTracker()._id;
+      const tracker_4_id = StateTrackerUtil.getTracker(data[4])._id;
       StateTrackerUtil.leave(proxyState);
 
       const newData = state.a.a1.slice();
@@ -141,22 +140,22 @@ function testTracker(useProxy: boolean) {
 
       StateTrackerUtil.enter(proxyState, 'item0');
       expect(nextData[0].id).toBe(0);
-      const tracker_0_id_next = nextData[0].getTracker()._id;
+      const tracker_0_id_next = StateTrackerUtil.getTracker(nextData[0])._id;
       expect(tracker_0_id_next).toBe(tracker_0_id);
       StateTrackerUtil.leave(proxyState);
       StateTrackerUtil.enter(proxyState, 'item1');
       expect(nextData[1].id).toBe(1);
-      const tracker_1_id_next = nextData[1].getTracker()._id;
+      const tracker_1_id_next = StateTrackerUtil.getTracker(nextData[1])._id;
       expect(tracker_1_id_next).toBe(tracker_1_id);
       StateTrackerUtil.leave(proxyState);
       StateTrackerUtil.enter(proxyState, 'item2');
       expect(nextData[2].id).toBe(3);
-      const tracker_2_id_next = nextData[2].getTracker()._id;
+      const tracker_2_id_next = StateTrackerUtil.getTracker(nextData[2])._id;
       expect(tracker_2_id_next).toBe(tracker_3_id);
       StateTrackerUtil.leave(proxyState);
       StateTrackerUtil.enter(proxyState, 'item3');
       expect(nextData[3].id).toBe(4);
-      const tracker_3_id_next = nextData[3].getTracker()._id;
+      const tracker_3_id_next = StateTrackerUtil.getTracker(nextData[3])._id;
       expect(tracker_3_id_next).toBe(tracker_4_id);
       StateTrackerUtil.leave(proxyState);
     });
