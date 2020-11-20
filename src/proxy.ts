@@ -80,7 +80,6 @@ function produce(
         const focusKeyToTrackerMap = tracker._focusKeyToTrackerMap;
         const nextAccessPath = accessPath.concat(prop as string);
         const isPeeking = tracker._isPeeking;
-        let retryProxy = null;
 
         if (!isPeeking) {
           if (trackerContext.getCurrent()) {
@@ -100,18 +99,8 @@ function produce(
           baseTracker._isStrictPeeking = true;
           value = base[prop];
           baseTracker._isStrictPeeking = false;
-          // childProxyTracker = baseTracker;
         } else {
           value = base[prop];
-        }
-
-        // refer to test case:
-        //   If retryProxy exist, childProxies[prop] base should be update
-        if (retryProxy) {
-          if (childProxies[prop]) {
-            // TODO: will cause basic example render list failed.
-            childProxies[prop].getTracker()._base = value;
-          }
         }
 
         if (!isTrackable(value)) {
@@ -134,8 +123,6 @@ function produce(
               value.getTracker &&
               childProxyBase === value.getTracker()._base)
           ) {
-            // if (tracker._context)
-            //   childProxyTracker.setContext(tracker._context);
             return childProxy;
           }
         }
@@ -194,14 +181,6 @@ function produce(
       return Reflect.set(target, prop, newValue, receiver);
     },
   };
-
-  // // Tracker is just like an assistant, it could be reused.
-  // // However, Tracker node should be created as a new now after call of enter context.
-  // if (mayReusedTracker) {
-  //   // baseValue should be update on each time or `childProxyBase === value` will
-  //   // be always false.
-  //   mayReusedTracker.update(state);
-  // }
 
   let nextState = state;
 
