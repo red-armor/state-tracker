@@ -27,10 +27,10 @@ export const canIUseProxy = () => {
   try {
     new Proxy({}, {}) // eslint-disable-line
   } catch (err) {
-    return true;
+    return false;
   }
 
-  return false;
+  return true;
 };
 
 export const hasOwnProperty = (o: object, prop: PropertyKey) => o.hasOwnProperty(prop) // eslint-disable-line
