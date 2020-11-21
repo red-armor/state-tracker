@@ -1,8 +1,6 @@
 import { Type } from './';
 import { TRACKER, PATH_TRACKER } from '../commons';
 import StateTrackerContext from '../StateTrackerContext';
-// import ChildProxy from '../ChildProxy';
-import { RelinkValue } from './produce';
 import PathTracker from '../PathTracker';
 
 export interface ProxyStateTrackerConfig {
@@ -19,10 +17,6 @@ export interface FocusKeyToTrackerMap {
   [key: string]: IStateTracker;
 }
 
-// export interface SubProxies {
-//   [key: string]: ChildProxy;
-// }
-
 export interface Base {
   [key: string]: any;
 }
@@ -34,10 +28,8 @@ export interface StateTrackerConstructorProps {
   base: any;
   shadowBase?: any;
   stateTrackerContext: StateTrackerContext;
-  context: string;
   lastUpdateAt: number;
   focusKey: string | null;
-  mask: string;
 }
 
 export interface StateTrackerProperties {
@@ -47,83 +39,23 @@ export interface StateTrackerProperties {
   _type: Type.Array | Type.Object;
   _base: Base;
   _shadowBase: Base;
-  _parentProxy: IStateTracker;
+  _parentProxy: IStateTracker | null;
   _childProxies: ChildProxies;
   _focusKeyToTrackerMap: FocusKeyToTrackerMap;
   _isPeeking: boolean;
   _isStrictPeeking: boolean;
   _updateTimes: number;
   _backwardAccessCount: number;
-  _context: string;
   _lastUpdateAt: number;
   _stateTrackerContext: StateTrackerContext;
   _focusKey: string | null;
-  _mask: string;
 }
 
-export type StateTrackerFunctions = {
-  update(newValue: any): void;
-  updateShadowBase(newValue: any): void;
-  setContext(context: string): void;
-  getContext(): string;
-  getId(): string;
-  getBase(): Base;
-  setBase(value: any): void;
-  getShadowBase(): Base;
-  setShadowBase(value: any): void;
-  getTrackedProperties(): Array<string>;
-  updateTrackedProperties(prop: string): void;
-  getParentProxy(): IStateTracker;
-  getChildProxies(): ChildProxies;
-  setChildProxies(value: ChildProxies): void;
-  getFocusKeyToTrackerMap(): FocusKeyToTrackerMap;
-  setFocusKeyToTrackerMap(value: FocusKeyToTrackerMap): void;
-  getPeeking(): boolean;
-  setPeeking(falsy: boolean): void;
-  getStrictPeeking(): boolean;
-  setStrictPeeking(falsy: boolean): void;
-  getRootPath(): Array<string>;
-  getAccessPath(): Array<string>;
-  getStateTrackerContext(): StateTrackerContext;
-  getTime(): number;
-  setTime(time: number): void;
-  getBackwardAccessCount(): number;
-  incrementBackwardAccessCount(): number;
-  getMask(): string;
-  setMask(value: string): void;
-  getFocusKey(): string | null;
-  setFocusKey(key: string): void;
-  getUpdateTimes(): number;
-  incrementUpdateTimes(): number;
-  getType(): string;
-};
-
-export type StateTrackerInterface = StateTrackerProperties &
-  StateTrackerFunctions;
-
-export interface StateTrackerConstructor {
-  new ({
-    accessPath,
-    parentProxy,
-    rootPath,
-    base,
-  }: StateTrackerConstructorProps): StateTrackerInterface;
-}
+export type StateTrackerInterface = StateTrackerProperties;
 
 export interface IStateTracker {
   [TRACKER]: StateTrackerInterface;
   [PATH_TRACKER]: PathTracker;
-
-  enter(context?: string): void;
-  strictEnter(context?: string): void;
-  leave(): void;
-  relink(path: Array<String>, value: any): void;
-  batchRelink(values: Array<RelinkValue>): IStateTracker;
-  unlink(): any;
-  hydrate(path: Array<String>, value: any): void;
-  getContext(): StateTrackerContext;
-  getTracker(): StateTrackerInterface;
-  peek(path: Array<string>): IStateTracker;
   [key: string]: any;
 }
 

@@ -1,8 +1,8 @@
-import { produce as ES5Produce } from './es5';
 import { produce as ES6Produce } from './proxy';
-import { canIUseProxy } from './commons';
+import { produce as ES5Produce } from './es5';
 
-import { Produce } from './types/produce';
+import { canIUseProxy } from './commons';
+import StateTrackerUtil from './StateTrackerUtil';
 
 let produce;
 
@@ -12,5 +12,6 @@ if (canIUseProxy()) {
   produce = ES5Produce;
 }
 
-export default produce as Produce;
+export default produce;
 export * from './types';
+export { StateTrackerUtil };

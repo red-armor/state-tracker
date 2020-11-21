@@ -1,6 +1,5 @@
-import { IStateTracker, SeenKeys } from './types';
+import { SeenKeys } from './types';
 
-export const DEFAULT_MASK = '__mask_$$';
 const toString = Function.call.bind<Function>(Object.prototype.toString);
 const ownKeys = (o: any) =>
   typeof Reflect !== 'undefined' && Reflect.ownKeys
@@ -115,16 +114,6 @@ export const hideProperty = (target: object, prop: PropertyKey) => {
 
 export const generateTrackerMapKey = (accessPath: Array<string>): string => {
   return accessPath.join(', ');
-};
-
-export const peek = (proxyState: IStateTracker, accessPath: Array<string>) => {
-  return accessPath.reduce((nextProxyState, cur: string) => {
-    const tracker = nextProxyState[TRACKER];
-    tracker.setPeeking(true);
-    const nextProxy = nextProxyState[cur];
-    tracker.setPeeking(false);
-    return nextProxy;
-  }, proxyState);
 };
 
 const seenKeys: SeenKeys = {};

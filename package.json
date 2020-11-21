@@ -17,12 +17,13 @@
     "lint": "tsdx lint --fix",
     "prepare": "tsdx build",
     "size": "size-limit",
-    "analyze": "size-limit --why"
+    "analyze": "size-limit --why",
+    "test:perf": "cd __performance_tests__ && babel-node measure.js"
   },
   "peerDependencies": {},
   "husky": {
     "hooks": {
-      "pre-commit": "tsdx lint"
+      "pre-commit": "tsdx lint && npm run test"
     }
   },
   "prettier": {
@@ -45,9 +46,13 @@
     }
   ],
   "devDependencies": {
+    "@babel/core": "^7.12.3",
+    "@babel/node": "^7.12.6",
     "@size-limit/preset-small-lib": "^4.6.0",
     "@types/invariant": "^2.2.34",
     "husky": "^4.3.0",
+    "immer": "^7.0.14",
+    "lodash.clonedeep": "^4.5.0",
     "size-limit": "^4.6.0",
     "tsdx": "^0.14.0",
     "tslib": "^2.0.1",

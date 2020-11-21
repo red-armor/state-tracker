@@ -1,8 +1,23 @@
-import { IStateTracker, StateTrackerInterface } from './stateTracker';
+import {
+  IStateTracker,
+  StateTrackerInterface,
+  StateTrackerProperties,
+} from './stateTracker';
 import StateTrackerContext from '../StateTrackerContext';
 
 export interface ProduceState {
   [key: string]: any;
+}
+
+export interface ProduceProxyOptions {
+  accessPath: Array<string>;
+  parentProxy?: IStateTracker;
+  rootPath: Array<string>;
+  stateTrackerContext: StateTrackerContext;
+  mayReusedTracker: null | StateTrackerProperties;
+  context?: string;
+  focusKey: string | null;
+  isDraft?: boolean;
 }
 
 export interface ProduceOptions {
@@ -13,7 +28,6 @@ export interface ProduceOptions {
   mayReusedTracker: null | StateTrackerInterface;
   context?: string;
   focusKey: string | null;
-  mask?: string;
   isDraft?: boolean;
 }
 
