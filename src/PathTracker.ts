@@ -8,6 +8,10 @@ class PathTracker {
   getPath() {
     return this._path;
   }
+
+  update(accessPath: Array<string>) {
+    this._path = accessPath;
+  }
 }
 
 export default PathTracker;
