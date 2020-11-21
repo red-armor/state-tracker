@@ -8,6 +8,7 @@ import {
   arrayProtoOwnKeys,
   objectProtoOwnKeys,
   Type,
+  generateRandomFocusKey,
 } from './commons';
 import { createPlainTrackerObject } from './StateTracker';
 import PathTracker from './PathTracker';
@@ -131,8 +132,29 @@ function produce(
           }
         }
 
-        const focusKey = `focus_${prop}`;
-        // const focusKey = generateRandomFocusKey();
+        // // if `path` is not change, it will match from childProxy
+        // if (isObject(value) && StateTrackerUtil.hasTracker(value)) {
+        //   const focusKey = StateTrackerUtil.getTracker(value)._focusKey;
+        //   if (focusKey && focusKeyToTrackerMap[focusKey]) {
+        //     // focusKey should be update every time it is reused.
+        //     const newFocusKey = generateRandomFocusKey()
+        //     const reusedProxy = focusKeyToTrackerMap[focusKey]
+        //     const reusedTracker = StateTrackerUtil.getTracker(reusedProxy);
+        //     const reusedPathTracker = StateTrackerUtil.getPathTracker(reusedProxy);
+        //     reusedPathTracker.update(nextAccessPath)
+        //     reusedTracker._focusKey = newFocusKey
+        //     focusKeyToTrackerMap[newFocusKey] = focusKeyToTrackerMap[focusKey]
+
+        //     if (focusKey !== newFocusKey) {
+        //       delete focusKeyToTrackerMap[focusKey!]
+        //     }
+
+        //     return focusKeyToTrackerMap[newFocusKey]
+        //   }
+        // }
+
+        // focusKey is mainly used on remove one item...
+        const focusKey = generateRandomFocusKey();
 
         const producedChildProxy = produce(
           // only new value should create new proxy object..
