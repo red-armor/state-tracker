@@ -1,7 +1,13 @@
-import { PATH_TRACKER, generateRandomContextKey, TRACKER } from './commons';
+import {
+  PATH_TRACKER,
+  generateRandomContextKey,
+  TRACKER,
+  canIUseProxy,
+} from './commons';
 import { IStateTracker, RelinkValue } from './types';
 import { createPlainTrackerObject } from './StateTracker';
 import { produce as ES6Produce } from './proxy';
+import { produce as ES5Produce } from './es5';
 
 const StateTrackerUtil = {
   hasTracker: function(proxy: IStateTracker) {
@@ -56,6 +62,7 @@ const StateTrackerUtil = {
   },
 
   batchRelink: function(proxy: IStateTracker, values: Array<RelinkValue>) {
+    const produce = canIUseProxy() ? ES6Produce : ES5Produce;
     const tracker = proxy[TRACKER];
     const pathTracker = proxy[PATH_TRACKER];
     const baseValue = Object.assign({}, tracker._shadowBase || tracker._base);
@@ -72,7 +79,7 @@ const StateTrackerUtil = {
       focusKey: null,
     });
 
-    const proxyStateCopy = ES6Produce(
+    const proxyStateCopy = produce(
       { ...baseValue },
       {
         // parentProxy: null,
