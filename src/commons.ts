@@ -30,7 +30,7 @@ export const canIUseProxy = () => {
     return false;
   }
 
-  return false;
+  return true;
 };
 
 export const hasOwnProperty = (o: object, prop: PropertyKey) => o.hasOwnProperty(prop) // eslint-disable-line
