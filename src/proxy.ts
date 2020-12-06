@@ -20,6 +20,7 @@ import {
 } from './types';
 import StateTrackerContext from './StateTrackerContext';
 import StateTrackerUtil from './StateTrackerUtil';
+import collection from './collection';
 
 function produce(
   state: ProduceState,
@@ -241,6 +242,14 @@ function produce(
     const tracker = this[TRACKER];
     return tracker._base;
   });
+
+  if (!stateTrackerContext) {
+    collection.register({
+      base: state,
+      proxyState: proxy,
+      stateTrackerContext: trackerContext,
+    });
+  }
 
   return proxy as IStateTracker;
 }

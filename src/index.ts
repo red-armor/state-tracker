@@ -15,3 +15,5 @@ if (canIUseProxy()) {
 export default produce;
 export * from './types';
 export { StateTrackerUtil };
+export { default as when } from './when';
+export { default as watch } from './watch';
