@@ -4,10 +4,11 @@ import {
   TRACKER,
   canIUseProxy,
 } from './commons';
-import { IStateTracker, RelinkValue } from './types';
+import { IStateTracker, PendingRunners, RelinkValue } from './types';
 import { createPlainTrackerObject } from './StateTracker';
 import { produce as ES6Produce } from './proxy';
 import { produce as ES5Produce } from './es5';
+import collection from './collection';
 
 const StateTrackerUtil = {
   hasTracker: function(proxy: IStateTracker) {
@@ -50,7 +51,11 @@ const StateTrackerUtil = {
     return tracker._stateTrackerContext;
   },
 
-  relink: function(proxy: IStateTracker, path: Array<string>, value: any) {
+  internalRelink: function(
+    proxy: IStateTracker,
+    path: Array<string>,
+    value: any
+  ): Array<PendingRunners> {
     const tracker = proxy[TRACKER];
     const stateContext = tracker._stateTrackerContext;
     stateContext.updateTime();
@@ -58,7 +63,21 @@ const StateTrackerUtil = {
     const last = copy.pop();
     const front = copy;
     const parentState = this.peek(proxy, front);
+    const pathTree = collection.getPathTree(proxy);
+    let pendingRunners = [] as Array<PendingRunners>;
+    if (pathTree) {
+      pendingRunners = pathTree.diff({
+        path,
+        value,
+      });
+    }
     parentState[last!] = value;
+    return pendingRunners;
+  },
+
+  relink: function(proxy: IStateTracker, path: Array<string>, value: any) {
+    const pendingRunners = this.internalRelink(proxy, path, value);
+    pendingRunners.forEach(({ runner }) => runner.run());
   },
 
   batchRelink: function(proxy: IStateTracker, values: Array<RelinkValue>) {
@@ -93,12 +112,16 @@ const StateTrackerUtil = {
     );
 
     const childProxies = Object.assign({}, tracker._childProxies);
+    let pendingRunners = [] as Array<PendingRunners>;
 
     values.forEach(({ path, value }) => {
-      this.relink(proxy, path, value);
+      const runners = this.internalRelink(proxy, path, value);
+      pendingRunners = pendingRunners.concat(runners);
       // unchanged object's proxy object will be preserved.
       delete childProxies[path[0]];
     });
+
+    pendingRunners.forEach(({ runner }) => runner.run());
 
     newTracker._childProxies = childProxies;
 

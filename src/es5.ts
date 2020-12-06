@@ -18,6 +18,7 @@ import {
 import StateTrackerContext from './StateTrackerContext';
 import PathTracker from './PathTracker';
 import StateTrackerUtil from './StateTrackerUtil';
+import collection from './collection';
 
 function produce(state: ProduceState, options?: ProduceOptions): IStateTracker {
   const {
@@ -293,6 +294,14 @@ function produce(state: ProduceState, options?: ProduceOptions): IStateTracker {
           createHiddenProperty(state, key, handler(func, state as any));
         }
       }
+    });
+  }
+
+  if (!stateTrackerContext) {
+    collection.register({
+      base: shadowBase,
+      proxyState: state as IStateTracker,
+      stateTrackerContext: trackerContext,
     });
   }
 
