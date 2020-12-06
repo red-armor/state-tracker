@@ -44,6 +44,38 @@ function testTracker(useProxy: boolean) {
       expect(count).toBe(3);
     });
 
+    it('predicate will be called only its watched variable value change', () => {
+      const state = {
+        a: {
+          a1: [{ value: 0 }, { value: 1 }],
+          a2: 1,
+        },
+      };
+      let count = 0;
+
+      const proxyState = produce(state);
+      when(proxyState, state => {
+        count++;
+        return state.a.a2 === 3;
+      });
+
+      StateTrackerUtil.relink(proxyState, ['a', 'a2'], 2);
+
+      expect(count).toBe(2);
+
+      StateTrackerUtil.relink(proxyState, ['a', 'a1'], 2);
+      expect(count).toBe(2);
+
+      StateTrackerUtil.relink(proxyState, ['a', 'a1'], 3);
+      expect(count).toBe(2);
+
+      StateTrackerUtil.relink(proxyState, ['a', 'a2'], 3);
+      expect(count).toBe(3);
+
+      StateTrackerUtil.relink(proxyState, ['a', 'a2'], 3);
+      expect(count).toBe(3);
+    });
+
     it('effect will be call when return true', () => {
       const state = {
         a: {

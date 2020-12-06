@@ -121,6 +121,11 @@ class PathTree {
       cb(branch);
     }
 
+    if (!keysToCompare.length) {
+      if (shallowEqual(baseValue, nextValue)) return;
+      cb(branch);
+    }
+
     keysToCompare.forEach(key => {
       const oldValue = baseValue[key];
       const newValue = nextValue[key];
