@@ -2,7 +2,7 @@ import { AccessPath, PathNodeChildren, PathNodeProps } from './types';
 import Runner from './Runner';
 
 class PathNode {
-  private _parent?: PathNode;
+  private _parent: PathNode | null;
   private _type: string;
   private _prop: string;
   private _effects: Array<Runner>;
@@ -10,7 +10,7 @@ class PathNode {
 
   constructor(options: PathNodeProps) {
     const { parent, type, prop } = options;
-    this._parent = parent;
+    this._parent = parent || null;
     this.children = {};
     this._type = type;
     this._prop = prop;
@@ -46,11 +46,12 @@ class PathNode {
           });
         // 只有到达`path`的最后一个`prop`时，才会进行patcher的添加
         if (index === len - 1) {
+          const currentEffects = node.children[cur]._effects;
+          currentEffects.push(runner);
           runner.addRemover(() => {
-            const index = this._effects.indexOf(runner);
-
+            const index = currentEffects.indexOf(runner);
             if (index !== -1) {
-              this._effects.splice(index, 1);
+              currentEffects.splice(index, 1);
             }
           });
         }

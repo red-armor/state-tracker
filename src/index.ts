@@ -15,3 +15,4 @@ if (canIUseProxy()) {
 export default produce;
 export * from './types';
 export { StateTrackerUtil };
+export { default as when } from './when';

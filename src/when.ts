@@ -4,16 +4,13 @@ import collection from './collection';
 import { isFunction } from './commons';
 import Runner from './Runner';
 
-let count = 0;
-
 function when(
   state: IStateTracker,
   predicate: (state: IStateTracker) => boolean,
-  effect: () => void
+  effect?: () => void
 ) {
-  const id = `when_${count++}`;
   const autoRunFn = () => {
-    state.enter(id);
+    StateTrackerUtil.enter(state);
     const falsy = predicate(state);
     if (!falsy) {
       const tracker = StateTrackerUtil.getContext(state).getCurrent();
@@ -22,9 +19,9 @@ function when(
       runner.updateAccessPaths(paths);
       pathTree!.addRunner(runner);
     } else if (isFunction(effect)) {
-      effect();
+      effect!();
     }
-    state.leave();
+    StateTrackerUtil.leave(state);
     return falsy;
   };
 

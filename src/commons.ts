@@ -154,7 +154,7 @@ function is(x: any, y: any) {
     return x !== 0 || y !== 0 || 1 / x === 1 / y;
   }
   // Step 6.a: NaN == NaN
-  return x !== x && y !== y;
+  return x !== x && y !== y; // eslint-disable-line
 }
 
 /**

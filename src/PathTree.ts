@@ -74,6 +74,7 @@ class PathTree {
   }): Array<PendingRunners> {
     const affectedNode = this.peek(path);
     const baseValue = this.peekBaseValue(path);
+
     if (!affectedNode) return [];
 
     this.compare(
@@ -87,7 +88,9 @@ class PathTree {
         );
       }
     );
-    return this.pendingRunners;
+    const copy = this.pendingRunners.slice();
+    this.pendingRunners = [];
+    return copy;
   }
 
   compare(
