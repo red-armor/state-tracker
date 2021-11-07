@@ -128,7 +128,7 @@ class StateTrackerNode {
     this._paths = [];
   }
 
-  reportPaths(path: Array<string>) {
+  trackPaths(path: Array<string>) {
     const node = new Node(path);
     this._paths.push(path);
     this.graph.access(node);
