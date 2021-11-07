@@ -21,7 +21,7 @@ import StateTrackerContext from './StateTrackerContext';
 import StateTrackerUtil from './StateTrackerUtil';
 import collection from './collection';
 
-const buildKey = (index: number | string) => `_arr_${index}`;
+// const buildKey = (index: number | string) => `_arr_${index}`;
 
 const cachedProxies = new Map();
 
@@ -51,14 +51,14 @@ function produce(
         let tracker = Reflect.get(target, TRACKER) as StateTrackerProperties;
         const targetType = tracker._type;
 
-        let targetKey = prop;
+        // let targetKey = prop;
 
         switch (targetType) {
           case Type.Array:
             // length should be reported
             if (prop !== 'length' && ~arrayProtoOwnKeys().indexOf(prop as any))
               return Reflect.get(target, prop, receiver);
-            targetKey = buildKey(prop as any);
+            // targetKey = buildKey(prop as any);
             break;
           case Type.Object:
             if (~objectProtoOwnKeys().indexOf(prop as any))
@@ -72,7 +72,7 @@ function produce(
         // Note: `getBase` can get the latest value, Maybe it's the dispatched value.
         // It means if you call relink to update a key's value, then we can get the
         // value here...
-        const childProxies = tracker._childProxies;
+        // const childProxies = tracker._childProxies;
         const nextChildProxies = tracker._nextChildProxies;
 
         const nextAccessPath = accessPath.concat(prop as string);
@@ -87,15 +87,17 @@ function produce(
         }
 
         if (!isTrackable(target[prop])) return target[prop];
-
-        if (childProxies[targetKey]) return childProxies[targetKey];
         const nextValue = target[prop];
+
+        // if (childProxies[targetKey]) return childProxies[targetKey];
+        if (nextChildProxies.has(nextValue))
+          return nextChildProxies.get(nextValue);
 
         const cachedProxy = cachedProxies.get(nextValue);
 
         if (cachedProxy) {
-          nextChildProxies[nextValue] = cachedProxy;
-          childProxies[targetKey as string] = cachedProxy;
+          nextChildProxies.set(nextValue, cachedProxy);
+          // childProxies[targetKey as string] = cachedProxy;
           return cachedProxy;
         }
         let producedChildProxy = null;
@@ -132,7 +134,7 @@ function produce(
           );
         }
 
-        childProxies[targetKey] = producedChildProxy;
+        // childProxies[targetKey] = producedChildProxy;
         cachedProxies.set(nextValue, producedChildProxy);
         nextChildProxies.set(nextValue, producedChildProxy);
 
@@ -150,7 +152,7 @@ function produce(
     ) => {
       const tracker = Reflect.get(target, TRACKER) as StateTrackerProperties;
       const base = tracker._base[prop as string];
-      const childProxies = tracker._childProxies;
+      // const childProxies = tracker._childProxies;
       const nextChildProxies = tracker._nextChildProxies;
       if (base === newValue) return true;
       // TODO：可能还需要查看value是不是match，万一被设置了一个ref一样，但是path不一样的怎么搞。。
@@ -167,10 +169,10 @@ function produce(
 
       // newValue may be a trackerValue
       if (tracker._type === Type.Array) {
-        delete childProxies[buildKey(prop as string)];
+        // delete childProxies[buildKey(prop as string)];
         nextChildProxies.delete(base);
       } else {
-        delete childProxies[prop as any];
+        // delete childProxies[prop as any];
         nextChildProxies.delete(base);
       }
 
