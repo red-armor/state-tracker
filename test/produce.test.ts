@@ -1,10 +1,10 @@
 import { TRACKER } from '../src/commons';
-import { produce as ES5Produce } from '../src/es5';
+// import { produce as ES5Produce } from '../src/es5';
 import { produce as ES6Produce } from '../src/proxy';
 import StateTrackerUtil from '../src/StateTrackerUtil';
 
 testTracker(true);
-testTracker(false);
+// testTracker(false);
 
 const getTrackerId = (str: string): number => {
   const matched = str.match(/(\d*)$/);
@@ -13,7 +13,8 @@ const getTrackerId = (str: string): number => {
 };
 
 function testTracker(useProxy: boolean) {
-  const produce = useProxy ? ES6Produce : ES5Produce;
+  const produce = ES6Produce;
+  // const produce = useProxy ? ES6Produce : ES5Produce;
   const decorateDesc = (text: string) =>
     useProxy ? `proxy: ${text}` : `es5: ${text}`;
 
@@ -96,13 +97,14 @@ function testTracker(useProxy: boolean) {
       const {
         goods: { listData: nextListData },
       } = state;
+
       expect(nextListData.length).toBe(2);
       StateTrackerUtil.leave(state);
     });
   });
 
   describe(decorateDesc('child proxies'), () => {
-    it('Access a key which has object value will add prop to childProxies', () => {
+    it('Access a key with object value will add prop to childProxies', () => {
       const state = {
         a: {
           a1: 1,
@@ -122,12 +124,14 @@ function testTracker(useProxy: boolean) {
 
       expect(proxyState.a).toEqual({ a1: 1, a2: 2 });
       expect(proxyState.c).toEqual(3);
-      const childProxies = tracker._childProxies;
-      const keys = Object.keys(childProxies);
-      expect(keys).toEqual(['a']);
+      const childProxies = tracker._nextChildProxies;
+
+      expect(childProxies.has(state.a)).toBeTruthy();
+      expect(childProxies.has(state.c)).toBeFalsy();
+      expect(childProxies.size).toBe(1);
     });
 
-    it('Access a key which has array value will add prop to childProxies', () => {
+    it('Access a key with array value will add prop to childProxies', () => {
       const state = {
         a: [2, 3, 4],
         b: {
@@ -144,9 +148,47 @@ function testTracker(useProxy: boolean) {
 
       expect(proxyState.a).toEqual([2, 3, 4]);
       expect(proxyState.c).toEqual(3);
-      const childProxies = tracker._childProxies;
-      const keys = Object.keys(childProxies);
-      expect(keys).toEqual(['a']);
+      const childProxies = tracker._nextChildProxies;
+      expect(childProxies.has(state.a)).toBeTruthy();
+      expect(childProxies.has(state.c)).toBeFalsy();
+      expect(childProxies.size).toBe(1);
+    });
+
+    it('Access a key with primitive value will not add prop to childProxies', () => {
+      const state = {
+        a: [2, 3, 4],
+        b: {
+          b1: {
+            b11: 1,
+            b12: 2,
+          },
+          b2: 2,
+        },
+        c: 3,
+      };
+      const proxyState = produce(state);
+      const tracker = StateTrackerUtil.getTracker(proxyState.b);
+      expect(proxyState.c).toEqual(3);
+      const childProxies = tracker._nextChildProxies;
+      expect(childProxies.size).toBe(0);
+    });
+
+    it('Access a key with undefined value will not add prop to childProxies', () => {
+      const state = {
+        a: [2, 3, 4],
+        b: {
+          b1: {
+            b11: 1,
+            b12: 2,
+          },
+        },
+        c: 3,
+      };
+      const proxyState = produce(state);
+      const tracker = StateTrackerUtil.getTracker(proxyState.b);
+      expect(proxyState.b.b2).toEqual(undefined);
+      const childProxies = tracker._nextChildProxies;
+      expect(childProxies.size).toBe(0);
     });
 
     it('Set a key with different type value which will cause clear up childProxies', () => {
@@ -166,36 +208,104 @@ function testTracker(useProxy: boolean) {
 
       expect(proxyState.a).toEqual([2, 3, 4]);
       expect(proxyState.c).toEqual(3);
+      const childProxies = tracker._nextChildProxies;
+      expect(childProxies.size).toBe(1);
       proxyState.a = { a1: 1 };
-      const childProxies = tracker._childProxies;
-      const keys = Object.keys(childProxies);
-      expect(keys).toEqual([]);
+      const nextChildProxies = tracker._nextChildProxies;
+      expect(nextChildProxies.size).toBe(0);
     });
 
-    it('childProxies will not update even if set to value with less keys than before', () => {
+    it('childProxies key will be deleted after set with new value', () => {
+      const list = [
+        {
+          v: 1,
+        },
+        {
+          v: 2,
+        },
+        {
+          v: 3,
+        },
+      ];
+
       const state = {
         a: [2, 3, 4],
         b: {
-          b1: {
-            b11: 1,
-            b12: 2,
-          },
-          b2: 2,
+          list: list,
+          b1: 3,
         },
         c: 3,
       };
       const proxyState = produce(state);
-      const tracker = StateTrackerUtil.getTracker(proxyState.b);
+      expect(proxyState.b.list).toEqual(list);
+      const tracker = StateTrackerUtil.getTracker(proxyState);
+      const childProxies = tracker._nextChildProxies;
+      expect(childProxies.size).toBe(1);
 
-      expect(proxyState.b.b1).toEqual({ b11: 1, b12: 2 });
-      expect(proxyState.c).toEqual(3);
-      proxyState.b = { b1: 1 };
-      const childProxies = tracker._childProxies;
-      const keys = Object.keys(childProxies);
-      expect(keys).toEqual(['b1']);
-      expect(proxyState.b.b1).toEqual(1);
-      const keys2 = Object.keys(childProxies);
-      expect(keys2).toEqual([]);
+      proxyState.b = { b1: [1] };
+
+      expect(childProxies.size).toBe(0);
+    });
+
+    it('reuse array trackerable item', () => {
+      const list = [
+        {
+          v: 1,
+        },
+        {
+          v: 2,
+        },
+        {
+          v: 3,
+        },
+      ];
+
+      const state = {
+        a: [2, 3, 4],
+        b: {
+          list,
+          b1: 3,
+        },
+        c: 3,
+      };
+
+      const proxyState = produce(state);
+      expect(proxyState.b.list[0].v).toEqual(1);
+      expect(proxyState.b.list[1].v).toEqual(2);
+      expect(proxyState.b.list[2].v).toEqual(3);
+
+      const list_1_tracker = StateTrackerUtil.getTracker(proxyState.b.list);
+      const list_1_0_tracker = StateTrackerUtil.getTracker(
+        proxyState.b.list[0]
+      );
+      const list_1_1_tracker = StateTrackerUtil.getTracker(
+        proxyState.b.list[1]
+      );
+      const list_1_2_tracker = StateTrackerUtil.getTracker(
+        proxyState.b.list[2]
+      );
+
+      proxyState.b.list = list.slice();
+
+      const list_2_tracker = StateTrackerUtil.getTracker(proxyState.b.list);
+      const list_2_0_tracker = StateTrackerUtil.getTracker(
+        proxyState.b.list[0]
+      );
+      const list_2_1_tracker = StateTrackerUtil.getTracker(
+        proxyState.b.list[1]
+      );
+      const list_2_2_tracker = StateTrackerUtil.getTracker(
+        proxyState.b.list[2]
+      );
+
+      expect(list_1_tracker._id).not.toEqual(list_2_tracker._id);
+      expect(list_1_0_tracker).toBe(list_2_0_tracker);
+      expect(list_1_1_tracker).toBe(list_2_1_tracker);
+      expect(list_1_2_tracker).toBe(list_2_2_tracker);
+
+      expect(proxyState.b.list[0].v).toEqual(1);
+      expect(proxyState.b.list[1].v).toEqual(2);
+      expect(proxyState.b.list[2].v).toEqual(3);
     });
   });
 
@@ -287,48 +397,6 @@ function testTracker(useProxy: boolean) {
       ]);
       StateTrackerUtil.leave(proxyState);
     });
-  });
-
-  describe(decorateDesc('return a proxy state with TRACKER prop'), () => {
-    // it('If value is an object, then it should be a proxy state with TRACKER prop', () => {
-    //   const state = {
-    //     a: {
-    //       a1: 1,
-    //       a2: 2,
-    //     },
-    //     b: {
-    //       b1: {
-    //         b11: 1,
-    //         b12: 2,
-    //       },
-    //       b2: 2,
-    //     },
-    //   };
-    //   const proxyState = produce(state);
-    //   const ap = proxyState.a;
-    //   const bp = proxyState.b;
-    //   const b1p = proxyState.b.b1;
-    //   expect(ap.getTracker()).toEqual(expect.any(StateTracker));
-    //   expect(bp.getTracker()).toEqual(expect.any(StateTracker));
-    //   expect(b1p.getTracker()).toEqual(expect.any(StateTracker));
-    // });
-    // it('If value is an array, then it should be a proxy state with TRACKER prop', () => {
-    //   const state = {
-    //     a: [1, 2],
-    //     b: [
-    //       {
-    //         b1: 1,
-    //       },
-    //     ],
-    //   };
-    //   const proxyState = produce(state);
-    //   const ap = proxyState.a;
-    //   const bp = proxyState.b;
-    //   const b1p = proxyState.b[0];
-    //   expect(ap.getTracker()).toEqual(expect.any(StateTracker));
-    //   expect(bp.getTracker()).toEqual(expect.any(StateTracker));
-    //   expect(b1p.getTracker()).toEqual(expect.any(StateTracker));
-    // });
   });
 
   describe(decorateDesc('change value'), () => {
@@ -463,11 +531,7 @@ function testTracker(useProxy: boolean) {
         a2: 4,
       });
 
-      const childProxies = StateTrackerUtil.getTracker(proxyState.a)
-        ._childProxies;
-      expect(Object.keys(childProxies)).toEqual(['a1', 'a2']);
       expect(proxyState.a.a2).toBe(4);
-      expect(Object.keys(childProxies)).toEqual(['a1']);
 
       StateTrackerUtil.relink(proxyState, ['a'], {
         a1: 5,
@@ -507,7 +571,6 @@ function testTracker(useProxy: boolean) {
       expect(draft.a.a1.a11).toBe(1);
       expect(proxyState.a.a1.a11).toBe(3);
       proxyState.b.b1 = 4;
-      // expect(draft.b.b1).toBe(2);
       expect(proxyState.b.b1).toBe(4);
     });
   });

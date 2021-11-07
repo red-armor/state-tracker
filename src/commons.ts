@@ -195,3 +195,8 @@ export function shallowEqual(objA: any, objB: any) {
 
   return true;
 }
+
+export const pathEqual = (a: Array<string>, b: Array<string>) => {
+  if (a && b && is(JSON.stringify(a), JSON.stringify(b))) return true;
+  return false;
+};

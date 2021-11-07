@@ -2,17 +2,18 @@ import {
   PATH_TRACKER,
   generateRandomContextKey,
   TRACKER,
-  canIUseProxy,
+  isPlainObject,
+  // canIUseProxy,
 } from './commons';
 import { IStateTracker, PendingRunners, RelinkValue } from './types';
 import { createPlainTrackerObject } from './StateTracker';
 import { produce as ES6Produce } from './proxy';
-import { produce as ES5Produce } from './es5';
+// import { produce as ES5Produce } from './es5';
 import collection from './collection';
 
 const StateTrackerUtil = {
   hasTracker: function(proxy: IStateTracker) {
-    return !!proxy[TRACKER];
+    return proxy && isPlainObject(proxy) && !!proxy[TRACKER];
   },
 
   getTracker: function(proxy: IStateTracker) {
@@ -81,10 +82,11 @@ const StateTrackerUtil = {
   },
 
   batchRelink: function(proxy: IStateTracker, values: Array<RelinkValue>) {
-    const produce = canIUseProxy() ? ES6Produce : ES5Produce;
+    const produce = ES6Produce;
+    // const produce = canIUseProxy() ? ES6Produce : ES5Produce;
     const tracker = proxy[TRACKER];
     const pathTracker = proxy[PATH_TRACKER];
-    const baseValue = Object.assign({}, tracker._shadowBase || tracker._base);
+    const baseValue = Object.assign({}, tracker._base);
     const stackerTrackerContext = tracker._stateTrackerContext;
 
     // should create a new object....
@@ -95,7 +97,6 @@ const StateTrackerUtil = {
       rootPath: tracker._rootPath,
       stateTrackerContext: stackerTrackerContext,
       lastUpdateAt: Date.now(),
-      focusKey: null,
     });
 
     const proxyStateCopy = produce(
@@ -105,8 +106,8 @@ const StateTrackerUtil = {
         accessPath: [],
         rootPath: [],
         stateTrackerContext: stackerTrackerContext,
-        mayReusedTracker: newTracker,
-        focusKey: null,
+        // mayReusedTracker: newTracker,
+        // focusKey: null,
         isDraft: true,
       }
     );

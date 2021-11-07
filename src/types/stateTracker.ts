@@ -29,26 +29,28 @@ export interface StateTrackerConstructorProps {
   shadowBase?: any;
   stateTrackerContext: StateTrackerContext;
   lastUpdateAt: number;
-  focusKey: string | null;
+  // focusKey: string | null;
 }
 
 export interface StateTrackerProperties {
   _id: string;
+  _useProxy: boolean;
   _accessPath: Array<string>;
   _rootPath: Array<string>;
   _type: Type.Array | Type.Object;
   _base: Base;
-  _shadowBase: Base;
+  // _shadowBase: Base;
   _parentProxy: IStateTracker | null;
   _childProxies: ChildProxies;
-  _focusKeyToTrackerMap: FocusKeyToTrackerMap;
+  _nextChildProxies: any;
+  // _focusKeyToTrackerMap: FocusKeyToTrackerMap;
   _isPeeking: boolean;
   _isStrictPeeking: boolean;
-  _updateTimes: number;
-  _backwardAccessCount: number;
+  // _updateTimes: number;
+  // _backwardAccessCount: number;
   _lastUpdateAt: number;
   _stateTrackerContext: StateTrackerContext;
-  _focusKey: string | null;
+  // _focusKey: string | null;
 }
 
 export type StateTrackerInterface = StateTrackerProperties;

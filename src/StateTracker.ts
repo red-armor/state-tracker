@@ -10,29 +10,32 @@ const createPlainTrackerObject = function({
   base,
   stateTrackerContext,
   lastUpdateAt,
-  focusKey,
-  shadowBase,
-}: StateTrackerConstructorProps) {
+}: // focusKey,
+// shadowBase,
+StateTrackerConstructorProps) {
   return {
     _id: canIUseProxy()
       ? `ProxyStateTracker_${count++}`
       : `ES5StateTracker_${count++}`,
     _useProxy: canIUseProxy(),
-    _updateTimes: 0,
-    _stateTrackerContext: stateTrackerContext,
-    _lastUpdateAt: lastUpdateAt,
-    _backwardAccessCount: 0,
     _accessPath: accessPath,
     _rootPath: rootPath,
     _type: Array.isArray(base) ? Type.Array : Type.Object,
     _base: base,
     _parentProxy: parentProxy,
     _childProxies: {},
-    _focusKeyToTrackerMap: {},
-    _focusKey: focusKey,
+    _nextChildProxies: new Map(),
     _isPeeking: false,
     _isStrictPeeking: false,
-    _shadowBase: shadowBase,
+    // _updateTimes: 0,
+    _lastUpdateAt: lastUpdateAt,
+    _stateTrackerContext: stateTrackerContext,
+    // _backwardAccessCount: 0,
+
+    // _focusKeyToTrackerMap: {},
+    // _focusKey: focusKey,
+
+    // _shadowBase: shadowBase,
   };
 };
 
