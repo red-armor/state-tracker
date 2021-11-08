@@ -10,9 +10,7 @@ const createPlainTrackerObject = function({
   base,
   stateTrackerContext,
   lastUpdateAt,
-}: // focusKey,
-// shadowBase,
-StateTrackerConstructorProps) {
+}: StateTrackerConstructorProps) {
   return {
     _id: canIUseProxy()
       ? `ProxyStateTracker_${count++}`
@@ -27,15 +25,8 @@ StateTrackerConstructorProps) {
     _nextChildProxies: new Map(),
     _isPeeking: false,
     _isStrictPeeking: false,
-    // _updateTimes: 0,
     _lastUpdateAt: lastUpdateAt,
     _stateTrackerContext: stateTrackerContext,
-    // _backwardAccessCount: 0,
-
-    // _focusKeyToTrackerMap: {},
-    // _focusKey: focusKey,
-
-    // _shadowBase: shadowBase,
   };
 };
 
