@@ -9,11 +9,17 @@ export interface ProduceState {
   [key: string]: any;
 }
 
+export interface ProduceProps {
+  state: ProduceState;
+  affected?: WeakMap<object, unknown>;
+  proxyCache?: WeakMap<object, unknown>;
+}
+
 export interface ProduceProxyOptions {
   accessPath: Array<string>;
   parentProxy?: IStateTracker;
   rootPath: Array<string>;
-  stateTrackerContext?: StateTrackerContext;
+  stateTrackerContext: StateTrackerContext;
   // mayReusedTracker?: null | StateTrackerProperties;
   context?: string;
   // focusKey?: string | null;

@@ -31,7 +31,6 @@ export interface StateTrackerConstructorProps {
   lastUpdateAt: number;
   // focusKey: string | null;
 }
-
 export interface StateTrackerProperties {
   _id: string;
   _useProxy: boolean;

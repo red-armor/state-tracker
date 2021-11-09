@@ -21,11 +21,34 @@ import StateTrackerContext from './StateTrackerContext';
 import StateTrackerUtil from './StateTrackerUtil';
 import collection from './collection';
 
-const cachedProxies = new Map();
-
-function produce(
+export function produceImpl(
   state: ProduceState,
-  options?: ProduceProxyOptions
+  affected?: WeakMap<object, IStateTracker>,
+  proxyCache?: WeakMap<object, IStateTracker>
+) {
+  const stateTrackerContext = new StateTrackerContext({
+    proxyCache,
+    affected,
+  });
+
+  const proxy = createProxy(state, {
+    stateTrackerContext,
+    accessPath: [],
+    rootPath: [],
+  });
+
+  collection.register({
+    base: state,
+    proxyState: proxy,
+    stateTrackerContext,
+  });
+
+  return proxy;
+}
+
+export function createProxy(
+  state: ProduceState,
+  options: ProduceProxyOptions
 ): IStateTracker {
   const {
     parentProxy = null,
@@ -34,9 +57,6 @@ function produce(
     stateTrackerContext,
   } = options || {};
   const outerAccessPath = accessPath;
-
-  const trackerContext = stateTrackerContext || new StateTrackerContext();
-
   const internalKeys = [TRACKER, PATH_TRACKER, 'unlink'];
 
   const handler = {
@@ -73,8 +93,8 @@ function produce(
         const isPeeking = tracker._isPeeking;
 
         if (!isPeeking) {
-          if (trackerContext.getCurrent()) {
-            trackerContext
+          if (stateTrackerContext.getCurrent()) {
+            stateTrackerContext
               .getCurrent()
               .trackPaths(outerAccessPath.concat(prop as string));
           }
@@ -86,7 +106,7 @@ function produce(
         if (nextChildProxies.has(nextValue))
           return nextChildProxies.get(nextValue);
 
-        const cachedProxy = cachedProxies.get(nextValue);
+        const cachedProxy = stateTrackerContext.getCachedProxy(nextValue);
 
         if (cachedProxy) {
           nextChildProxies.set(nextValue, cachedProxy);
@@ -100,7 +120,7 @@ function produce(
           if (pathEqual(nextValue, nextValueTracker._accessPath)) {
             producedChildProxy = nextValue;
           } else {
-            producedChildProxy = produce(
+            producedChildProxy = createProxy(
               // only new value should create new proxy object..
               // Array.isArray(value) ? value.slice() : { ...value },
               shallowCopy(nextValue),
@@ -108,12 +128,12 @@ function produce(
                 accessPath: nextAccessPath,
                 parentProxy: proxy as IStateTracker,
                 rootPath,
-                stateTrackerContext: trackerContext,
+                stateTrackerContext,
               }
             );
           }
         } else {
-          producedChildProxy = produce(
+          producedChildProxy = createProxy(
             // only new value should create new proxy object..
             // Array.isArray(value) ? value.slice() : { ...value },
             nextValue,
@@ -121,15 +141,13 @@ function produce(
               accessPath: nextAccessPath,
               parentProxy: proxy as IStateTracker,
               rootPath,
-              stateTrackerContext: trackerContext,
+              stateTrackerContext,
             }
           );
         }
 
-        // childProxies[targetKey] = producedChildProxy;
-        cachedProxies.set(nextValue, producedChildProxy);
+        stateTrackerContext.setCachedProxy(nextValue, producedChildProxy);
         nextChildProxies.set(nextValue, producedChildProxy);
-
         return producedChildProxy;
       } catch (err) {
         console.log('[state-tracker] ', err);
@@ -176,7 +194,7 @@ function produce(
     parentProxy,
     accessPath,
     rootPath,
-    stateTrackerContext: trackerContext,
+    stateTrackerContext,
     lastUpdateAt: Date.now(),
   });
 
@@ -195,15 +213,5 @@ function produce(
     return tracker._base;
   });
 
-  if (!stateTrackerContext) {
-    collection.register({
-      base: state,
-      proxyState: proxy,
-      stateTrackerContext: trackerContext,
-    });
-  }
-
   return proxy as IStateTracker;
 }
-
-export { produce };

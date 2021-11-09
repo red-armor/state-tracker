@@ -1,19 +1,34 @@
 import StateTrackerNode from './StateTrackerNode';
 import { generateRandomKey } from './commons';
+import {
+  ProxyCache,
+  StateTrackerContextProps,
+} from './types/stateTrackerContext';
+import { IStateTracker } from '.';
 
 class StateTrackerContext {
   private queue: Array<StateTrackerNode>;
   private _lastUpdateAt: number;
   private _id: string;
+  private proxyCache: ProxyCache;
 
-  constructor() {
+  constructor(props: StateTrackerContextProps) {
     this.queue = [];
     this._id = generateRandomKey();
     this._lastUpdateAt = Date.now();
+    this.proxyCache = props.proxyCache || new WeakMap();
   }
 
   getId() {
     return this._id;
+  }
+
+  getCachedProxy(obj: object) {
+    return this.proxyCache.get(obj);
+  }
+
+  setCachedProxy(key: object, value: IStateTracker) {
+    this.proxyCache.set(key, value);
   }
 
   enter(context?: string) {

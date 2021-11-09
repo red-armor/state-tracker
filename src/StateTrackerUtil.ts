@@ -7,7 +7,7 @@ import {
 } from './commons';
 import { IStateTracker, PendingRunners, RelinkValue } from './types';
 import { createPlainTrackerObject } from './StateTracker';
-import { produce as ES6Produce } from './proxy';
+import { createProxy as createES6Proxy } from './proxy';
 // import { produce as ES5Produce } from './es5';
 import collection from './collection';
 
@@ -82,7 +82,7 @@ const StateTrackerUtil = {
   },
 
   batchRelink: function(proxy: IStateTracker, values: Array<RelinkValue>) {
-    const produce = ES6Produce;
+    const createProxy = createES6Proxy;
     // const produce = canIUseProxy() ? ES6Produce : ES5Produce;
     const tracker = proxy[TRACKER];
     const pathTracker = proxy[PATH_TRACKER];
@@ -99,15 +99,13 @@ const StateTrackerUtil = {
       lastUpdateAt: Date.now(),
     });
 
-    const proxyStateCopy = produce(
+    const proxyStateCopy = createProxy(
       { ...baseValue },
       {
         // parentProxy: null,
         accessPath: [],
         rootPath: [],
         stateTrackerContext: stackerTrackerContext,
-        // mayReusedTracker: newTracker,
-        // focusKey: null,
         isDraft: true,
       }
     );
