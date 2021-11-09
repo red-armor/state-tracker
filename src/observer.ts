@@ -8,9 +8,9 @@ import StateTrackerNode from './StateTrackerNode';
 export default (
   state: IStateTracker,
   fn: Function,
-  options: ObserverOptions
+  options?: ObserverOptions
 ) => {
-  const { props } = options;
+  const { props } = options || {};
   const reaction = new Reaction({ fn });
   const reactionName = fn.name ? fn.name : generateReactionName();
   const stateTrackerNode = new StateTrackerNode(reactionName);
@@ -20,7 +20,7 @@ export default (
   return function(...args: Array<any>) {
     const args0 = args[0];
 
-    if (!isPlainObject(args0)) {
+    if (args0 && !isPlainObject(args0)) {
       throw new StateTrackerError(
         "Observed function's args should match the following rules: \n" +
           '  1. only one param\n' +
@@ -35,13 +35,13 @@ export default (
     }
 
     const truthy = isInitial
-      ? !!props
-        ? stateTrackerNode.isPropsEqual(props)
-        : true
-      : false;
+      ? false
+      : !!props
+      ? stateTrackerNode.isPropsEqual(props)
+      : true;
 
-    isInitial = false;
     if (truthy) return result;
+    isInitial = false;
 
     StateTrackerUtil.enterNode(state, stateTrackerNode);
     const nextArgs = props ? { ...args0, ...props } : args0;
