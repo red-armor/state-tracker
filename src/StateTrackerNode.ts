@@ -1,5 +1,6 @@
 import { isTrackable } from './commons';
 import { ObserverProps } from './types';
+import StateTrackerUtil from './StateTrackerUtil'
 class Node {
   private _effects: Array<Function>;
   private _paths: Array<string>;
@@ -133,16 +134,27 @@ class StateTrackerNode {
     this.graph = new Graph('root', []);
     this._paths = [];
     this._observerProps = observerProps || {};
+    this.registerObserverProps()
   }
 
   registerObserverProps() {
     for (const key in this._observerProps) {
+      console.log('registerObserverProps ', key)
       if (this._observerProps.hasOwnProperty(key)) {
         const value = this._observerProps[key];
-        if (!this._observerPropsProxyToKey.has(value))
-          this._observerPropsProxyToKey.set(value, key);
+        if (!this._observerPropsProxyToKey.has(value)) {
+          if (value.__isProxy) {
+            const tracker = StateTrackerUtil.getTracker(value)
+            const base = tracker._base
+            this._observerPropsProxyToKey.set(base, key);
+          } else {
+            this._observerPropsProxyToKey.set(value, key);
+          }
+        }
       }
     }
+
+    console.log('_observerPropsProxyToKey ', this._observerPropsProxyToKey)
   }
 
   isTrackablePropsEqual(key: string, value: any, nextValue: any) {
@@ -150,6 +162,11 @@ class StateTrackerNode {
     // 证明props并没有被用到；所以，直接返回true就可以了
     if (!graph) return true;
     return value !== nextValue;
+  }
+
+  setObserverProps(props?: ObserverProps) {
+    this._observerProps = props || {}
+    this.registerObserverProps()
   }
 
   isPropsEqual(nextProps: ObserverProps) {
@@ -190,6 +207,10 @@ class StateTrackerNode {
   }) {
     const propsTargetKey = this._observerPropsProxyToKey.get(target);
 
+    console.log('this._observerPropsProxyToKey ', this._observerPropsProxyToKey)
+    console.log('track ', target, path, value)
+    console.log('propsTargetKey ', propsTargetKey)
+
     // value derived from props
     if (propsTargetKey) {
       if (isTrackable(value)) {
@@ -222,6 +243,16 @@ class StateTrackerNode {
 
   getRemarkable() {
     return this.graph.traverse();
+  }
+
+  getObserverPropsRemarkable() {
+    const result: {
+      [key: string]: Array<Array<string>>
+    } = {}
+    for (const [key, value] of this._observerPropsGraph.entries()) {
+      result[key] = value.traverse()
+    }
+    return result
   }
 }
 

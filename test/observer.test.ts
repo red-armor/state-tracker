@@ -13,9 +13,9 @@ function testTracker(useProxy: boolean) {
         app: {
           list: [
             { id: 1, label: 'first' },
-            { id: 2, label: 'second' },
-            { id: 3, label: 'third' },
-            { id: 4, label: 'forth' },
+            // { id: 2, label: 'second' },
+            // { id: 3, label: 'third' },
+            // { id: 4, label: 'forth' },
           ],
         },
       };
@@ -26,13 +26,12 @@ function testTracker(useProxy: boolean) {
         return proxyState.app.list.map((item: any) => {
           const func = observer(
             proxyState,
-            () => {
-              // const { item } = props;
-              // console.log('item ', item.id);
+            (props: any) => {
+              const { item } = props;
+              console.log('item ', item.id);
             },
             { props: { item } }
           );
-
           func();
         });
       });
