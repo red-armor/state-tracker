@@ -1,8 +1,8 @@
-import { ProduceState, IStateTracker } from './types';
+import { State, IStateTracker } from './types';
 import { produceImpl } from './proxy';
 
 const produce = (
-  state: ProduceState,
+  state: State,
   affected?: WeakMap<object, IStateTracker>,
   proxyCache?: WeakMap<object, IStateTracker>
 ) => {

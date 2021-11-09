@@ -200,3 +200,7 @@ export const pathEqual = (a: Array<string>, b: Array<string>) => {
   if (a && b && is(JSON.stringify(a), JSON.stringify(b))) return true;
   return false;
 };
+
+let reactionNameCounter = 0;
+export const generateReactionName = () =>
+  `anonymous_reaction_${reactionNameCounter++}`;

@@ -1,14 +1,14 @@
 import PathNode from './PathNode';
 import Runner from './Runner';
 import StateTrackerContext from './StateTrackerContext';
-import { IStateTracker, PendingRunners, ProduceState } from './types';
+import { IStateTracker, PendingRunners, State } from './types';
 import { UPDATE_TYPE } from './types/pathTree';
 import { shallowEqual, isTypeEqual, isPrimitive, isMutable } from './commons';
 
 class PathTree {
   public node: PathNode;
   readonly _state: IStateTracker;
-  readonly _base: ProduceState;
+  readonly _base: State;
   readonly _stateTrackerContext: StateTrackerContext;
   private _updateType: UPDATE_TYPE | null;
   public pendingRunners: Array<PendingRunners>;
@@ -19,7 +19,7 @@ class PathTree {
     stateTrackerContext,
   }: {
     proxyState: IStateTracker;
-    base: ProduceState;
+    base: State;
     stateTrackerContext: StateTrackerContext;
   }) {
     this.node = new PathNode({

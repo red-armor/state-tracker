@@ -1,3 +1,4 @@
+import { ObserverProps } from './types';
 class Node {
   private _effects: Array<Function>;
   private _paths: Array<string>;
@@ -118,14 +119,16 @@ class Graph {
 }
 
 class StateTrackerNode {
-  public context: string;
+  public name: string;
   public graph: Graph;
   private _paths: Array<Array<string>>;
+  readonly _observedProps?: ObserverProps;
 
-  constructor(context?: string) {
-    this.context = context || 'default';
+  constructor(name: string, observedProps?: ObserverProps) {
+    this.name = name || 'default';
     this.graph = new Graph('root', []);
     this._paths = [];
+    this._observedProps = observedProps;
   }
 
   trackPaths(path: Array<string>) {

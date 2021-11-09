@@ -5,7 +5,12 @@ import {
   isPlainObject,
   // canIUseProxy,
 } from './commons';
-import { IStateTracker, PendingRunners, RelinkValue } from './types';
+import {
+  IStateTracker,
+  PendingRunners,
+  RelinkValue,
+  ObserverProps,
+} from './types';
 import { createPlainTrackerObject } from './StateTracker';
 import { createProxy as createES6Proxy } from './proxy';
 // import { produce as ES5Produce } from './es5';
@@ -24,11 +29,11 @@ const StateTrackerUtil = {
     return proxy[PATH_TRACKER];
   },
 
-  enter: function(proxy: IStateTracker, mark?: string) {
+  enter: function(proxy: IStateTracker, mark?: string, props?: ObserverProps) {
     const tracker = proxy[TRACKER];
-    const contextKey = mark || generateRandomContextKey();
+    const name = mark || generateRandomContextKey();
     const trackerContext = tracker._stateTrackerContext;
-    trackerContext.enter(contextKey);
+    trackerContext.enter(name, props);
   },
 
   leave: function(proxy: IStateTracker) {

@@ -1,6 +1,6 @@
 import PathTree from './PathTree';
 import StateTrackerContext from './StateTrackerContext';
-import { IStateTracker, ProduceState } from './types';
+import { IStateTracker, State } from './types';
 import StateTrackerUtil from './StateTrackerUtil';
 
 class Collection {
@@ -11,7 +11,7 @@ class Collection {
   }
 
   register(props: {
-    base: ProduceState;
+    base: State;
     proxyState: IStateTracker;
     stateTrackerContext: StateTrackerContext;
   }) {

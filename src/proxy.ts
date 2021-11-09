@@ -13,7 +13,7 @@ import { createPlainTrackerObject } from './StateTracker';
 import PathTracker from './PathTracker';
 import {
   IStateTracker,
-  ProduceState,
+  State,
   ProduceProxyOptions,
   StateTrackerProperties,
 } from './types';
@@ -22,7 +22,7 @@ import StateTrackerUtil from './StateTrackerUtil';
 import collection from './collection';
 
 export function produceImpl(
-  state: ProduceState,
+  state: State,
   affected?: WeakMap<object, IStateTracker>,
   proxyCache?: WeakMap<object, IStateTracker>
 ) {
@@ -47,7 +47,7 @@ export function produceImpl(
 }
 
 export function createProxy(
-  state: ProduceState,
+  state: State,
   options: ProduceProxyOptions
 ): IStateTracker {
   const {

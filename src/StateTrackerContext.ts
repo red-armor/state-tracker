@@ -4,7 +4,7 @@ import {
   ProxyCache,
   StateTrackerContextProps,
 } from './types/stateTrackerContext';
-import { IStateTracker } from '.';
+import { IStateTracker, ObserverProps } from '.';
 
 class StateTrackerContext {
   private queue: Array<StateTrackerNode>;
@@ -31,8 +31,8 @@ class StateTrackerContext {
     this.proxyCache.set(key, value);
   }
 
-  enter(context?: string) {
-    const node = new StateTrackerNode(context);
+  enter(name: string, props?: ObserverProps) {
+    const node = new StateTrackerNode(name, props);
     this.queue.push(node);
   }
 
