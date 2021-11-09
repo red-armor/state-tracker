@@ -3,6 +3,7 @@ import Reaction from './Reaction';
 import { isPlainObject, generateReactionName } from './commons';
 import StateTrackerError from './StateTrackerError';
 import StateTrackerUtil from './StateTrackerUtil';
+import StateTrackerNode from './StateTrackerNode';
 
 export default (
   state: IStateTracker,
@@ -12,6 +13,9 @@ export default (
   const { props } = options;
   const reaction = new Reaction({ fn });
   const reactionName = fn.name ? fn.name : generateReactionName();
+  const stateTrackerNode = new StateTrackerNode(reactionName);
+  let result = null as any;
+  let isInitial = true;
 
   return function(...args: Array<any>) {
     const args0 = args[0];
@@ -30,10 +34,20 @@ export default (
       );
     }
 
-    StateTrackerUtil.enter(state, reactionName, props);
+    const truthy = isInitial
+      ? !!props
+        ? stateTrackerNode.isPropsEqual(props)
+        : true
+      : false;
+
+    isInitial = false;
+    if (truthy) return result;
+
+    StateTrackerUtil.enterNode(state, stateTrackerNode);
     const nextArgs = props ? { ...args0, ...props } : args0;
-    const result = reaction.run([nextArgs]);
+    const nextResult = reaction.run([nextArgs]);
     StateTrackerUtil.leave(state);
-    return result;
+    result = nextResult;
+    return nextResult;
   };
 };

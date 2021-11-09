@@ -91,17 +91,21 @@ export function createProxy(
 
         const nextAccessPath = accessPath.concat(prop as string);
         const isPeeking = tracker._isPeeking;
+        const nextValue = target[prop];
 
         if (!isPeeking) {
           if (stateTrackerContext.getCurrent()) {
-            stateTrackerContext
-              .getCurrent()
-              .trackPaths(outerAccessPath.concat(prop as string));
+            stateTrackerContext.getCurrent().track({
+              target,
+              key: prop,
+              value: nextValue,
+              path: outerAccessPath.concat(prop as string),
+            });
+            // .trackPaths(outerAccessPath.concat(prop as string));
           }
         }
 
-        if (!isTrackable(target[prop])) return target[prop];
-        const nextValue = target[prop];
+        if (!isTrackable(nextValue)) return nextValue;
 
         if (nextChildProxies.has(nextValue))
           return nextChildProxies.get(nextValue);

@@ -1,3 +1,4 @@
+import { isTrackable } from './commons';
 import { ObserverProps } from './types';
 class Node {
   private _effects: Array<Function>;
@@ -121,14 +122,92 @@ class Graph {
 class StateTrackerNode {
   public name: string;
   public graph: Graph;
+  private _observerPropsGraph: Map<string, Graph> = new Map();
   private _paths: Array<Array<string>>;
-  readonly _observedProps?: ObserverProps;
+  private _observerProps: ObserverProps;
 
-  constructor(name: string, observedProps?: ObserverProps) {
+  private _observerPropsProxyToKey: Map<object, string> = new Map();
+
+  constructor(name: string, observerProps?: ObserverProps) {
     this.name = name || 'default';
     this.graph = new Graph('root', []);
     this._paths = [];
-    this._observedProps = observedProps;
+    this._observerProps = observerProps || {};
+  }
+
+  registerObserverProps() {
+    for (const key in this._observerProps) {
+      if (this._observerProps.hasOwnProperty(key)) {
+        const value = this._observerProps[key];
+        if (!this._observerPropsProxyToKey.has(value))
+          this._observerPropsProxyToKey.set(value, key);
+      }
+    }
+  }
+
+  isTrackablePropsEqual(key: string, value: any, nextValue: any) {
+    const graph = this._observerPropsGraph.get(key);
+    // 证明props并没有被用到；所以，直接返回true就可以了
+    if (!graph) return true;
+    return value !== nextValue;
+  }
+
+  isPropsEqual(nextProps: ObserverProps) {
+    const nextKeys = Object.keys(nextProps);
+    const keys = Object.keys(this._observerProps);
+    const len = keys.length;
+
+    if (nextKeys.length !== keys.length) return false;
+    for (let idx = 0; idx < len; idx++) {
+      const key = nextKeys[idx];
+      const nextValue = nextProps[key];
+      const value = this._observerProps[key];
+
+      if (
+        isTrackable(value) &&
+        isTrackable(nextValue) &&
+        !this.isTrackablePropsEqual(key, value, nextValue)
+      ) {
+        return false;
+      }
+
+      if (nextValue !== value) return false;
+    }
+
+    this._observerProps = nextProps;
+    return false;
+  }
+
+  track({
+    target,
+    path,
+    value,
+  }: {
+    target: object;
+    path: Array<string>;
+    key: string | number;
+    value: any;
+  }) {
+    const propsTargetKey = this._observerPropsProxyToKey.get(target);
+
+    // value derived from props
+    if (propsTargetKey) {
+      if (isTrackable(value)) {
+        this._observerPropsProxyToKey.set(value, propsTargetKey);
+      }
+      const graph = this._observerPropsGraph.get(propsTargetKey);
+      if (!graph)
+        this._observerPropsGraph.set(
+          propsTargetKey,
+          new Graph(propsTargetKey, [])
+        );
+      const node = new Node(path);
+      graph?.access(node);
+      return;
+    }
+
+    // The normal perform...
+    this.trackPaths(path);
   }
 
   trackPaths(path: Array<string>) {

@@ -36,6 +36,10 @@ class StateTrackerContext {
     this.queue.push(node);
   }
 
+  enterNode(node: StateTrackerNode) {
+    this.queue.push(node);
+  }
+
   leave() {
     this.pop();
   }

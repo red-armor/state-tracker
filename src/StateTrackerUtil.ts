@@ -3,7 +3,6 @@ import {
   generateRandomContextKey,
   TRACKER,
   isPlainObject,
-  // canIUseProxy,
 } from './commons';
 import {
   IStateTracker,
@@ -13,8 +12,8 @@ import {
 } from './types';
 import { createPlainTrackerObject } from './StateTracker';
 import { createProxy as createES6Proxy } from './proxy';
-// import { produce as ES5Produce } from './es5';
 import collection from './collection';
+import StateTrackerNode from './StateTrackerNode';
 
 const StateTrackerUtil = {
   hasTracker: function(proxy: IStateTracker) {
@@ -34,6 +33,12 @@ const StateTrackerUtil = {
     const name = mark || generateRandomContextKey();
     const trackerContext = tracker._stateTrackerContext;
     trackerContext.enter(name, props);
+  },
+
+  enterNode: function(proxy: IStateTracker, node: StateTrackerNode) {
+    const tracker = proxy[TRACKER];
+    const trackerContext = tracker._stateTrackerContext;
+    trackerContext.enterNode(node);
   },
 
   leave: function(proxy: IStateTracker) {
