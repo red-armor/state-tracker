@@ -14,8 +14,8 @@ import StateTrackerUtil from './StateTrackerUtil';
 //   produce = ES5Produce;
 // }
 
-export { default as observer } from './observer'
-export { default as produce } from './produce'
+export { default as observer } from './observer';
+export { default as produce } from './produce';
 export * from './types';
 export { StateTrackerUtil };
 export { default as when } from './when';

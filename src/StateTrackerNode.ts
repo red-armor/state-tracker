@@ -1,6 +1,6 @@
 import { isTrackable } from './commons';
 import { ObserverProps } from './types';
-import StateTrackerUtil from './StateTrackerUtil'
+import StateTrackerUtil from './StateTrackerUtil';
 class Node {
   private _effects: Array<Function>;
   private _paths: Array<string>;
@@ -98,6 +98,7 @@ class Graph {
 
   traverse(): Array<Array<string>> {
     const keys = Object.keys(this.childrenMap);
+
     const len = keys.length;
     let merged = [] as Array<Array<string>>;
     for (let i = 0; i < len; i++) {
@@ -127,34 +128,37 @@ class StateTrackerNode {
   private _paths: Array<Array<string>>;
   private _observerProps: ObserverProps;
 
-  private _observerPropsProxyToKey: Map<object, string> = new Map();
+  private _observerPropsProxyToKeyMap: Map<object, string> = new Map();
 
   constructor(name: string, observerProps?: ObserverProps) {
     this.name = name || 'default';
     this.graph = new Graph('root', []);
     this._paths = [];
     this._observerProps = observerProps || {};
-    this.registerObserverProps()
+    this.registerObserverProps();
   }
 
   registerObserverProps() {
     for (const key in this._observerProps) {
-      console.log('registerObserverProps ', key)
+      console.log('registerObserverProps ', key);
       if (this._observerProps.hasOwnProperty(key)) {
         const value = this._observerProps[key];
-        if (!this._observerPropsProxyToKey.has(value)) {
+        if (!this._observerPropsProxyToKeyMap.has(value)) {
           if (value.__isProxy) {
-            const tracker = StateTrackerUtil.getTracker(value)
-            const base = tracker._base
-            this._observerPropsProxyToKey.set(base, key);
+            const tracker = StateTrackerUtil.getTracker(value);
+            const base = tracker._base;
+            this._observerPropsProxyToKeyMap.set(base, key);
           } else {
-            this._observerPropsProxyToKey.set(value, key);
+            this._observerPropsProxyToKeyMap.set(value, key);
           }
         }
       }
     }
 
-    console.log('_observerPropsProxyToKey ', this._observerPropsProxyToKey)
+    console.log(
+      '_observerPropsProxyToKeyMap ',
+      this._observerPropsProxyToKeyMap
+    );
   }
 
   isTrackablePropsEqual(key: string, value: any, nextValue: any) {
@@ -165,8 +169,8 @@ class StateTrackerNode {
   }
 
   setObserverProps(props?: ObserverProps) {
-    this._observerProps = props || {}
-    this.registerObserverProps()
+    this._observerProps = props || {};
+    this.registerObserverProps();
   }
 
   isPropsEqual(nextProps: ObserverProps) {
@@ -205,25 +209,26 @@ class StateTrackerNode {
     key: string | number;
     value: any;
   }) {
-    const propsTargetKey = this._observerPropsProxyToKey.get(target);
+    const propsTargetKey = this._observerPropsProxyToKeyMap.get(target);
 
-    console.log('this._observerPropsProxyToKey ', this._observerPropsProxyToKey)
-    console.log('track ', target, path, value)
-    console.log('propsTargetKey ', propsTargetKey)
+    // console.log('this._observerPropsProxyToKeyMap ', this._observerPropsProxyToKeyMap)
+    // console.log('track ', target, path, value)
+    // console.log('propsTargetKey ', propsTargetKey)
 
     // value derived from props
     if (propsTargetKey) {
       if (isTrackable(value)) {
-        this._observerPropsProxyToKey.set(value, propsTargetKey);
+        this._observerPropsProxyToKeyMap.set(value, propsTargetKey);
       }
-      const graph = this._observerPropsGraph.get(propsTargetKey);
-      if (!graph)
-        this._observerPropsGraph.set(
-          propsTargetKey,
-          new Graph(propsTargetKey, [])
-        );
+      const graph = this._observerPropsGraph.has(propsTargetKey)
+        ? this._observerPropsGraph.get(propsTargetKey)
+        : this._observerPropsGraph
+            .set(propsTargetKey, new Graph(propsTargetKey, []))
+            .get(propsTargetKey);
+
       const node = new Node(path);
       graph?.access(node);
+      console.log('access node ', graph);
       return;
     }
 
@@ -247,12 +252,12 @@ class StateTrackerNode {
 
   getObserverPropsRemarkable() {
     const result: {
-      [key: string]: Array<Array<string>>
-    } = {}
+      [key: string]: Array<Array<string>>;
+    } = {};
     for (const [key, value] of this._observerPropsGraph.entries()) {
-      result[key] = value.traverse()
+      result[key] = value.traverse();
     }
-    return result
+    return result;
   }
 }
 
