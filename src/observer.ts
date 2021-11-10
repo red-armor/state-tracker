@@ -34,24 +34,19 @@ export default (
       );
     }
 
-    const truthy = isInitial
-      ? false
-      : !!props
-      ? stateTrackerNode.isPropsEqual(props)
-      : true;
+    const isPropsEqual = props ? stateTrackerNode.isPropsEqual(props) : false;
+    const truthy = isInitial ? false : !!props ? isPropsEqual : true;
 
     if (truthy) return result;
     isInitial = false;
-
-    console.log('props ========= ', props);
 
     stateTrackerNode.setObserverProps(props);
 
     StateTrackerUtil.enterNode(state, stateTrackerNode);
     const nextArgs = props ? { ...args0, ...props } : args0;
     const nextResult = reaction.run(nextArgs);
-    console.log('remarkable ', stateTrackerNode.getRemarkable());
-    console.log('remarkable 2 ', stateTrackerNode.getObserverPropsRemarkable());
+    // console.log('remarkable ', stateTrackerNode.getRemarkable());
+    // console.log('remarkable 2 ', stateTrackerNode.getObserverPropsRemarkable());
     StateTrackerUtil.leave(state);
     result = nextResult;
     return nextResult;

@@ -9,7 +9,6 @@ class Reaction {
   }
 
   run(...args: Array<any>) {
-    console.log('args ', args);
     return this.fn.apply(null, args);
   }
 }

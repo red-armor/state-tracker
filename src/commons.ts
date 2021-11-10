@@ -204,3 +204,23 @@ export const pathEqual = (a: Array<string>, b: Array<string>) => {
 let reactionNameCounter = 0;
 export const generateReactionName = () =>
   `anonymous_reaction_${reactionNameCounter++}`;
+
+export function peek(
+  obj: Object,
+  rootPath: Array<string>,
+  accessPath: Array<string>
+) {
+  if (!isTrackable(obj)) return null;
+  const rootPathString = rootPath.join('_');
+  const accessPathString = accessPath.join('_');
+
+  const index = accessPathString.indexOf(rootPathString);
+
+  if (index === -1) return null;
+
+  const left = accessPathString.slice(index + rootPathString.length);
+  const parts = left.split('_').filter(v => v);
+  return parts.reduce((n: { [key: string]: any }, c: string) => {
+    return n[c];
+  }, obj);
+}
