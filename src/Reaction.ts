@@ -19,6 +19,10 @@ class Reaction {
     this.fn = fn;
   }
 
+  getStateTrackerNode() {
+    return this.stateTrackerNode;
+  }
+
   run() {
     StateTrackerUtil.enterNode(this.state, this.stateTrackerNode);
     const args = [];

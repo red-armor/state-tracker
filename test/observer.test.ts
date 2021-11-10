@@ -118,5 +118,42 @@ function testTracker(useProxy: boolean) {
 
       expect(runCount).toBe(2);
     });
+
+    it.only('basic', () => {
+      const state = {
+        app: {
+          list: [{ id: 1, label: 'first' }],
+          location: {
+            city: 'shanghai',
+          },
+          title: 'testing',
+          description: 'testing',
+        },
+      };
+
+      const proxyState = produce(state);
+
+      const fn = observer(proxyState, () => {
+        const { app } = proxyState;
+        return app.list.forEach((item: any) => {
+          const {
+            location: { city },
+            title,
+            description,
+          } = proxyState.app;
+          console.log('trigger ======');
+          expect(city).toBe('shanghai');
+          expect(title).toBe('testing');
+          expect(description).toBe('testing');
+          const func = observer(proxyState, (props: any) => {
+            const { item } = props;
+            return item.id;
+          });
+          func({ item });
+        });
+      });
+
+      fn();
+    });
   });
 }

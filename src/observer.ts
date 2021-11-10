@@ -37,6 +37,8 @@ export default (
     isInitial = false;
 
     const nextResult = reaction.run();
+
+    console.log('reaction ', reaction.getStateTrackerNode().stateGraph);
     result = nextResult;
     return nextResult;
   };

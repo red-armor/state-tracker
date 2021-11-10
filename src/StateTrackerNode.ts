@@ -86,8 +86,8 @@ class StateTrackerNode {
 
   // only shallow compare used props. So the root path is very important.
   isPropsEqual(nextProps: ObserverProps) {
-    const nextKeys = Object.keys(nextProps);
-    const keys = Object.keys(this._observerProps);
+    const nextKeys = Object.keys(nextProps || {});
+    const keys = Object.keys(this._observerProps || {});
     const len = keys.length;
 
     if (nextKeys.length !== keys.length) return false;
@@ -170,6 +170,7 @@ class StateTrackerNode {
 
   trackPaths(path: Array<string>) {
     const node = new Node(path);
+    console.log('node ', node, path);
     this.stateGraph.access(node);
   }
 
