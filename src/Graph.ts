@@ -96,7 +96,7 @@ export class Graph {
   }
 
   getPath(): Array<string> {
-    return this.slug;
+    return this.slug.concat(this.getPoint());
   }
 
   getPaths() {

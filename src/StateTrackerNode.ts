@@ -114,8 +114,30 @@ class StateTrackerNode {
     return this.performComparison(nextRootState, graph);
   }
 
-  performComparison(values: IStateTracker | object, graph: Graph) {
-    console.log('value ', values, graph);
+  performComparison(
+    values:
+      | IStateTracker
+      | {
+          [key: string]: any;
+        },
+    graph: Graph
+  ) {
+    const childrenMap = graph.childrenMap;
+    const keys = Object.keys(childrenMap);
+    const len = keys.length;
+
+    for (let idx = 0; idx < len; idx++) {
+      const key = keys[idx];
+      const graph = childrenMap[key];
+      const nextValue = values[key];
+      const affectedPath = graph.getPath();
+      const affectedKey = this.generateAffectedPathKey(affectedPath);
+      const currentValue = this._affectedPathValue.get(affectedKey);
+      if (raw(nextValue) !== raw(currentValue)) {
+        return false;
+      }
+    }
+    return true;
   }
 
   // 设置props root path
