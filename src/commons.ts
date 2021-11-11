@@ -1,3 +1,4 @@
+import StateTrackerUtil from './StateTrackerUtil';
 import { SeenKeys } from './types';
 
 const toString = Function.call.bind<Function>(Object.prototype.toString);
@@ -22,6 +23,9 @@ export const TRACKER: unique symbol = hasSymbol
 export const PATH_TRACKER: unique symbol = hasSymbol
   ? Symbol.for('path_tracker')
   : ('__path_tracker__' as any);
+export const IS_PROXY: unique symbol = hasSymbol
+  ? Symbol.for('is_proxy')
+  : ('__is_proxy__' as any);
 
 export const canIUseProxy = () => {
   try {
@@ -223,4 +227,17 @@ export function peek(
   return parts.reduce((n: { [key: string]: any }, c: string) => {
     return n[c];
   }, obj);
+}
+
+export function isProxy(obj: any) {
+  if (isTrackable(obj) && obj[IS_PROXY]) return true;
+  return false;
+}
+
+export function raw(obj: any) {
+  if (isProxy(obj)) {
+    return StateTrackerUtil.getTracker(obj)._base;
+  }
+
+  return obj;
 }

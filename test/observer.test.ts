@@ -132,15 +132,16 @@ function testTracker(useProxy: boolean) {
       };
 
       const proxyState = produce(state);
+      const app = proxyState.app;
 
       const fn = observer(proxyState, () => {
-        const { app } = proxyState;
-        return app.list.forEach((item: any) => {
+        const { list } = app;
+        return list.forEach((item: any) => {
           const {
             location: { city },
             title,
             description,
-          } = proxyState.app;
+          } = app;
           console.log('trigger ======');
           expect(city).toBe('shanghai');
           expect(title).toBe('testing');

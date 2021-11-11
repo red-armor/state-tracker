@@ -1,26 +1,34 @@
-import { isTrackable, peek } from './commons';
+import { isTrackable, peek, raw } from './commons';
 import { ObserverProps, IStateTracker } from './types';
 import StateTrackerUtil from './StateTrackerUtil';
 import { Graph, Node } from './Graph';
 class StateTrackerNode {
   public name: string;
-  public stateGraph: Graph;
-  private _observerPropsGraph: Map<string, Graph> = new Map();
+  public stateGraphMap: Map<string, Graph> = new Map();
+  private propsGraphMap: Map<string, Graph> = new Map();
   private _observerProps: ObserverProps;
-  private _rootMetaMap: Map<
+
+  private propsRootMetaMap: Map<
     string,
     {
       path: Array<string>;
       target: object;
     }
   > = new Map();
+  // private stateRootMetaMap: Map<
+  //   string,
+  //   {
+  //     path: Array<string>;
+  //     target: object;
+  //   }
+  // > = new Map();
+
   private _affectedPathValue: Map<string, any> = new Map();
 
-  private _observerPropsProxyToKeyMap: Map<object, string> = new Map();
+  private _propsProxyToKeyMap: Map<object, string> = new Map();
 
   constructor(name: string, observerProps?: ObserverProps) {
     this.name = name || 'default';
-    this.stateGraph = new Graph('root', []);
     this._observerProps = observerProps || {};
     this.registerObserverProps();
   }
@@ -29,23 +37,14 @@ class StateTrackerNode {
     for (const key in this._observerProps) {
       if (this._observerProps.hasOwnProperty(key)) {
         const value = this._observerProps[key];
-        if (!this._observerPropsProxyToKeyMap.has(value)) {
+        if (!this._propsProxyToKeyMap.has(value)) {
           // proxy should not be key
-          if (value.__isProxy) {
-            const tracker = StateTrackerUtil.getTracker(value);
-            const base = tracker._base;
-            this._observerPropsProxyToKeyMap.set(base, key);
-            this._rootMetaMap.set(key, {
-              target: base,
-              path: [],
-            });
-          } else {
-            this._observerPropsProxyToKeyMap.set(value, key);
-            this._rootMetaMap.set(key, {
-              target: value,
-              path: [],
-            });
-          }
+          const rawValue = raw(value);
+          this._propsProxyToKeyMap.set(rawValue, key);
+          this.propsRootMetaMap.set(key, {
+            target: rawValue,
+            path: [],
+          });
         }
       }
     }
@@ -56,12 +55,12 @@ class StateTrackerNode {
   }
 
   isTrackablePropsEqual(key: string, nextValue: any) {
-    const graph = this._observerPropsGraph.get(key);
+    const graph = this.propsGraphMap.get(key);
 
     // 证明props并没有被用到；所以，直接返回true就可以了
     if (!graph) return true;
     const affectedPaths = graph.getPaths();
-    const rootPath = this._rootMetaMap.get(key)?.path || [];
+    const rootPath = this.propsRootMetaMap.get(key)?.path || [];
 
     const len = affectedPaths.length;
 
@@ -110,7 +109,9 @@ class StateTrackerNode {
 
   isStateEqual(state: IStateTracker, rootPath: Array<string> = []) {
     const nextRootState = StateTrackerUtil.peek(state, rootPath);
-    return this.performComparison(nextRootState, this.stateGraph);
+    const rootPoint = rootPath[0];
+    const graph = this.stateGraphMap.get(rootPoint)!;
+    return this.performComparison(nextRootState, graph);
   }
 
   performComparison(values: IStateTracker | object, graph: Graph) {
@@ -118,7 +119,7 @@ class StateTrackerNode {
   }
 
   findRootMeta(target: object) {
-    for (const value of this._rootMetaMap.values()) {
+    for (const value of this.propsRootMetaMap.values()) {
       if (value.target === target) return value;
     }
 
@@ -135,12 +136,12 @@ class StateTrackerNode {
     key: string | number;
     value: any;
   }) {
-    const propsTargetKey = this._observerPropsProxyToKeyMap.get(target);
+    const propsTargetKey = this._propsProxyToKeyMap.get(target);
 
     // value derived from props
     if (propsTargetKey) {
       if (isTrackable(value)) {
-        this._observerPropsProxyToKeyMap.set(value, propsTargetKey);
+        this._propsProxyToKeyMap.set(value, propsTargetKey);
       }
 
       // 设置root path
@@ -153,10 +154,10 @@ class StateTrackerNode {
       const affectedPathKey = this.generateAffectedPathKey(path);
       this._affectedPathValue.set(affectedPathKey, value);
 
-      const graph = this._observerPropsGraph.has(propsTargetKey)
-        ? this._observerPropsGraph.get(propsTargetKey)
-        : this._observerPropsGraph
-            .set(propsTargetKey, new Graph(propsTargetKey, []))
+      const graph = this.propsGraphMap.has(propsTargetKey)
+        ? this.propsGraphMap.get(propsTargetKey)
+        : this.propsGraphMap
+            .set(propsTargetKey, new Graph(propsTargetKey))
             .get(propsTargetKey);
 
       const node = new Node(path);
@@ -170,22 +171,41 @@ class StateTrackerNode {
 
   trackPaths(path: Array<string>) {
     const node = new Node(path);
-    console.log('node ', node, path);
-    this.stateGraph.access(node);
+    const rootPoint = path[0];
+
+    if (this.stateGraphMap.has(rootPoint)) {
+      this.stateGraphMap.set(rootPoint, new Graph(rootPoint));
+    }
+
+    const graph = this.stateGraphMap.has(rootPoint)
+      ? this.stateGraphMap.get(rootPoint)
+      : this.stateGraphMap.set(rootPoint, new Graph(rootPoint)).get(rootPoint);
+    graph!.access(node);
   }
 
-  getRemarkable() {
-    return this.stateGraph.traverse();
-  }
-
-  getObserverPropsRemarkable() {
+  getStateRemarkable() {
     const result: {
       [key: string]: Array<Array<string>>;
     } = {};
-    for (const [key, value] of this._observerPropsGraph.entries()) {
+    for (const [key, value] of this.stateGraphMap.entries()) {
       result[key] = value.getPaths();
     }
     return result;
+  }
+
+  getPropsRemarkable() {
+    const result: {
+      [key: string]: Array<Array<string>>;
+    } = {};
+    for (const [key, value] of this.propsGraphMap.entries()) {
+      result[key] = value.getPaths();
+    }
+    return result;
+  }
+
+  // TODO: clear
+  getRemarkable() {
+    return [];
   }
 }
 

@@ -1,6 +1,7 @@
 import {
   TRACKER,
   PATH_TRACKER,
+  IS_PROXY,
   createHiddenProperty,
   arrayProtoOwnKeys,
   objectProtoOwnKeys,
@@ -63,7 +64,7 @@ export function createProxy(
     get: (target: IStateTracker, prop: PropertyKey, receiver: any) => {
       try {
         // https://stackoverflow.com/questions/36372611/how-to-test-if-an-object-is-a-proxy
-        if (prop === '__isProxy') return true;
+        if (prop === IS_PROXY) return true;
         if (internalKeys.indexOf(prop as string | symbol) !== -1)
           return Reflect.get(target, prop, receiver);
         if (typeof prop === 'symbol')

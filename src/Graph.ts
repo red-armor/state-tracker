@@ -45,7 +45,7 @@ export class Graph {
   private _nodes: Array<Node>;
   private _pathSet: Set<string>;
 
-  constructor(point: string = 'root', slug: Array<string>) {
+  constructor(point: string = 'root', slug: Array<string> = []) {
     this.childrenMap = {};
     this.slug = slug || [];
     this._point = point;

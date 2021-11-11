@@ -38,7 +38,7 @@ export default (
 
     const nextResult = reaction.run();
 
-    console.log('reaction ', reaction.getStateTrackerNode().stateGraph);
+    console.log('reaction ', reaction.getStateTrackerNode());
     result = nextResult;
     return nextResult;
   };
