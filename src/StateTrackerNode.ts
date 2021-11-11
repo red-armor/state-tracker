@@ -118,9 +118,12 @@ class StateTrackerNode {
     console.log('value ', values, graph);
   }
 
-  findRootMeta(target: object) {
+  // 设置props root path
+  attemptToUpdatePropsRootMetaInfo(target: object, path: Array<string>) {
     for (const value of this.propsRootMetaMap.values()) {
-      if (value.target === target) return value;
+      if (value.target === target) {
+        value.path = path.slice(0, -1);
+      }
     }
 
     return null;
@@ -137,50 +140,26 @@ class StateTrackerNode {
     value: any;
   }) {
     const propsTargetKey = this._propsProxyToKeyMap.get(target);
-
-    // value derived from props
     if (propsTargetKey) {
       if (isTrackable(value)) {
         this._propsProxyToKeyMap.set(value, propsTargetKey);
       }
-
-      // 设置root path
-      const meta = this.findRootMeta(target);
-      if (meta) {
-        meta.path = path.slice(0, -1);
-      }
-
-      // 存储path对应的value，这个可以认为是oldValue
-      const affectedPathKey = this.generateAffectedPathKey(path);
-      this._affectedPathValue.set(affectedPathKey, value);
-
-      const graph = this.propsGraphMap.has(propsTargetKey)
-        ? this.propsGraphMap.get(propsTargetKey)
-        : this.propsGraphMap
-            .set(propsTargetKey, new Graph(propsTargetKey))
-            .get(propsTargetKey);
-
-      const node = new Node(path);
-      graph?.access(node);
-      return;
+      this.attemptToUpdatePropsRootMetaInfo(target, path);
     }
 
-    // The normal perform...
-    this.trackPaths(path);
-  }
+    const graphMap = !!propsTargetKey ? this.propsGraphMap : this.stateGraphMap;
+    const graphMapKey = !!propsTargetKey ? propsTargetKey : path[0];
 
-  trackPaths(path: Array<string>) {
+    // 存储path对应的value，这个可以认为是oldValue
+    const affectedPathKey = this.generateAffectedPathKey(path);
+    this._affectedPathValue.set(affectedPathKey, value);
+
+    const graph = graphMap.has(graphMapKey)
+      ? graphMap.get(graphMapKey)
+      : graphMap.set(graphMapKey, new Graph(propsTargetKey)).get(graphMapKey);
+
     const node = new Node(path);
-    const rootPoint = path[0];
-
-    if (this.stateGraphMap.has(rootPoint)) {
-      this.stateGraphMap.set(rootPoint, new Graph(rootPoint));
-    }
-
-    const graph = this.stateGraphMap.has(rootPoint)
-      ? this.stateGraphMap.get(rootPoint)
-      : this.stateGraphMap.set(rootPoint, new Graph(rootPoint)).get(rootPoint);
-    graph!.access(node);
+    graph?.access(node);
   }
 
   getStateRemarkable() {
