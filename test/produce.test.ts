@@ -32,7 +32,8 @@ function testTracker(useProxy: boolean) {
         expect(v.value).toBe(index)
       );
       const trackerNode = StateTrackerUtil.getContext(proxyState).getCurrent();
-      const paths = trackerNode.getPaths();
+      const paths = trackerNode.stateGraphMap.get('a')!.getPaths();
+
       if (useProxy) {
         expect(paths).toEqual([
           ['a'],
@@ -69,7 +70,7 @@ function testTracker(useProxy: boolean) {
         '[object Object]'
       );
       const trackerNode = StateTrackerUtil.getContext(proxyState).getCurrent();
-      const paths = trackerNode.getPaths();
+      const paths = trackerNode.stateGraphMap.get('a')!.getPaths();
       expect(paths).toEqual([['a']]);
       StateTrackerUtil.leave(proxyState);
     });
@@ -331,10 +332,8 @@ function testTracker(useProxy: boolean) {
       /* eslint-enable */
 
       const trackerNode = StateTrackerUtil.getContext(proxyState).getCurrent();
-      const paths = trackerNode.getPaths();
-      expect(paths).toEqual([['a'], ['a'], ['a', 'a1'], ['a'], ['a', 'a2']]);
-      const remarkable = trackerNode.getRemarkable();
-      expect(remarkable).toEqual([['a', 'a1'], ['a', 'a2'], ['a']]);
+      const paths = trackerNode.stateGraphMap.get('a')!.getPaths();
+      expect(paths).toEqual([['a'], ['a', 'a1'], ['a', 'a2']]);
       StateTrackerUtil.leave(proxyState);
     });
 
@@ -365,13 +364,9 @@ function testTracker(useProxy: boolean) {
       b.b12
 
       const subNode = StateTrackerUtil.getContext(b).getCurrent()
-      const subPaths = subNode.getPaths()
-      const subRemarkable = subNode.getRemarkable()
+      // const subPaths = subNode.getPaths()
+      const subPaths = subNode.stateGraphMap.get('b')!.getPaths()
       expect(subPaths).toEqual([
-        ['b', 'b1', 'b11'],
-        ['b', 'b1', 'b12'],
-      ])
-      expect(subRemarkable).toEqual([
         ['b', 'b1', 'b11'],
         ['b', 'b1', 'b12'],
       ])
@@ -379,23 +374,10 @@ function testTracker(useProxy: boolean) {
       /* eslint-enable */
 
       const trackerNode = StateTrackerUtil.getContext(proxyState).getCurrent();
-      const paths = trackerNode.getPaths();
-      expect(paths).toEqual([
-        ['a'],
-        ['a'],
-        ['a', 'a1'],
-        ['a'],
-        ['a', 'a2'],
-        ['b'],
-        ['b', 'b1'],
-      ]);
-      const remarkable = trackerNode.getRemarkable();
-      expect(remarkable).toEqual([
-        ['a', 'a1'],
-        ['a', 'a2'],
-        ['a'],
-        ['b', 'b1'],
-      ]);
+      const apaths = trackerNode.stateGraphMap.get('a')!.getPaths();
+      expect(apaths).toEqual([['a'], ['a', 'a1'], ['a', 'a2']]);
+      const bpaths = trackerNode.stateGraphMap.get('b')!.getPaths();
+      expect(bpaths).toEqual([['b'], ['b', 'b1']]);
       StateTrackerUtil.leave(proxyState);
     });
   });
@@ -589,7 +571,8 @@ function testTracker(useProxy: boolean) {
       Object.prototype.toString.call(proxyState.a)
       /* eslint-enable */
       const trackerNode = StateTrackerUtil.getContext(proxyState).getCurrent();
-      expect(trackerNode.getPaths()).toEqual([['a']]);
+      const paths = trackerNode.stateGraphMap.get('a')!.getPaths();
+      expect(paths).toEqual([['a']]);
       StateTrackerUtil.leave(proxyState);
     });
 

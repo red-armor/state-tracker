@@ -1,5 +1,5 @@
-import { isTrackable, peek, raw } from './commons';
-import { ObserverProps, IStateTracker, NextState } from './types';
+import { isTrackable, raw } from './commons';
+import { ObserverProps, NextState } from './types';
 import StateTrackerUtil from './StateTrackerUtil';
 import { Graph } from './Graph';
 class StateTrackerNode {
@@ -47,27 +47,28 @@ class StateTrackerNode {
     return path.join('_');
   }
 
-  isTrackablePropsEqual(key: string, nextValue: any) {
-    const graph = this.propsGraphMap.get(key);
+  isEqual(graphMap: Map<string, Graph>, key: string, nextValue: any) {
+    const graph = graphMap.get(key);
 
     // 证明props并没有被用到；所以，直接返回true就可以了
     if (!graph) return true;
-    const affectedPaths = graph.getPaths();
-    const rootPath = this.propsRootMetaMap.get(key)?.path || [];
 
-    const len = affectedPaths.length;
+    const childrenMap = graph.childrenMap;
+    const keys = Object.keys(childrenMap);
+    const len = keys.length;
 
     for (let idx = 0; idx < len; idx++) {
-      const affectedPath = affectedPaths[idx];
-      const affectedPathKey = this.generateAffectedPathKey(affectedPath);
-      const currentValue = peek(nextValue, rootPath, affectedPath);
-      const oldValue = this._affectedPathValue.get(affectedPathKey);
+      const key = keys[idx];
+      const graph = childrenMap[key];
+      const newValue = nextValue[key];
+      const affectedPath = graph.getPath();
+      const affectedKey = this.generateAffectedPathKey(affectedPath);
+      const currentValue = this._affectedPathValue.get(affectedKey);
 
-      if (currentValue !== oldValue) {
+      if (raw(newValue) !== raw(currentValue)) {
         return false;
       }
     }
-
     return true;
   }
 
@@ -90,7 +91,7 @@ class StateTrackerNode {
       const value = this._observerProps[key];
 
       if (isTrackable(value) && isTrackable(nextValue)) {
-        if (!this.isTrackablePropsEqual(key, nextValue)) return false;
+        if (!this.isEqual(this.propsGraphMap, key, nextValue)) return false;
       } else if (nextValue !== value) {
         return false;
       }
@@ -108,34 +109,7 @@ class StateTrackerNode {
     // 如果说没有访问过state的话，也就是graph就没有创建这个时候直接返回true就行
     if (!graph) return true;
 
-    return this.performComparison(nextRootState, graph);
-  }
-
-  performComparison(
-    values:
-      | IStateTracker
-      | {
-          [key: string]: any;
-        },
-    graph: Graph
-  ) {
-    const childrenMap = graph.childrenMap;
-    const keys = Object.keys(childrenMap);
-    const len = keys.length;
-
-    for (let idx = 0; idx < len; idx++) {
-      const key = keys[idx];
-      const graph = childrenMap[key];
-      const nextValue = values[key];
-      const affectedPath = graph.getPath();
-      const affectedKey = this.generateAffectedPathKey(affectedPath);
-      const currentValue = this._affectedPathValue.get(affectedKey);
-
-      if (raw(nextValue) !== raw(currentValue)) {
-        return false;
-      }
-    }
-    return true;
+    return this.isEqual(this.stateGraphMap, rootPoint, nextRootState);
   }
 
   // 设置props root path
@@ -172,10 +146,10 @@ class StateTrackerNode {
     }
 
     const graphMap = !!propsTargetKey ? this.propsGraphMap : this.stateGraphMap;
-    const graphMapKey = !!propsTargetKey ? propsTargetKey : path[0];
+    const graphMapKey = !!propsTargetKey ? propsTargetKey : nextPath[0];
 
     // 存储path对应的value，这个可以认为是oldValue
-    const affectedPathKey = this.generateAffectedPathKey(path);
+    const affectedPathKey = this.generateAffectedPathKey(nextPath);
     this._affectedPathValue.set(affectedPathKey, value);
 
     const graph = graphMap.has(graphMapKey)

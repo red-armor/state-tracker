@@ -142,7 +142,6 @@ function testTracker(useProxy: boolean) {
             location: { city },
             description,
           } = app;
-          console.log('trigger ======');
           expect(city).toBe('shanghai');
           expect(description).toBe('testing');
           const func = observer(proxyState, (props: any) => {
@@ -164,7 +163,7 @@ function testTracker(useProxy: boolean) {
       fn({ app: proxyState.app });
     });
 
-    it.only('observer: state perform', () => {
+    it('observer: state perform', () => {
       const state = {
         app: {
           list: [{ id: 1, label: 'first' }],
@@ -184,13 +183,11 @@ function testTracker(useProxy: boolean) {
         const {
           location: { city },
           description,
-          title,
+          // @ts-ignore
+          title,  // eslint-disable-line
         } = app;
-        console.log('trigger ======');
         expect(city).toBe('shanghai');
         expect(description).toBe('testing');
-
-        console.log('title ', title);
 
         return list.forEach((item: any) => {
           const func = observer(proxyState, (props: any) => {
