@@ -1,7 +1,7 @@
 import { isTrackable, peek, raw } from './commons';
-import { ObserverProps, IStateTracker } from './types';
+import { ObserverProps, IStateTracker, NextState } from './types';
 import StateTrackerUtil from './StateTrackerUtil';
-import { Graph, Node } from './Graph';
+import { Graph } from './Graph';
 class StateTrackerNode {
   public name: string;
   public stateGraphMap: Map<string, Graph> = new Map();
@@ -15,13 +15,6 @@ class StateTrackerNode {
       target: object;
     }
   > = new Map();
-  // private stateRootMetaMap: Map<
-  //   string,
-  //   {
-  //     path: Array<string>;
-  //     target: object;
-  //   }
-  // > = new Map();
 
   private _affectedPathValue: Map<string, any> = new Map();
 
@@ -107,10 +100,14 @@ class StateTrackerNode {
     return true;
   }
 
-  isStateEqual(state: IStateTracker, rootPath: Array<string> = []) {
+  isStateEqual(state: NextState, rootPath: Array<string> = []) {
     const nextRootState = StateTrackerUtil.peek(state, rootPath);
     const rootPoint = rootPath[0];
     const graph = this.stateGraphMap.get(rootPoint)!;
+
+    // 如果说没有访问过state的话，也就是graph就没有创建这个时候直接返回true就行
+    if (!graph) return true;
+
     return this.performComparison(nextRootState, graph);
   }
 
@@ -133,6 +130,7 @@ class StateTrackerNode {
       const affectedPath = graph.getPath();
       const affectedKey = this.generateAffectedPathKey(affectedPath);
       const currentValue = this._affectedPathValue.get(affectedKey);
+
       if (raw(nextValue) !== raw(currentValue)) {
         return false;
       }
@@ -162,11 +160,15 @@ class StateTrackerNode {
     value: any;
   }) {
     const propsTargetKey = this._propsProxyToKeyMap.get(target);
+    let nextPath = path;
+    // 如果是props的，需要进行特殊处理
     if (propsTargetKey) {
       if (isTrackable(value)) {
         this._propsProxyToKeyMap.set(value, propsTargetKey);
       }
       this.attemptToUpdatePropsRootMetaInfo(target, path);
+      const { path: rootPath } = this.propsRootMetaMap.get(propsTargetKey)!;
+      nextPath = [propsTargetKey].concat(path.slice(rootPath.length));
     }
 
     const graphMap = !!propsTargetKey ? this.propsGraphMap : this.stateGraphMap;
@@ -178,10 +180,9 @@ class StateTrackerNode {
 
     const graph = graphMap.has(graphMapKey)
       ? graphMap.get(graphMapKey)
-      : graphMap.set(graphMapKey, new Graph(propsTargetKey)).get(graphMapKey);
+      : graphMap.set(graphMapKey, new Graph(graphMapKey)).get(graphMapKey);
 
-    const node = new Node(path);
-    graph?.access(node);
+    graph?.access(nextPath);
   }
 
   getStateRemarkable() {

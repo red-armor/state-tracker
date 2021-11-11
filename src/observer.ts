@@ -34,11 +34,11 @@ export default (
     const truthy = isInitial ? false : !!props ? isPropsEqual : true;
 
     if (truthy) return result;
+
     isInitial = false;
 
     const nextResult = reaction.run();
 
-    console.log('reaction ', reaction.getStateTrackerNode());
     result = nextResult;
     return nextResult;
   };

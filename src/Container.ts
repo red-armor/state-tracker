@@ -1,4 +1,4 @@
-import { IStateTracker } from './types';
+import { NextState } from './types';
 import Reaction from './Reaction';
 // 用来注册创建的Reaction；
 
@@ -17,7 +17,7 @@ class Container {
     };
   }
 
-  perform(state: IStateTracker) {
+  perform(state: NextState) {
     this.reactions.forEach(reaction => reaction.perform(state));
   }
 }

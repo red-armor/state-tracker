@@ -5,18 +5,21 @@ import {
   StateTrackerContextProps,
 } from './types/stateTrackerContext';
 import { IStateTracker, ObserverProps } from '.';
+import Container from './Container';
 
 class StateTrackerContext {
   private queue: Array<StateTrackerNode>;
   private _lastUpdateAt: number;
   private _id: string;
   private proxyCache: ProxyCache;
+  readonly container: Container;
 
   constructor(props: StateTrackerContextProps) {
     this.queue = [];
     this._id = generateRandomKey();
     this._lastUpdateAt = Date.now();
     this.proxyCache = props.proxyCache || new WeakMap();
+    this.container = props.container;
   }
 
   getId() {

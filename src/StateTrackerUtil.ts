@@ -3,12 +3,14 @@ import {
   generateRandomContextKey,
   TRACKER,
   isPlainObject,
+  isTrackable,
 } from './commons';
 import {
   IStateTracker,
   PendingRunners,
   RelinkValue,
   ObserverProps,
+  NextState,
 } from './types';
 import { createPlainTrackerObject } from './StateTracker';
 import { createProxy as createES6Proxy } from './proxy';
@@ -47,14 +49,38 @@ const StateTrackerUtil = {
     trackerContext.leave();
   },
 
-  peek: function(proxyState: IStateTracker, accessPath: Array<string>) {
+  peek: function(
+    proxyState: IStateTracker | NextState,
+    accessPath: Array<string>
+  ) {
     return accessPath.reduce((nextProxyState, cur: string) => {
-      const tracker = nextProxyState[TRACKER];
-      tracker._isPeeking = true;
-      const nextProxy = nextProxyState[cur];
-      tracker._isPeeking = false;
-      return nextProxy;
+      if (isTrackable(proxyState)) {
+        const tracker = (nextProxyState as IStateTracker)[TRACKER];
+        if (tracker) {
+          tracker._isPeeking = true;
+          const nextProxy = nextProxyState[cur];
+          tracker._isPeeking = false;
+          return nextProxy;
+        }
+
+        return nextProxyState[cur];
+      }
+      return proxyState;
     }, proxyState);
+  },
+
+  perform(
+    state: IStateTracker,
+    nextState:
+      | IStateTracker
+      | {
+          [key: string]: any;
+        }
+  ) {
+    const tracker = state[TRACKER];
+    const context = tracker._stateTrackerContext;
+    const { container } = context;
+    container.perform(nextState);
   },
 
   getContext: function(proxy: IStateTracker) {

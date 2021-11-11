@@ -1,7 +1,12 @@
 import StateTrackerNode from './StateTrackerNode';
 import StateTrackerUtil from './StateTrackerUtil';
 import { generateReactionName } from './commons';
-import { ReactionProps, ReactionOptions, IStateTracker } from './types';
+import {
+  ReactionProps,
+  ReactionOptions,
+  IStateTracker,
+  NextState,
+} from './types';
 
 class Reaction {
   private fn: Function;
@@ -17,6 +22,17 @@ class Reaction {
     this.stateTrackerNode = new StateTrackerNode(this.name);
     this.props = props;
     this.fn = fn;
+
+    this.register();
+  }
+
+  register() {
+    const context = StateTrackerUtil.getTracker(this.state)
+      ._stateTrackerContext;
+    const container = context.container;
+
+    const disposer = container.register(this);
+    return disposer;
   }
 
   getStateTrackerNode() {
@@ -43,8 +59,9 @@ class Reaction {
     this.props = props;
   }
 
-  perform(state: IStateTracker) {
-    return this.stateTrackerNode.isStateEqual(state);
+  perform(state: NextState, rootPath: Array<string> = ['app']) {
+    const falsy = this.stateTrackerNode.isStateEqual(state, rootPath);
+    return falsy;
   }
 }
 

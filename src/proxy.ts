@@ -21,15 +21,18 @@ import {
 import StateTrackerContext from './StateTrackerContext';
 import StateTrackerUtil from './StateTrackerUtil';
 import collection from './collection';
+import Container from './Container';
 
 export function produceImpl(
   state: State,
   affected?: WeakMap<object, IStateTracker>,
   proxyCache?: WeakMap<object, IStateTracker>
 ) {
+  const container = new Container();
   const stateTrackerContext = new StateTrackerContext({
     proxyCache,
     affected,
+    container,
   });
 
   const proxy = createProxy(state, {

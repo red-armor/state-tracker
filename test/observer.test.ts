@@ -1,5 +1,6 @@
 import produce from '../src/produce';
 import observer from '../src/observer';
+import { StateTrackerUtil } from '../src';
 
 testTracker(true);
 
@@ -119,14 +120,14 @@ function testTracker(useProxy: boolean) {
       expect(runCount).toBe(2);
     });
 
-    it.only('basic', () => {
+    it('observer: state', () => {
       const state = {
         app: {
           list: [{ id: 1, label: 'first' }],
           location: {
             city: 'shanghai',
           },
-          title: 'testing',
+          title: 'current',
           description: 'testing',
         },
       };
@@ -135,16 +136,14 @@ function testTracker(useProxy: boolean) {
       const app = proxyState.app;
 
       const fn = observer(proxyState, () => {
-        const { list } = app;
+        const { list } = proxyState.app;
         return list.forEach((item: any) => {
           const {
             location: { city },
-            title,
             description,
           } = app;
           console.log('trigger ======');
           expect(city).toBe('shanghai');
-          expect(title).toBe('testing');
           expect(description).toBe('testing');
           const func = observer(proxyState, (props: any) => {
             const { item } = props;
@@ -154,7 +153,64 @@ function testTracker(useProxy: boolean) {
         });
       });
 
+      fn({ app: proxyState.app });
+
+      const nextApp = state.app;
+      const nextList = nextApp.list.slice();
+      nextList[0] = { ...nextList[0], label: 'first_1' };
+      proxyState.app = { ...nextApp, list: nextList };
+      nextApp.title = 'next';
+
+      fn({ app: proxyState.app });
+    });
+
+    it.only('observer: state perform', () => {
+      const state = {
+        app: {
+          list: [{ id: 1, label: 'first' }],
+          location: {
+            city: 'shanghai',
+          },
+          title: 'current',
+          description: 'testing',
+        },
+      };
+
+      const proxyState = produce(state);
+      const app = proxyState.app;
+
+      const fn = observer(proxyState, () => {
+        const { list } = proxyState.app;
+        const {
+          location: { city },
+          description,
+          title,
+        } = app;
+        console.log('trigger ======');
+        expect(city).toBe('shanghai');
+        expect(description).toBe('testing');
+
+        console.log('title ', title);
+
+        return list.forEach((item: any) => {
+          const func = observer(proxyState, (props: any) => {
+            const { item } = props;
+            return item.id;
+          });
+          func({ item });
+        });
+      });
+
       fn();
+
+      const nextApp = state.app;
+      nextApp.title = 'next';
+      const nextList = nextApp.list.slice();
+      nextList[0] = { ...nextList[0], label: 'first_1' };
+
+      StateTrackerUtil.perform(proxyState, {
+        app: { ...nextApp, list: nextList },
+      });
     });
   });
 }
