@@ -43,6 +43,14 @@ class StateTrackerNode {
     }
   }
 
+  cleanup() {
+    this.stateGraphMap = new Map();
+    this.propsGraphMap = new Map();
+    this._propsProxyToKeyMap = new Map();
+    this._affectedPathValue = new Map();
+    this.propsRootMetaMap = new Map();
+  }
+
   generateAffectedPathKey(path: Array<string> = []) {
     return path.join('_');
   }
@@ -134,6 +142,7 @@ class StateTrackerNode {
     value: any;
   }) {
     const propsTargetKey = this._propsProxyToKeyMap.get(target);
+
     let nextPath = path;
     // 如果是props的，需要进行特殊处理
     if (propsTargetKey) {

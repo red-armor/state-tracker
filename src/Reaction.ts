@@ -44,12 +44,23 @@ class Reaction {
   }
 
   run() {
+    // should not teardown, or props will cleaned two times
+    // this.teardown();
     StateTrackerUtil.enterNode(this.state, this.stateTrackerNode);
     const args = [];
     if (this.props) args.push(this.props);
     const result = this.fn.apply(null, args);
     StateTrackerUtil.leave(this.state);
     return result;
+  }
+
+  teardown() {
+    this.stateTrackerNode.cleanup();
+  }
+
+  schedulerRun() {
+    this.teardown();
+    this.scheduler(this.run.bind(this));
   }
 
   enter() {
@@ -62,7 +73,11 @@ class Reaction {
 
   isPropsEqual(props: ReactionProps) {
     const truthy = this.stateTrackerNode.isPropsEqual(props);
-    if (!truthy) this.updateObserverProps(props);
+    if (!truthy) {
+      // if props not equal, then tear down.
+      this.teardown();
+      this.updateObserverProps(props);
+    }
     return truthy;
   }
 
@@ -71,17 +86,29 @@ class Reaction {
     this.props = props;
   }
 
-  perform(state: NextState) {
+  performComparison(
+    state: NextState
+  ): {
+    reaction: Reaction;
+    isEqual: boolean;
+  } {
     const keys = Object.keys(state);
     let truthy = true;
+    const token = {
+      reaction: this,
+      isEqual: true,
+    };
 
     for (let idx = 0; idx < keys.length; idx++) {
       const root = [keys[idx]];
       truthy = this.stateTrackerNode.isStateEqual(state, root);
-      if (!truthy) break;
+      if (!truthy) {
+        token.isEqual = false;
+        return token;
+      }
     }
 
-    if (!truthy) this.scheduler(this.run.bind(this));
+    return token;
   }
 }
 

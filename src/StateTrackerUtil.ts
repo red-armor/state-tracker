@@ -75,12 +75,13 @@ const StateTrackerUtil = {
       | IStateTracker
       | {
           [key: string]: any;
-        }
+        },
+    afterCallback?: Function
   ) {
     const tracker = state[TRACKER];
     const context = tracker._stateTrackerContext;
     const { container } = context;
-    container.perform(nextState);
+    container.perform(nextState, afterCallback);
   },
 
   getContext: function(proxy: IStateTracker) {

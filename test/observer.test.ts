@@ -76,6 +76,7 @@ function testTracker(useProxy: boolean) {
       expect(runCount).toBe(1);
     });
 
+    // teardown should be placed in `run` function, or it will throw error!!!
     it('observer: fn will rerun if access path value changed', () => {
       const state = {
         app: {
