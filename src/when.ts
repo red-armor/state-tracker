@@ -11,6 +11,7 @@ function when(
 ) {
   const autoRunFn = () => {
     StateTrackerUtil.enter(state);
+
     const falsy = predicate(state);
     if (!falsy) {
       const tracker = StateTrackerUtil.getContext(state).getCurrent();

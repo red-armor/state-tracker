@@ -8,20 +8,24 @@ import {
   NextState,
 } from './types';
 
+const noop = (fn: Function) => fn.call(null);
+
 class Reaction {
   private fn: Function;
   private name: string;
   private state: IStateTracker;
   private stateTrackerNode: StateTrackerNode;
   private props?: ReactionProps;
+  private scheduler: Function;
 
   constructor(options: ReactionOptions, props?: ReactionProps) {
-    const { fn, state } = options;
+    const { fn, state, scheduler } = options;
     this.name = fn.name ? fn.name : generateReactionName();
     this.state = state;
     this.stateTrackerNode = new StateTrackerNode(this.name);
     this.props = props;
     this.fn = fn;
+    this.scheduler = scheduler || noop;
 
     this.register();
   }
@@ -48,6 +52,14 @@ class Reaction {
     return result;
   }
 
+  enter() {
+    StateTrackerUtil.enterNode(this.state, this.stateTrackerNode);
+  }
+
+  leave() {
+    StateTrackerUtil.leave(this.state);
+  }
+
   isPropsEqual(props: ReactionProps) {
     const truthy = this.stateTrackerNode.isPropsEqual(props);
     if (!truthy) this.updateObserverProps(props);
@@ -59,9 +71,17 @@ class Reaction {
     this.props = props;
   }
 
-  perform(state: NextState, rootPath: Array<string> = ['app']) {
-    const falsy = this.stateTrackerNode.isStateEqual(state, rootPath);
-    return falsy;
+  perform(state: NextState) {
+    const keys = Object.keys(state);
+    let truthy = true;
+
+    for (let idx = 0; idx < keys.length; idx++) {
+      const root = [keys[idx]];
+      truthy = this.stateTrackerNode.isStateEqual(state, root);
+      if (!truthy) break;
+    }
+
+    if (!truthy) Promise.resolve().then(() => this.scheduler(this.run));
   }
 }
 
