@@ -81,7 +81,7 @@ class Reaction {
       if (!truthy) break;
     }
 
-    if (!truthy) Promise.resolve().then(() => this.scheduler(this.run));
+    if (!truthy) this.scheduler(this.run.bind(this));
   }
 }
 
