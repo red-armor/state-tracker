@@ -21,14 +21,11 @@ export default (
         'The passing `props` in `options` param should be an object'
       );
     }
-
     const isPropsEqual = reaction.isPropsEqual(props);
+
     const truthy = isInitial ? false : !!props ? isPropsEqual : true;
-
     if (truthy) return result;
-
     isInitial = false;
-
     const nextResult = reaction.run();
     result = nextResult;
     return nextResult;

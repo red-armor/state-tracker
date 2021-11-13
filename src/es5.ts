@@ -64,6 +64,7 @@ export function createProxy(
       configurable,
       get(this: IStateTracker) {
         const tracker = this[TRACKER];
+        // base could not be a proxy object, or go to loop
         const base = raw(tracker._base);
         const nextAccessPath = accessPath.concat(prop as string);
         const isPeeking = tracker._isPeeking;
@@ -82,13 +83,15 @@ export function createProxy(
         }
 
         if (!isTrackable(nextValue)) return nextValue;
+        // used for cached key
+        const rawNextValue = raw(nextValue);
 
-        if (nextChildProxies.has(nextValue))
-          return nextChildProxies.get(nextValue);
+        if (nextChildProxies.has(rawNextValue))
+          return nextChildProxies.get(rawNextValue);
 
-        const cachedProxy = stateTrackerContext.getCachedProxy(nextValue);
+        const cachedProxy = stateTrackerContext.getCachedProxy(rawNextValue);
         if (cachedProxy) {
-          nextChildProxies.set(nextValue, cachedProxy);
+          nextChildProxies.set(rawNextValue, cachedProxy);
           return cachedProxy;
         }
 
@@ -106,7 +109,7 @@ export function createProxy(
               shallowCopy(nextValue),
               {
                 accessPath: nextAccessPath,
-                parentProxy: state as IStateTracker,
+                parentProxy: copy as IStateTracker,
                 rootPath,
                 stateTrackerContext,
               }
@@ -119,15 +122,15 @@ export function createProxy(
             nextValue,
             {
               accessPath: nextAccessPath,
-              parentProxy: state as IStateTracker,
+              parentProxy: copy as IStateTracker,
               rootPath,
               stateTrackerContext,
             }
           );
         }
 
-        stateTrackerContext.setCachedProxy(nextValue, producedChildProxy);
-        nextChildProxies.set(nextValue, producedChildProxy);
+        stateTrackerContext.setCachedProxy(rawNextValue, producedChildProxy);
+        nextChildProxies.set(rawNextValue, producedChildProxy);
         return producedChildProxy;
       },
       set(this: IStateTracker, newValue: any) {
@@ -149,7 +152,8 @@ export function createProxy(
   }
 
   const tracker = createPlainTrackerObject({
-    base: copy,
+    // original state should be preserved
+    base: state,
     parentProxy,
     accessPath,
     rootPath,
@@ -157,8 +161,8 @@ export function createProxy(
     lastUpdateAt: Date.now(),
   });
 
-  each(state as Array<any>, (prop: PropertyKey) => {
-    const desc = Object.getOwnPropertyDescriptor(state, prop);
+  each(copy as Array<any>, (prop: PropertyKey) => {
+    const desc = Object.getOwnPropertyDescriptor(copy, prop);
     const enumerable = desc?.enumerable || false;
     const configurable = desc?.configurable || false;
 
@@ -166,23 +170,23 @@ export function createProxy(
     if (!configurable) return;
 
     createES5ProxyProperty({
-      target: state,
+      target: copy,
       prop: prop,
       enumerable,
       configurable,
     });
-    createHiddenProperty(state, IS_PROXY, true);
+    createHiddenProperty(copy, IS_PROXY, true);
   });
 
   // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Errors/Cant_define_property_object_not_extensible
   // if property value is not extensible, it will cause error. such as a ref value..
-  createHiddenProperty(state, TRACKER, tracker);
-  createHiddenProperty(state, 'unlink', function(this: IStateTracker) {
+  createHiddenProperty(copy, TRACKER, tracker);
+  createHiddenProperty(copy, 'unlink', function(this: IStateTracker) {
     const tracker = this[TRACKER];
     return tracker._base;
   });
 
-  if (Array.isArray(state)) {
+  if (Array.isArray(copy)) {
     const descriptors = Object.getPrototypeOf([]);
     const keys = Object.getOwnPropertyNames(descriptors);
 
@@ -203,8 +207,8 @@ export function createProxy(
           if (!isPeeking) {
             if (stateTrackerContext.getCurrent()) {
               stateTrackerContext.getCurrent().track({
-                target: state,
-                value: state.length,
+                target: copy,
+                value: copy.length,
                 key: 'length',
                 path: nextAccessPath,
               });
@@ -219,6 +223,7 @@ export function createProxy(
       const func = descriptors[key];
       if (typeof func === 'function') {
         const notRemarkLengthPropKeys = ['concat', 'copyWith'];
+        // For these function, length should be tracked
         const remarkLengthPropKeys = [
           'concat',
           'copyWith',
@@ -250,13 +255,13 @@ export function createProxy(
           'reduceRight',
         ];
         if (notRemarkLengthPropKeys.indexOf(key) !== -1) {
-          createHiddenProperty(state, key, handler(func, state as any, false));
+          createHiddenProperty(copy, key, handler(func, copy as any, false));
         } else if (remarkLengthPropKeys.indexOf(key) !== -1) {
-          createHiddenProperty(state, key, handler(func, state as any));
+          createHiddenProperty(copy, key, handler(func, copy as any));
         }
       }
     });
   }
 
-  return state as IStateTracker;
+  return copy as IStateTracker;
 }

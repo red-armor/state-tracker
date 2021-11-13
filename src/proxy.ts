@@ -99,19 +99,20 @@ export function createProxy(
               value: nextValue,
               path: outerAccessPath.concat(prop as string),
             });
-            // .trackPaths(outerAccessPath.concat(prop as string));
           }
         }
 
         if (!isTrackable(nextValue)) return nextValue;
+        // used for cached key
+        const rawNextValue = raw(nextValue);
 
-        if (nextChildProxies.has(nextValue))
-          return nextChildProxies.get(nextValue);
+        if (nextChildProxies.has(rawNextValue))
+          return nextChildProxies.get(rawNextValue);
 
-        const cachedProxy = stateTrackerContext.getCachedProxy(nextValue);
+        const cachedProxy = stateTrackerContext.getCachedProxy(rawNextValue);
 
         if (cachedProxy) {
-          nextChildProxies.set(nextValue, cachedProxy);
+          nextChildProxies.set(rawNextValue, cachedProxy);
           return cachedProxy;
         }
         let producedChildProxy = null;
@@ -148,8 +149,8 @@ export function createProxy(
           );
         }
 
-        stateTrackerContext.setCachedProxy(nextValue, producedChildProxy);
-        nextChildProxies.set(nextValue, producedChildProxy);
+        stateTrackerContext.setCachedProxy(rawNextValue, producedChildProxy);
+        nextChildProxies.set(rawNextValue, producedChildProxy);
         return producedChildProxy;
       } catch (err) {
         console.log('[state-tracker] ', err);

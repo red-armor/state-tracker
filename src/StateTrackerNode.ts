@@ -19,6 +19,8 @@ class StateTrackerNode {
 
   private _affectedPathValue: Map<string, any> = new Map();
 
+  // For es5, proxy target may not match a value. In this condition
+  // compare raw value key will be better.
   private _propsProxyToKeyMap: Map<object, string> = new Map();
 
   constructor({
@@ -41,7 +43,7 @@ class StateTrackerNode {
     for (const key in this._observerProps) {
       if (this._observerProps.hasOwnProperty(key)) {
         const value = this._observerProps[key];
-        if (!this._propsProxyToKeyMap.has(value)) {
+        if (!this._propsProxyToKeyMap.has(raw(value))) {
           // proxy should not be key
           const rawValue = raw(value);
           this._propsProxyToKeyMap.set(rawValue, key);
@@ -62,13 +64,12 @@ class StateTrackerNode {
     this.propsRootMetaMap = new Map();
   }
 
-  generateAffectedPathKey(path: Array<string> = []) {
+  generateAffectedPathKey(path: Array<string | number> = []) {
     return path.join('_');
   }
 
   isEqual(graphMap: Map<string, Graph>, key: string, nextValue: any) {
     const graph = graphMap.get(key);
-
     // 证明props并没有被用到；所以，直接返回true就可以了
     if (!graph) return true;
 
@@ -101,9 +102,7 @@ class StateTrackerNode {
     const nextKeys = Object.keys(nextProps || {});
     const keys = Object.keys(this._observerProps || {});
     const len = keys.length;
-
     if (nextKeys.length !== keys.length) return false;
-
     for (let idx = 0; idx < len; idx++) {
       const key = nextKeys[idx];
       const nextValue = nextProps[key];
@@ -146,7 +145,8 @@ class StateTrackerNode {
   // 设置props root path
   attemptToUpdatePropsRootMetaInfo(target: object, path: Array<string>) {
     for (const value of this.propsRootMetaMap.values()) {
-      if (value.target === target) {
+      // es5 will make value.target !== target, so raw!!!
+      if (raw(value.target) === raw(target)) {
         value.path = path.slice(0, -1);
       }
     }
@@ -164,13 +164,13 @@ class StateTrackerNode {
     key: string | number;
     value: any;
   }) {
-    const propsTargetKey = this._propsProxyToKeyMap.get(target);
+    const propsTargetKey = this._propsProxyToKeyMap.get(raw(target));
 
     let nextPath = path;
     // 如果是props的，需要进行特殊处理
     if (propsTargetKey) {
       if (isTrackable(value)) {
-        this._propsProxyToKeyMap.set(value, propsTargetKey);
+        this._propsProxyToKeyMap.set(raw(value), propsTargetKey);
       }
       this.attemptToUpdatePropsRootMetaInfo(target, path);
       const { path: rootPath } = this.propsRootMetaMap.get(propsTargetKey)!;
@@ -187,7 +187,6 @@ class StateTrackerNode {
     const graph = graphMap.has(graphMapKey)
       ? graphMap.get(graphMapKey)
       : graphMap.set(graphMapKey, new Graph(graphMapKey)).get(graphMapKey);
-
     graph?.access(nextPath);
   }
 

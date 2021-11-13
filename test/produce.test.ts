@@ -1,11 +1,10 @@
 import { TRACKER } from '../src/commons';
-// import { produce as ES5Produce } from '../src/es5';
-// import { produce as ES6Produce } from '../src/proxy';
-import produce from '../src/produce';
+import { produceImpl as ES5Produce } from '../src/es5';
+import { produceImpl as ES6Produce } from '../src/proxy';
 import StateTrackerUtil from '../src/StateTrackerUtil';
 
 testTracker(true);
-// testTracker(false);
+testTracker(false);
 
 const getTrackerId = (str: string): number => {
   const matched = str.match(/(\d*)$/);
@@ -14,8 +13,7 @@ const getTrackerId = (str: string): number => {
 };
 
 function testTracker(useProxy: boolean) {
-  // const produce = ES6Produce;
-  // const produce = useProxy ? ES6Produce : ES5Produce;
+  const produce = useProxy ? ES6Produce : ES5Produce;
   const decorateDesc = (text: string) =>
     useProxy ? `proxy: ${text}` : `es5: ${text}`;
 
@@ -34,27 +32,15 @@ function testTracker(useProxy: boolean) {
       const trackerNode = StateTrackerUtil.getContext(proxyState).getCurrent();
       const paths = trackerNode.stateGraphMap.get('a')!.getPaths();
 
-      if (useProxy) {
-        expect(paths).toEqual([
-          ['a'],
-          ['a', 'a1'],
-          ['a', 'a1', 'length'],
-          ['a', 'a1', '0'],
-          ['a', 'a1', '0', 'value'],
-          ['a', 'a1', '1'],
-          ['a', 'a1', '1', 'value'],
-        ]);
-      } else {
-        expect(paths).toEqual([
-          ['a'],
-          ['a', 'a1'],
-          ['a', 'a1', 'length'],
-          ['a', 'a1', 0],
-          ['a', 'a1', 0, 'value'],
-          ['a', 'a1', 1],
-          ['a', 'a1', 1, 'value'],
-        ]);
-      }
+      expect(paths).toEqual([
+        ['a'],
+        ['a', 'a1'],
+        ['a', 'a1', 'length'],
+        ['a', 'a1', '0'],
+        ['a', 'a1', '0', 'value'],
+        ['a', 'a1', '1'],
+        ['a', 'a1', '1', 'value'],
+      ]);
       StateTrackerUtil.leave(proxyState);
     });
 
@@ -411,11 +397,7 @@ function testTracker(useProxy: boolean) {
       const id1 = getTrackerId(StateTrackerUtil.getTracker(proxyState.a)._id);
       proxyState.a = state.a;
       const id2 = getTrackerId(StateTrackerUtil.getTracker(proxyState.a)._id);
-      if (useProxy) {
-        expect(id1).toBe(id2);
-      } else {
-        expect(id1).toBe(id2 - 1);
-      }
+      expect(id1).toBe(id2);
     });
 
     it('Set with different value will create new tracker', () => {

@@ -1,14 +1,13 @@
-// import { produce as ES5Produce } from '../src/es5';
-import { produce as ES6Produce } from '../src';
+import { produceImpl as ES5Produce } from '../src/es5';
+import { produceImpl as ES6Produce } from '../src/proxy';
 import StateTrackerUtil from '../src/StateTrackerUtil';
 import when from '../src/when';
 
 testTracker(true);
-// testTracker(false);
+testTracker(false);
 
 function testTracker(useProxy: boolean) {
-  const produce = ES6Produce;
-  // const produce = useProxy ? ES6Produce : ES5Produce;
+  const produce = useProxy ? ES6Produce : ES5Produce;
   const decorateDesc = (text: string) =>
     useProxy ? `proxy: ${text}` : `es5: ${text}`;
 

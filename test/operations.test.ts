@@ -1,12 +1,12 @@
-import { produce as ES6Produce } from '../src';
+import { produceImpl as ES5Produce } from '../src/es5';
+import { produceImpl as ES6Produce } from '../src/proxy';
 import StateTrackerUtil from '../src/StateTrackerUtil';
 
 testTracker(true);
 testTracker(false);
 
 function testTracker(useProxy: boolean) {
-  const produce = ES6Produce;
-  // const produce = useProxy ? ES6Produce : ES5Produce;
+  const produce = useProxy ? ES6Produce : ES5Produce;
   const decorateDesc = (text: string) =>
     useProxy ? `proxy: ${text}` : `es5: ${text}`;
 
@@ -49,8 +49,6 @@ function testTracker(useProxy: boolean) {
       StateTrackerUtil.leave(proxyState);
       const list = [...proxyState.a.a1];
       list[2] = { ...list[2] };
-
-      // StateTrackerUtil.relink(proxyState, ['a'], { a1: list });
 
       let nextA = {
         ...proxyState.a,
@@ -95,8 +93,6 @@ function testTracker(useProxy: boolean) {
 
       const list = [...state.a.a1];
       list[2] = { ...list[2] };
-
-      // StateTrackerUtil.relink(proxyState, ['a'], { a1: list });
 
       let nextA = {
         ...proxyState.a,
