@@ -7,6 +7,7 @@ class StateTrackerNode {
   public stateGraphMap: Map<string, Graph> = new Map();
   private propsGraphMap: Map<string, Graph> = new Map();
   private _observerProps: ObserverProps;
+  readonly _shallowEqual: boolean;
 
   private propsRootMetaMap: Map<
     string,
@@ -20,9 +21,19 @@ class StateTrackerNode {
 
   private _propsProxyToKeyMap: Map<object, string> = new Map();
 
-  constructor(name: string, observerProps?: ObserverProps) {
+  constructor({
+    name,
+    shallowEqual,
+    props,
+  }: {
+    name: string;
+    shallowEqual?: boolean;
+    props?: ObserverProps;
+  }) {
     this.name = name || 'default';
-    this._observerProps = observerProps || {};
+    this._shallowEqual =
+      typeof shallowEqual === 'boolean' ? shallowEqual : true;
+    this._observerProps = props || {};
     this.registerObserverProps();
   }
 
@@ -120,6 +131,18 @@ class StateTrackerNode {
     return this.isEqual(this.stateGraphMap, rootPoint, nextRootState);
   }
 
+  isRootEqual(state: NextState) {
+    for (const [key] of this.stateGraphMap.entries()) {
+      const newValue = state[key];
+      const currentValue = this._affectedPathValue.get(key);
+      if (raw(newValue) !== raw(currentValue)) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
   // 设置props root path
   attemptToUpdatePropsRootMetaInfo(target: object, path: Array<string>) {
     for (const value of this.propsRootMetaMap.values()) {
@@ -176,21 +199,6 @@ class StateTrackerNode {
       result[key] = value.getPaths();
     }
     return result;
-  }
-
-  getPropsRemarkable() {
-    const result: {
-      [key: string]: Array<Array<string>>;
-    } = {};
-    for (const [key, value] of this.propsGraphMap.entries()) {
-      result[key] = value.getPaths();
-    }
-    return result;
-  }
-
-  // TODO: clear
-  getRemarkable() {
-    return [];
   }
 }
 

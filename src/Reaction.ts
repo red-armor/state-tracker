@@ -1,14 +1,8 @@
 import StateTrackerNode from './StateTrackerNode';
 import StateTrackerUtil from './StateTrackerUtil';
-import { generateReactionName } from './commons';
-import {
-  ReactionProps,
-  ReactionOptions,
-  IStateTracker,
-  NextState,
-} from './types';
-
-const noop = (fn: Function) => fn.call(null);
+import { generateReactionName, noop } from './commons';
+import { ReactionProps, IStateTracker, NextState } from './types';
+import StateTrackerError from './StateTrackerError';
 
 class Reaction {
   private fn: Function;
@@ -17,17 +11,34 @@ class Reaction {
   private stateTrackerNode: StateTrackerNode;
   private props?: ReactionProps;
   private scheduler: Function;
+  private _shallowEqual: boolean = true;
 
-  constructor(options: ReactionOptions, props?: ReactionProps) {
-    const { fn, state, scheduler } = options;
+  private _disposer: Function = noop;
+
+  constructor(
+    options: {
+      fn: Function;
+      state: IStateTracker;
+      scheduler?: Function;
+      shallowEqual?: boolean;
+    },
+    props?: ReactionProps
+  ) {
+    const { fn, state, scheduler, shallowEqual } = options;
     this.name = fn.name ? fn.name : generateReactionName();
     this.state = state;
-    this.stateTrackerNode = new StateTrackerNode(this.name);
+    this._shallowEqual =
+      typeof shallowEqual === 'boolean' ? shallowEqual : true;
+    this.stateTrackerNode = new StateTrackerNode({
+      name: this.name,
+      shallowEqual: this._shallowEqual,
+    });
     this.props = props;
     this.fn = fn;
     this.scheduler = scheduler || noop;
 
     this.register();
+    this.dispose = this.dispose.bind(this);
   }
 
   register() {
@@ -35,8 +46,11 @@ class Reaction {
       ._stateTrackerContext;
     const container = context.container;
 
-    const disposer = container.register(this);
-    return disposer;
+    this._disposer = container.register(this);
+  }
+
+  dispose() {
+    this._disposer();
   }
 
   getStateTrackerNode() {
@@ -48,8 +62,14 @@ class Reaction {
     // this.teardown();
     StateTrackerUtil.enterNode(this.state, this.stateTrackerNode);
     const args = [];
+    let result;
     if (this.props) args.push(this.props);
-    const result = this.fn.apply(null, args);
+    try {
+      result = this.fn.apply(null, args);
+    } catch (err) {
+      console.error(new StateTrackerError(`Reaction fn run with error ${err}`));
+    }
+
     StateTrackerUtil.leave(this.state);
     return result;
   }
@@ -58,6 +78,7 @@ class Reaction {
     this.stateTrackerNode.cleanup();
   }
 
+  // for state update trigger
   schedulerRun() {
     this.teardown();
     this.scheduler(this.run.bind(this));
@@ -87,7 +108,12 @@ class Reaction {
   }
 
   performComparison(
-    state: NextState
+    state: NextState,
+    {
+      enableRootComparison = true,
+    }: {
+      enableRootComparison: boolean;
+    }
   ): {
     reaction: Reaction;
     isEqual: boolean;
@@ -99,12 +125,20 @@ class Reaction {
       isEqual: true,
     };
 
-    for (let idx = 0; idx < keys.length; idx++) {
-      const root = [keys[idx]];
-      truthy = this.stateTrackerNode.isStateEqual(state, root);
+    if (enableRootComparison) {
+      truthy = this.stateTrackerNode.isRootEqual(state);
       if (!truthy) {
         token.isEqual = false;
         return token;
+      }
+    } else {
+      for (let idx = 0; idx < keys.length; idx++) {
+        const root = [keys[idx]];
+        truthy = this.stateTrackerNode.isStateEqual(state, root);
+        if (!truthy) {
+          token.isEqual = false;
+          return token;
+        }
       }
     }
 

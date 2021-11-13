@@ -76,12 +76,19 @@ const StateTrackerUtil = {
       | {
           [key: string]: any;
         },
-    afterCallback?: Function
+    configs?: {
+      enableRootComparison?: boolean;
+      afterCallback?: Function;
+    }
   ) {
     const tracker = state[TRACKER];
     const context = tracker._stateTrackerContext;
     const { container } = context;
-    container.perform(nextState, afterCallback);
+    const { afterCallback, enableRootComparison = true } = configs || {};
+    container.perform(nextState, {
+      afterCallback,
+      enableRootComparison,
+    });
   },
 
   getContext: function(proxy: IStateTracker) {

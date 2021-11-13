@@ -17,9 +17,20 @@ class Container {
     };
   }
 
-  perform(nextState: NextState, afterCallback?: Function) {
+  perform(
+    nextState: NextState,
+    {
+      afterCallback,
+      enableRootComparison = true,
+    }: {
+      afterCallback?: Function;
+      enableRootComparison?: boolean;
+    }
+  ) {
     const tokens = this.reactions.map(reaction => {
-      return reaction.performComparison(nextState);
+      return reaction.performComparison(nextState, {
+        enableRootComparison,
+      });
     });
 
     if (typeof afterCallback === 'function') {

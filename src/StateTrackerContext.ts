@@ -35,7 +35,10 @@ class StateTrackerContext {
   }
 
   enter(name: string, props?: ObserverProps) {
-    const node = new StateTrackerNode(name, props);
+    const node = new StateTrackerNode({
+      name,
+      props,
+    });
     this.queue.push(node);
   }
 

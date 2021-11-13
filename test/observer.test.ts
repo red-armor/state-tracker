@@ -206,9 +206,15 @@ function testTracker(useProxy: boolean) {
       const nextList = nextApp.list.slice();
       nextList[0] = { ...nextList[0], label: 'first_1' };
 
-      StateTrackerUtil.perform(proxyState, {
-        app: { ...nextApp, list: nextList },
-      });
+      StateTrackerUtil.perform(
+        proxyState,
+        {
+          app: { ...nextApp, list: nextList },
+        },
+        {
+          enableRootComparison: false,
+        }
+      );
     });
   });
 }
