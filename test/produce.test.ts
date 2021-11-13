@@ -91,9 +91,18 @@ function testTracker(useProxy: boolean) {
       expect(listData.length).toBe(0);
       StateTrackerUtil.leave(state);
 
-      StateTrackerUtil.relink(state, ['goods'], {
+      let nextGoods = {
+        ...state.goods,
         listData: [{ id: '1' }, { id: '2' }],
-      });
+      };
+      StateTrackerUtil.perform(
+        state,
+        { a: nextGoods },
+        {
+          afterCallback: () => (state.goods = nextGoods),
+          enableRootComparison: false,
+        }
+      );
 
       StateTrackerUtil.enter(state);
       const {
@@ -507,19 +516,37 @@ function testTracker(useProxy: boolean) {
       proxyState.a.a2;
       /* eslint-enable */
 
-      StateTrackerUtil.relink(proxyState, ['a'], {
+      let nextA = {
         a1: {
           a11: 3,
         },
         a2: 4,
-      });
+      };
+      StateTrackerUtil.perform(
+        proxyState,
+        { a: nextA },
+        {
+          afterCallback: () => (proxyState.a = nextA),
+          enableRootComparison: false,
+        }
+      );
 
       expect(proxyState.a.a2).toBe(4);
 
-      StateTrackerUtil.relink(proxyState, ['a'], {
+      nextA = {
+        // @ts-ignore
         a1: 5,
         a2: 6,
-      });
+      };
+      StateTrackerUtil.perform(
+        proxyState,
+        { a: nextA },
+        {
+          afterCallback: () => (proxyState.a = nextA),
+          enableRootComparison: false,
+        }
+      );
+
       expect(proxyState.a.a1).toBe(5);
       expect(proxyState.a.a2).toBe(6);
     });
@@ -540,18 +567,23 @@ function testTracker(useProxy: boolean) {
       };
 
       const proxyState = produce(state);
-      const draft = StateTrackerUtil.batchRelink(proxyState, [
-        {
-          path: ['a'],
-          value: {
-            a1: {
-              a11: 3,
-            },
-          },
-        },
-      ]);
 
-      expect(draft.a.a1.a11).toBe(1);
+      let nextA = {
+        ...proxyState.a,
+        a1: {
+          a11: 3,
+        },
+      };
+      StateTrackerUtil.perform(
+        proxyState,
+        { ...proxyState, a: nextA },
+        {
+          afterCallback: () => (proxyState.a = nextA),
+          enableRootComparison: false,
+        }
+      );
+
+      // expect(proxyState.a.a1.a11).toBe(1);
       expect(proxyState.a.a1.a11).toBe(3);
       proxyState.b.b1 = 4;
       expect(proxyState.b.b1).toBe(4);
@@ -623,14 +655,23 @@ function testTracker(useProxy: boolean) {
       StateTrackerUtil.leave(state);
       StateTrackerUtil.leave(state);
 
-      StateTrackerUtil.relink(state, ['promotionInfo'], {
+      let nextPromotionInfo = {
+        ...state.promotionInfo,
         header: {
           presellDeposit: {
             deposit: 2,
             deduction: 3,
           },
         },
-      });
+      };
+      StateTrackerUtil.perform(
+        state,
+        { promotionInfo: nextPromotionInfo },
+        {
+          afterCallback: () => (state.promotionInfo = nextPromotionInfo),
+          enableRootComparison: false,
+        }
+      );
 
       StateTrackerUtil.enter(state, 'level2');
       header = StateTrackerUtil.peek(state, ['promotionInfo', 'header']);
@@ -655,9 +696,18 @@ function testTracker(useProxy: boolean) {
       expect(listData.length).toBe(0);
       StateTrackerUtil.leave(state);
 
-      StateTrackerUtil.relink(state, ['goods'], {
+      let nextGoods = {
+        ...state.goods,
         listData: [{ id: '1' }, { id: '2' }],
-      });
+      };
+      StateTrackerUtil.perform(
+        state,
+        { a: nextGoods },
+        {
+          afterCallback: () => (state.goods = nextGoods),
+          enableRootComparison: false,
+        }
+      );
 
       StateTrackerUtil.enter(state);
       const {
@@ -697,14 +747,23 @@ function testTracker(useProxy: boolean) {
 
       StateTrackerUtil.leave(state);
 
-      StateTrackerUtil.relink(state, ['promotionInfo'], {
+      let nextPromotionInfo = {
+        ...state.promotionInfo,
         header: {
           presellDeposit: {
             deposit: 2,
             deduction: 3,
           },
         },
-      });
+      };
+      StateTrackerUtil.perform(
+        state,
+        { promotionInfo: nextPromotionInfo },
+        {
+          afterCallback: () => (state.promotionInfo = nextPromotionInfo),
+          enableRootComparison: false,
+        }
+      );
 
       StateTrackerUtil.enter(state, 'level2');
       header = StateTrackerUtil.peek(state, ['promotionInfo', 'header']);
@@ -756,7 +815,8 @@ function testTracker(useProxy: boolean) {
       let header = promotionInfo.header;
       StateTrackerUtil.leave(state);
 
-      StateTrackerUtil.relink(state, ['promotionInfo'], {
+      let nextPromotionInfo = {
+        ...state.promotionInfo,
         header: {
           presellDeposit: {
             deposit: 2,
@@ -765,7 +825,15 @@ function testTracker(useProxy: boolean) {
           price: 6,
           selected: true,
         },
-      });
+      };
+      StateTrackerUtil.perform(
+        state,
+        { promotionInfo: nextPromotionInfo },
+        {
+          afterCallback: () => (state.promotionInfo = nextPromotionInfo),
+          enableRootComparison: false,
+        }
+      );
 
       StateTrackerUtil.enter(state, 'level2');
       header = StateTrackerUtil.peek(state, ['promotionInfo', 'header']);
@@ -795,7 +863,8 @@ function testTracker(useProxy: boolean) {
       let header = promotionInfo.header;
       StateTrackerUtil.leave(state);
 
-      StateTrackerUtil.relink(state, ['promotionInfo'], {
+      let nextPromotionInfo = {
+        ...state.promotionInfo,
         header: {
           presellDeposit: {
             deposit: 2,
@@ -804,7 +873,15 @@ function testTracker(useProxy: boolean) {
           price: 6,
           selected: true,
         },
-      });
+      };
+      StateTrackerUtil.perform(
+        state,
+        { promotionInfo: nextPromotionInfo },
+        {
+          afterCallback: () => (state.promotionInfo = nextPromotionInfo),
+          enableRootComparison: false,
+        }
+      );
 
       StateTrackerUtil.enter(state, 'level2');
       header = StateTrackerUtil.peek(state, ['promotionInfo', 'header']);

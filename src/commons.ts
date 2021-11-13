@@ -20,9 +20,6 @@ export const hasSymbol = typeof Symbol !== 'undefined';
 export const TRACKER: unique symbol = hasSymbol
   ? Symbol.for('tracker')
   : ('__tracker__' as any);
-export const PATH_TRACKER: unique symbol = hasSymbol
-  ? Symbol.for('path_tracker')
-  : ('__path_tracker__' as any);
 export const IS_PROXY: unique symbol = hasSymbol
   ? Symbol.for('is_proxy')
   : ('__is_proxy__' as any);

@@ -1,12 +1,12 @@
-import { produce as ES6Produce } from '../src/proxy';
-import { produce as ES5Produce } from '../src/es5';
+import { produce as ES6Produce } from '../src';
 import StateTrackerUtil from '../src/StateTrackerUtil';
 
 testTracker(true);
 testTracker(false);
 
 function testTracker(useProxy: boolean) {
-  const produce = useProxy ? ES6Produce : ES5Produce;
+  const produce = ES6Produce;
+  // const produce = useProxy ? ES6Produce : ES5Produce;
   const decorateDesc = (text: string) =>
     useProxy ? `proxy: ${text}` : `es5: ${text}`;
 
@@ -50,7 +50,21 @@ function testTracker(useProxy: boolean) {
       const list = [...proxyState.a.a1];
       list[2] = { ...list[2] };
 
-      StateTrackerUtil.relink(proxyState, ['a'], { a1: list });
+      // StateTrackerUtil.relink(proxyState, ['a'], { a1: list });
+
+      let nextA = {
+        ...proxyState.a,
+        a1: list,
+      };
+      StateTrackerUtil.perform(
+        proxyState,
+        { a: nextA },
+        {
+          afterCallback: () => (proxyState.a = nextA),
+          enableRootComparison: false,
+        }
+      );
+
       StateTrackerUtil.enter(proxyState, 'list');
 
       const nextTrackerList = proxyState.a.a1.map(
@@ -82,7 +96,21 @@ function testTracker(useProxy: boolean) {
       const list = [...state.a.a1];
       list[2] = { ...list[2] };
 
-      StateTrackerUtil.relink(proxyState, ['a'], { a1: list });
+      // StateTrackerUtil.relink(proxyState, ['a'], { a1: list });
+
+      let nextA = {
+        ...proxyState.a,
+        a1: list,
+      };
+      StateTrackerUtil.perform(
+        proxyState,
+        { a: nextA },
+        {
+          afterCallback: () => (proxyState.a = nextA),
+          enableRootComparison: false,
+        }
+      );
+
       StateTrackerUtil.enter(proxyState, 'list');
 
       const nextTrackerList = proxyState.a.a1.map(
@@ -130,9 +158,6 @@ function testTracker(useProxy: boolean) {
 
       const newData = state.a.a1.slice();
       newData.splice(2, 1);
-      // proxyState.relink(['a'], {
-      //   a1: newData,
-      // })
       proxyState.a.a1 = newData;
 
       StateTrackerUtil.enter(proxyState, 'list');

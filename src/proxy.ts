@@ -1,6 +1,5 @@
 import {
   TRACKER,
-  PATH_TRACKER,
   IS_PROXY,
   createHiddenProperty,
   arrayProtoOwnKeys,
@@ -11,7 +10,6 @@ import {
   shallowCopy,
 } from './commons';
 import { createPlainTrackerObject } from './StateTracker';
-import PathTracker from './PathTracker';
 import {
   IStateTracker,
   State,
@@ -20,7 +18,6 @@ import {
 } from './types';
 import StateTrackerContext from './StateTrackerContext';
 import StateTrackerUtil from './StateTrackerUtil';
-import collection from './collection';
 import Container from './Container';
 
 export function produceImpl(
@@ -41,12 +38,6 @@ export function produceImpl(
     rootPath: [],
   });
 
-  collection.register({
-    base: state,
-    proxyState: proxy,
-    stateTrackerContext,
-  });
-
   return proxy;
 }
 
@@ -61,7 +52,7 @@ export function createProxy(
     stateTrackerContext,
   } = options || {};
   const outerAccessPath = accessPath;
-  const internalKeys = [TRACKER, PATH_TRACKER, 'unlink'];
+  const internalKeys = [TRACKER, 'unlink'];
 
   const handler = {
     get: (target: IStateTracker, prop: PropertyKey, receiver: any) => {
@@ -208,16 +199,12 @@ export function createProxy(
     lastUpdateAt: Date.now(),
   });
 
-  const pathTracker = new PathTracker({
-    path: accessPath,
-  });
   const proxy = new Proxy(nextState, handler) as IStateTracker;
 
   // TODO: Cannot add property x, object is not extensible
   // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Errors/Cant_define_property_object_not_extensible
   // if property value is not extensible, it will cause error. such as a ref value..
   createHiddenProperty(proxy, TRACKER, tracker);
-  createHiddenProperty(proxy, PATH_TRACKER, pathTracker);
   createHiddenProperty(proxy, 'unlink', function(this: IStateTracker) {
     const tracker = this[TRACKER];
     return tracker._base;

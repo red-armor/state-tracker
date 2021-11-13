@@ -1,7 +1,6 @@
 import { Type } from './';
-import { TRACKER, PATH_TRACKER } from '../commons';
+import { TRACKER } from '../commons';
 import StateTrackerContext from '../StateTrackerContext';
-import PathTracker from '../PathTracker';
 
 export interface ProxyStateTrackerConfig {
   accessPath?: Array<string>;
@@ -56,7 +55,6 @@ export type StateTrackerInterface = StateTrackerProperties;
 
 export interface IStateTracker {
   [TRACKER]: StateTrackerInterface;
-  [PATH_TRACKER]: PathTracker;
   [key: string]: any;
 }
 
