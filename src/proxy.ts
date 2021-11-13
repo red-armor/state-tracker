@@ -8,6 +8,7 @@ import {
   isTrackable,
   pathEqual,
   shallowCopy,
+  raw,
 } from './commons';
 import { createPlainTrackerObject } from './StateTracker';
 import {
@@ -162,13 +163,15 @@ export function createProxy(
       receiver: any
     ) => {
       const tracker = Reflect.get(target, TRACKER) as StateTrackerProperties;
-      const base = tracker._base[prop as string];
+      const base = tracker._base;
+      const currentValue = base[prop as string];
       const nextChildProxies = tracker._nextChildProxies;
-      if (base === newValue) return true;
+      // if (base === newValue) return true;
       // TODO：可能还需要查看value是不是match，万一被设置了一个ref一样，但是path不一样的怎么搞。。
-      if (StateTrackerUtil.hasTracker(newValue)) {
-        if (base === StateTrackerUtil.getTracker(newValue)._base) return true;
-      }
+      if (raw(currentValue) === raw(newValue)) return true;
+      // if (StateTrackerUtil.hasTracker(newValue)) {
+      //   if (base === StateTrackerUtil.getTracker(newValue)._base) return true;
+      // }
 
       let nextValue = newValue;
 
@@ -176,8 +179,7 @@ export function createProxy(
       // if (StateTrackerUtil.hasTracker(newValue)) {
       //   nextValue = StateTrackerUtil.getTracker(newValue)._base
       // }
-
-      nextChildProxies.delete(base);
+      nextChildProxies.delete(currentValue);
       return Reflect.set(target, prop, nextValue, receiver);
     },
   };

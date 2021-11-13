@@ -223,6 +223,7 @@ function testTracker(useProxy: boolean) {
       expect(childProxies.size).toBe(1);
       proxyState.a = { a1: 1 };
       const nextChildProxies = tracker._nextChildProxies;
+
       expect(nextChildProxies.size).toBe(0);
     });
 
