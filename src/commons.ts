@@ -15,7 +15,8 @@ export const arrayProtoOwnKeys = () => ownKeys(Object.getPrototypeOf([]));
 export const objectProtoOwnKeys = () => ownKeys(Object.getPrototypeOf({}));
 
 export const emptyFunction = () => {};
-export const isObject = (o: any) => o ? (typeof o === 'object' || typeof o === 'function') : false // eslint-disable-line
+export const isObject = (o: any) =>
+  o ? typeof o === 'object' || typeof o === 'function' : false; // eslint-disable-line
 export const hasSymbol = typeof Symbol !== 'undefined';
 export const TRACKER: unique symbol = hasSymbol
   ? Symbol.for('tracker')
@@ -26,7 +27,7 @@ export const IS_PROXY: unique symbol = hasSymbol
 
 export const canIUseProxy = () => {
   try {
-    new Proxy({}, {}) // eslint-disable-line
+    new Proxy({}, {}); // eslint-disable-line
   } catch (err) {
     return false;
   }
@@ -34,9 +35,11 @@ export const canIUseProxy = () => {
   return true;
 };
 
-export const hasOwnProperty = (o: object, prop: PropertyKey) => o.hasOwnProperty(prop) // eslint-disable-line
+export const hasOwnProperty = (o: object, prop: PropertyKey) =>
+  o.hasOwnProperty(prop); // eslint-disable-line
 
-export const isTrackable = (o: any) => { // eslint-disable-line
+export const isTrackable = (o: any) => {
+  // eslint-disable-line
   return ['[object Object]', '[object Array]'].indexOf(toString(o)) !== -1;
 };
 
@@ -124,12 +127,13 @@ export const generateTrackerMapKey = (accessPath: Array<string>): string => {
 };
 
 const seenKeys: SeenKeys = {};
-const MULTIPLIER = Math.pow(2, 24) // eslint-disable-line
+const MULTIPLIER = Math.pow(2, 24); // eslint-disable-line
 
 export const generateRandomKey = (prefix = '') => {
   let key;
 
-  while (key === undefined || seenKeys.hasOwnProperty(key) || !isNaN(+key)) { // eslint-disable-line
+  while (key === undefined || seenKeys.hasOwnProperty(key) || !isNaN(+key)) {
+    // eslint-disable-line
     key = Math.floor(Math.random() * MULTIPLIER).toString(32);
   }
 
@@ -197,7 +201,10 @@ export function shallowEqual(objA: any, objB: any) {
   return true;
 }
 
-export const pathEqual = (a: Array<string>, b: Array<string>) => {
+export const pathEqual = (
+  a: Array<string | number>,
+  b: Array<string | number>
+) => {
   if (a && b && is(JSON.stringify(a), JSON.stringify(b))) return true;
   return false;
 };

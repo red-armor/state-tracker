@@ -2,12 +2,15 @@ import { isTrackable, raw } from './commons';
 import { ObserverProps, NextState } from './types';
 import StateTrackerUtil from './StateTrackerUtil';
 import { Graph } from './Graph';
+import { Reaction } from '.';
 class StateTrackerNode {
   public name: string;
   public stateGraphMap: Map<string, Graph> = new Map();
   private propsGraphMap: Map<string, Graph> = new Map();
   private _observerProps: ObserverProps;
   readonly _shallowEqual: boolean;
+  private _listener?: Function;
+  readonly _reaction?: Reaction;
 
   private propsRootMetaMap: Map<
     string,
@@ -27,15 +30,22 @@ class StateTrackerNode {
     name,
     shallowEqual,
     props,
+    listener,
+    reaction,
   }: {
     name: string;
     shallowEqual?: boolean;
     props?: ObserverProps;
+    listener?: Function;
+    reaction?: Reaction;
   }) {
     this.name = name || 'default';
     this._shallowEqual =
       typeof shallowEqual === 'boolean' ? shallowEqual : true;
     this._observerProps = props || {};
+
+    this._listener = listener;
+    this._reaction = reaction;
     this.registerObserverProps();
   }
 
@@ -69,9 +79,18 @@ class StateTrackerNode {
   }
 
   isEqual(graphMap: Map<string, Graph>, key: string, nextValue: any) {
+    const token = {
+      key: '',
+      falsy: true,
+      nextValue: null,
+      currentValue: null,
+    };
     const graph = graphMap.get(key);
     // 证明props并没有被用到；所以，直接返回true就可以了
-    if (!graph) return true;
+    if (!graph) {
+      token.falsy = true;
+      return token;
+    }
 
     const childrenMap = graph.childrenMap;
     const keys = Object.keys(childrenMap);
@@ -86,10 +105,14 @@ class StateTrackerNode {
       const currentValue = this._affectedPathValue.get(affectedKey);
 
       if (raw(newValue) !== raw(currentValue)) {
-        return false;
+        token.falsy = false;
+        token.key = key;
+        token.nextValue = raw(newValue);
+        token.currentValue = raw(currentValue);
+        return token;
       }
     }
-    return true;
+    return token;
   }
 
   setObserverProps(props?: ObserverProps) {
@@ -109,7 +132,19 @@ class StateTrackerNode {
       const value = this._observerProps[key];
 
       if (isTrackable(value) && isTrackable(nextValue)) {
-        if (!this.isEqual(this.propsGraphMap, key, nextValue)) return false;
+        const equalityToken = this.isEqual(this.propsGraphMap, key, nextValue);
+        if (!equalityToken.falsy) {
+          // console.log({
+          //   action: 'isPropsEqual',
+          //   reactionName: this._reaction?.name,
+          //   key,
+          //   graph: this.propsGraphMap,
+          //   diffKey: equalityToken.key,
+          //   nextValue: equalityToken.nextValue,
+          //   currentValue: equalityToken.currentValue,
+          // });
+          return false;
+        }
       } else if (nextValue !== value) {
         return false;
       }
@@ -127,7 +162,26 @@ class StateTrackerNode {
     // 如果说没有访问过state的话，也就是graph就没有创建这个时候直接返回true就行
     if (!graph) return true;
 
-    return this.isEqual(this.stateGraphMap, rootPoint, nextRootState);
+    const equalityToken = this.isEqual(
+      this.stateGraphMap,
+      rootPoint,
+      nextRootState
+    );
+
+    if (!equalityToken.falsy) {
+      // console.log({
+      //   action: 'isStateEqual',
+      //   reaction: this._reaction,
+      //   reactionName: this._reaction?.name,
+      //   rootPoint,
+      //   graph: graph,
+      //   diffKey: equalityToken.key,
+      //   nextValue: equalityToken.nextValue,
+      //   currentValue: equalityToken.currentValue,
+      // });
+    }
+
+    return equalityToken.falsy;
   }
 
   isRootEqual(state: NextState) {
@@ -156,7 +210,7 @@ class StateTrackerNode {
 
   track({
     target,
-    path,
+    path: base,
     value,
   }: {
     target: object;
@@ -165,6 +219,20 @@ class StateTrackerNode {
     value: any;
   }) {
     const propsTargetKey = this._propsProxyToKeyMap.get(raw(target));
+    // path will be changed, so use copy instead
+    const path = base.slice();
+
+    if (this._listener) {
+      this._listener({
+        function: 'tracker',
+        propsTargetKey,
+        args: {
+          target,
+          path: path.slice(),
+          value,
+        },
+      });
+    }
 
     let nextPath = path;
     // 如果是props的，需要进行特殊处理

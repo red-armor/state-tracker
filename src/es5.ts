@@ -2,11 +2,9 @@ import {
   raw,
   each,
   TRACKER,
-  isTrackable,
-  createHiddenProperty,
-  pathEqual,
-  shallowCopy,
   IS_PROXY,
+  shallowCopy,
+  createHiddenProperty,
 } from './commons';
 import { createPlainTrackerObject } from './StateTracker';
 import { State, IndexType, IStateTracker, ProduceProxyOptions } from './types';
@@ -68,8 +66,18 @@ export function createProxy(
         const base = raw(tracker._base);
         const nextAccessPath = accessPath.concat(prop as string);
         const isPeeking = tracker._isPeeking;
-        const nextValue = base[prop as string];
-        const nextChildProxies = tracker._nextChildProxies;
+        // const nextValue = base[prop as string];
+        // const nextChildProxies = tracker._nextChildProxies;
+
+        const nextValue = StateTrackerUtil.resolveNextValue({
+          value: base[prop],
+          tracker,
+          stateTrackerContext,
+          nextAccessPath: nextAccessPath.slice(),
+          proxy: copy,
+          rootPath,
+          createProxy,
+        });
 
         if (!isPeeking) {
           if (stateTrackerContext.getCurrent()) {
@@ -82,56 +90,7 @@ export function createProxy(
           }
         }
 
-        if (!isTrackable(nextValue)) return nextValue;
-        // used for cached key
-        const rawNextValue = raw(nextValue);
-
-        if (nextChildProxies.has(rawNextValue))
-          return nextChildProxies.get(rawNextValue);
-
-        const cachedProxy = stateTrackerContext.getCachedProxy(rawNextValue);
-        if (cachedProxy) {
-          nextChildProxies.set(rawNextValue, cachedProxy);
-          return cachedProxy;
-        }
-
-        let producedChildProxy = null;
-
-        // 被设置了一个trackedValue，这个时候会尽量用这个trackedValue
-        if (StateTrackerUtil.hasTracker(nextValue)) {
-          const nextValueTracker = StateTrackerUtil.getTracker(nextValue);
-          if (pathEqual(nextValue, nextValueTracker._accessPath)) {
-            producedChildProxy = nextValue;
-          } else {
-            producedChildProxy = createProxy(
-              // only new value should create new proxy object..
-              // Array.isArray(value) ? value.slice() : { ...value },
-              shallowCopy(nextValue),
-              {
-                accessPath: nextAccessPath,
-                parentProxy: copy as IStateTracker,
-                rootPath,
-                stateTrackerContext,
-              }
-            );
-          }
-        } else {
-          producedChildProxy = createProxy(
-            // only new value should create new proxy object..
-            // Array.isArray(value) ? value.slice() : { ...value },
-            nextValue,
-            {
-              accessPath: nextAccessPath,
-              parentProxy: copy as IStateTracker,
-              rootPath,
-              stateTrackerContext,
-            }
-          );
-        }
-
-        stateTrackerContext.setCachedProxy(rawNextValue, producedChildProxy);
-        nextChildProxies.set(rawNextValue, producedChildProxy);
-        return producedChildProxy;
+        return nextValue;
       },
       set(this: IStateTracker, newValue: any) {
         const tracker = this[TRACKER];
@@ -196,7 +155,7 @@ export function createProxy(
       lengthGetter = true
     ) =>
       function(this: IStateTracker) {
-        const args = Array.prototype.slice.call(arguments) // eslint-disable-line
+        const args = Array.prototype.slice.call(arguments); // eslint-disable-line
         if (lengthGetter) {
           const tracker = this[TRACKER];
 

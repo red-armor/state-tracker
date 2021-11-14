@@ -5,10 +5,8 @@ import {
   arrayProtoOwnKeys,
   objectProtoOwnKeys,
   Type,
-  isTrackable,
-  pathEqual,
-  shallowCopy,
   raw,
+  isProxy,
 } from './commons';
 import { createPlainTrackerObject } from './StateTracker';
 import {
@@ -52,7 +50,6 @@ export function createProxy(
     rootPath = [],
     stateTrackerContext,
   } = options || {};
-  const outerAccessPath = accessPath;
   const internalKeys = [TRACKER, 'unlink'];
 
   const handler = {
@@ -85,11 +82,19 @@ export function createProxy(
         // Note: `getBase` can get the latest value, Maybe it's the dispatched value.
         // It means if you call relink to update a key's value, then we can get the
         // value here...
-        const nextChildProxies = tracker._nextChildProxies;
+        // const nextChildProxies = tracker._nextChildProxies;
 
-        const nextAccessPath = accessPath.concat(prop as string);
+        const nextAccessPath = accessPath.slice().concat(prop as string);
         const isPeeking = tracker._isPeeking;
-        const nextValue = target[prop];
+        const nextValue = StateTrackerUtil.resolveNextValue({
+          value: target[prop],
+          tracker,
+          stateTrackerContext,
+          nextAccessPath: nextAccessPath.slice(),
+          proxy,
+          rootPath,
+          createProxy,
+        });
 
         if (!isPeeking) {
           if (stateTrackerContext.getCurrent()) {
@@ -97,61 +102,12 @@ export function createProxy(
               target,
               key: prop,
               value: nextValue,
-              path: outerAccessPath.concat(prop as string),
+              path: nextAccessPath,
             });
           }
         }
 
-        if (!isTrackable(nextValue)) return nextValue;
-        // used for cached key
-        const rawNextValue = raw(nextValue);
-
-        if (nextChildProxies.has(rawNextValue))
-          return nextChildProxies.get(rawNextValue);
-
-        const cachedProxy = stateTrackerContext.getCachedProxy(rawNextValue);
-
-        if (cachedProxy) {
-          nextChildProxies.set(rawNextValue, cachedProxy);
-          return cachedProxy;
-        }
-        let producedChildProxy = null;
-
-        // 被设置了一个trackedValue，这个时候会尽量用这个trackedValue
-        if (StateTrackerUtil.hasTracker(nextValue)) {
-          const nextValueTracker = StateTrackerUtil.getTracker(nextValue);
-          if (pathEqual(nextValue, nextValueTracker._accessPath)) {
-            producedChildProxy = nextValue;
-          } else {
-            producedChildProxy = createProxy(
-              // only new value should create new proxy object..
-              // Array.isArray(value) ? value.slice() : { ...value },
-              shallowCopy(nextValue),
-              {
-                accessPath: nextAccessPath,
-                parentProxy: proxy as IStateTracker,
-                rootPath,
-                stateTrackerContext,
-              }
-            );
-          }
-        } else {
-          producedChildProxy = createProxy(
-            // only new value should create new proxy object..
-            // Array.isArray(value) ? value.slice() : { ...value },
-            nextValue,
-            {
-              accessPath: nextAccessPath,
-              parentProxy: proxy as IStateTracker,
-              rootPath,
-              stateTrackerContext,
-            }
-          );
-        }
-
-        stateTrackerContext.setCachedProxy(rawNextValue, producedChildProxy);
-        nextChildProxies.set(rawNextValue, producedChildProxy);
-        return producedChildProxy;
+        return nextValue;
       } catch (err) {
         console.log('[state-tracker] ', err);
       }
@@ -187,7 +143,8 @@ export function createProxy(
 
   let nextState = state;
 
-  if (StateTrackerUtil.hasTracker(state as IStateTracker)) {
+  // should be a Proxy!!!!
+  if (isProxy(state as IStateTracker)) {
     return state as IStateTracker;
   }
 

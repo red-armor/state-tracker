@@ -12,15 +12,17 @@ function when(
   predicate: (state: IStateTracker) => boolean,
   effect?: () => void
 ) {
+  function when_reaction() {
+    const falsy = predicate(state);
+    if (falsy) {
+      reaction.dispose();
+      if (typeof effect === 'function') effect();
+    }
+  }
+
   const reaction = new Reaction({
     state,
-    fn: () => {
-      const falsy = predicate(state);
-      if (falsy) {
-        reaction.dispose();
-        if (typeof effect === 'function') effect();
-      }
-    },
+    fn: when_reaction,
   });
 
   reaction.run();

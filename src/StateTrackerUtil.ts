@@ -1,10 +1,21 @@
 import {
-  generateRandomContextKey,
+  raw,
   TRACKER,
-  isPlainObject,
+  pathEqual,
   isTrackable,
+  shallowCopy,
+  isPlainObject,
+  generateRandomContextKey,
 } from './commons';
-import { IStateTracker, ObserverProps, NextState } from './types';
+import {
+  State,
+  NextState,
+  IStateTracker,
+  ObserverProps,
+  ProduceProxyOptions,
+  StateTrackerProperties,
+} from './types';
+import StateTrackerContext from './StateTrackerContext';
 import StateTrackerNode from './StateTrackerNode';
 
 const StateTrackerUtil = {
@@ -80,6 +91,125 @@ const StateTrackerUtil = {
   getContext: function(proxy: IStateTracker) {
     const tracker = proxy[TRACKER];
     return tracker._stateTrackerContext;
+  },
+
+  resolveNextValue: function resolveNextValue({
+    value,
+    tracker,
+    stateTrackerContext,
+    nextAccessPath,
+    proxy,
+    rootPath,
+    createProxy,
+  }: {
+    value: any;
+    rootPath: Array<string>;
+    proxy: IStateTracker;
+    tracker: StateTrackerProperties;
+    nextAccessPath: Array<string | number>;
+    stateTrackerContext: StateTrackerContext;
+    createProxy: (state: State, options: ProduceProxyOptions) => IStateTracker;
+  }) {
+    const nextChildProxies = tracker._nextChildProxies;
+    let nextValue = value;
+    if (!isTrackable(nextValue)) return nextValue;
+
+    // used for cached key
+    const rawNextValue = raw(nextValue);
+
+    // 1. use value in nextChildProxies
+    if (nextChildProxies.has(rawNextValue)) {
+      nextValue = nextChildProxies.get(rawNextValue);
+      return nextValue;
+    }
+
+    // 2. use value in context cached proxy
+    const cachedProxy = stateTrackerContext.getCachedProxy(rawNextValue);
+    // let producedChildProxy = null;
+    const rootPoint = nextAccessPath[0];
+    // let setContextCachedProxy = true;
+
+    if (cachedProxy) {
+      const cachedTracker = StateTrackerUtil.getTracker(cachedProxy);
+      const cachedAccessPath = cachedTracker._accessPath;
+      // const cachedRootPoint = cachedAccessPath[0];
+      // For set with an proxy value, the same root should be preserved.
+      if (
+        pathEqual(nextAccessPath.slice(0, -1), cachedAccessPath.slice(0, -1))
+      ) {
+        // if (pathEqual(nextAccessPath, cachedAccessPath)) {
+        //    too strictly !!! if remove an item, all the left should be re-proxy
+        // if (nextAccessPath[0] === cachedAccessPath[0]) {
+        //    may result in a bug!!!, for Example, set value under the same root !
+        // so we only care the path except the end point !!!
+        // not matched, will be placed in getCachedNextProxy...But, it still has a issue.
+        // set more than once, then it may have overlap!!
+        nextChildProxies.set(rawNextValue, cachedProxy);
+        return cachedProxy;
+      }
+
+      const cachedNextProxy = stateTrackerContext.getCachedNextProxy(
+        rootPoint,
+        rawNextValue
+      );
+      if (cachedNextProxy) {
+        const cachedNextTracker = StateTrackerUtil.getTracker(cachedNextProxy);
+
+        if (rootPoint === cachedNextTracker._accessPath[0]) {
+          nextChildProxies.set(rawNextValue, cachedNextProxy);
+          nextValue = cachedNextProxy;
+          return nextValue;
+        }
+      }
+
+      nextValue = createProxy(
+        // only new value should create new proxy object..
+        // Array.isArray(value) ? value.slice() : { ...value },
+        shallowCopy(nextValue),
+        {
+          accessPath: nextAccessPath.slice() as Array<string>,
+          parentProxy: proxy as IStateTracker,
+          rootPath,
+          stateTrackerContext,
+        }
+      );
+
+      stateTrackerContext.setCachedNextProxy(
+        rootPoint,
+        rawNextValue,
+        nextValue
+      );
+      nextChildProxies.set(rawNextValue, nextValue);
+      return nextValue;
+    }
+
+    // 被设置了一个trackedValue，这个时候会尽量用这个trackedValue
+    if (StateTrackerUtil.hasTracker(nextValue)) {
+      const nextValueTracker = StateTrackerUtil.getTracker(nextValue);
+      if (!pathEqual(nextAccessPath, nextValueTracker._accessPath)) {
+        nextValue = createProxy(
+          // only new value should create new proxy object..
+          shallowCopy(nextValue),
+          {
+            accessPath: nextAccessPath.slice() as Array<string>,
+            parentProxy: proxy as IStateTracker,
+            rootPath,
+            stateTrackerContext,
+          }
+        );
+      }
+    } else {
+      nextValue = createProxy(nextValue, {
+        accessPath: nextAccessPath.slice() as Array<string>,
+        parentProxy: proxy as IStateTracker,
+        rootPath,
+        stateTrackerContext,
+      });
+    }
+
+    stateTrackerContext.setCachedProxy(rawNextValue, nextValue);
+    nextChildProxies.set(rawNextValue, nextValue);
+    return nextValue;
   },
 };
 

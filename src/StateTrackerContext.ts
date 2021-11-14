@@ -2,6 +2,7 @@ import StateTrackerNode from './StateTrackerNode';
 import { generateRandomKey } from './commons';
 import {
   ProxyCache,
+  ProxyNextCache,
   StateTrackerContextProps,
 } from './types/stateTrackerContext';
 import { IStateTracker, ObserverProps } from '.';
@@ -12,6 +13,7 @@ class StateTrackerContext {
   private _lastUpdateAt: number;
   private _id: string;
   private proxyCache: ProxyCache;
+  private proxyNextCache: ProxyNextCache;
   readonly container: Container;
 
   constructor(props: StateTrackerContextProps) {
@@ -19,6 +21,7 @@ class StateTrackerContext {
     this._id = generateRandomKey();
     this._lastUpdateAt = Date.now();
     this.proxyCache = props.proxyCache || new WeakMap();
+    this.proxyNextCache = props.proxyNextCache || new Map();
     this.container = props.container;
   }
 
@@ -32,6 +35,24 @@ class StateTrackerContext {
 
   setCachedProxy(key: object, value: IStateTracker) {
     this.proxyCache.set(key, value);
+  }
+
+  getCachedNextProxy(rootPoint: string | number, obj: object) {
+    const values = this.proxyNextCache.get(rootPoint);
+    if (values) return values.get(obj);
+    return null;
+  }
+
+  setCachedNextProxy(
+    rootPoint: string | number,
+    key: object,
+    value: IStateTracker
+  ) {
+    const values = this.proxyNextCache.has(rootPoint)
+      ? this.proxyNextCache.get(rootPoint)
+      : this.proxyNextCache.set(rootPoint, new WeakMap()).get(rootPoint);
+    if (values) values.set(key, value);
+    return true;
   }
 
   enter(name: string, props?: ObserverProps) {

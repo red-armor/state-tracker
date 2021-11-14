@@ -6,7 +6,7 @@ import StateTrackerError from './StateTrackerError';
 
 class Reaction {
   private fn: Function;
-  private name: string;
+  public name: string;
   private state: IStateTracker;
   private stateTrackerNode: StateTrackerNode;
   private props?: ReactionProps;
@@ -14,6 +14,7 @@ class Reaction {
   private _shallowEqual: boolean = true;
 
   private _disposer: Function = noop;
+  private _listener?: Function;
 
   constructor(
     options: {
@@ -21,17 +22,25 @@ class Reaction {
       state: IStateTracker;
       scheduler?: Function;
       shallowEqual?: boolean;
+      listener?: Function;
     },
     props?: ReactionProps
   ) {
-    const { fn, state, scheduler, shallowEqual } = options;
-    this.name = fn.name ? fn.name : generateReactionName();
+    const { fn, state, scheduler, shallowEqual, listener } = options;
+    this.name = (fn as any).displayName
+      ? (fn as any).displayName
+      : fn.name
+      ? fn.name
+      : generateReactionName();
     this.state = state;
     this._shallowEqual =
       typeof shallowEqual === 'boolean' ? shallowEqual : true;
+    this._listener = listener;
     this.stateTrackerNode = new StateTrackerNode({
+      reaction: this,
       name: this.name,
       shallowEqual: this._shallowEqual,
+      listener: this.listener.bind(this),
     });
     this.props = props;
     this.fn = fn;
@@ -49,6 +58,15 @@ class Reaction {
     this._disposer = container.register(this);
   }
 
+  listener(options: any) {
+    if (typeof this._listener === 'function') {
+      this._listener({
+        reaction: this,
+        ...options,
+      });
+    }
+  }
+
   dispose() {
     this._disposer();
   }
@@ -57,15 +75,15 @@ class Reaction {
     return this.stateTrackerNode;
   }
 
-  run() {
+  run(...args: Array<any>) {
     // should not teardown, or props will cleaned two times
     // this.teardown();
     StateTrackerUtil.enterNode(this.state, this.stateTrackerNode);
-    const args = [];
+    const nextArgs = [...args];
     let result;
-    if (this.props) args.push(this.props);
+    if (this.props) nextArgs.push(this.props);
     try {
-      result = this.fn.apply(null, args);
+      result = this.fn.apply(null, nextArgs);
     } catch (err) {
       console.error(new StateTrackerError(`Reaction fn run with error ${err}`));
     }
@@ -75,11 +93,25 @@ class Reaction {
   }
 
   teardown() {
+    if (this._listener) {
+      this.listener({
+        action: 'teardown',
+        reactionName: this.name,
+        reaction: this,
+      });
+    }
     this.stateTrackerNode.cleanup();
   }
 
   // for state update trigger
   schedulerRun() {
+    if (this._listener) {
+      this.listener({
+        action: 'scheduler run',
+        reactionName: this.name,
+        reaction: this,
+      });
+    }
     this.teardown();
     this.scheduler(this.run.bind(this));
   }
@@ -140,6 +172,15 @@ class Reaction {
           return token;
         }
       }
+    }
+
+    if (this._listener) {
+      this.listener({
+        action: 'performComparison',
+        reactionName: this.name,
+        reaction: this,
+        token,
+      });
     }
 
     return token;
