@@ -1,8 +1,9 @@
-import { isTrackable, raw } from './commons';
-import { ObserverProps, NextState } from './types';
+import { isPlainObject, isTrackable, raw } from './commons';
+import { ObserverProps, NextState, FalsyScreenShot } from './types';
 import StateTrackerUtil from './StateTrackerUtil';
 import { Graph } from './Graph';
 import { Reaction } from '.';
+import { EqualityToken } from './types/stateTrackerNode';
 class StateTrackerNode {
   public name: string;
   public stateGraphMap: Map<string, Graph> = new Map();
@@ -79,12 +80,7 @@ class StateTrackerNode {
   }
 
   isEqual(graphMap: Map<string, Graph>, key: string, nextValue: any) {
-    const token = {
-      key: '',
-      falsy: true,
-      nextValue: null,
-      currentValue: null,
-    };
+    const token = this.equalityToken();
     const graph = graphMap.get(key);
     // 证明props并没有被用到；所以，直接返回true就可以了
     if (!graph) {
@@ -120,8 +116,40 @@ class StateTrackerNode {
     this.registerObserverProps();
   }
 
+  equalityToken(): EqualityToken {
+    return {
+      key: '',
+      falsy: true,
+      nextValue: null,
+      currentValue: null,
+    };
+  }
+
+  hydrateFalsyScreenshot(
+    target: FalsyScreenShot | undefined,
+    token: EqualityToken,
+    type: string
+  ) {
+    if (!isPlainObject(target) || !target) return;
+    if (token.falsy) return;
+    target.reactionName = this._reaction?.name;
+    target.diffKey = token.key;
+    target.nextValue = token.nextValue;
+    target.currentValue = token.currentValue;
+
+    if (type === 'props') {
+      target.action = 'isPropsEqual';
+      target.graph = this.propsGraphMap;
+    }
+
+    if (type === 'state') {
+      target.action = 'isStateEqual';
+      target.graph = this.stateGraphMap;
+    }
+  }
+
   // only shallow compare used props. So the root path is very important.
-  isPropsEqual(nextProps: ObserverProps) {
+  isPropsEqual(nextProps: ObserverProps, falsyScreenShot?: FalsyScreenShot) {
     const nextKeys = Object.keys(nextProps || {});
     const keys = Object.keys(this._observerProps || {});
     const len = keys.length;
@@ -134,18 +162,20 @@ class StateTrackerNode {
       if (isTrackable(value) && isTrackable(nextValue)) {
         const equalityToken = this.isEqual(this.propsGraphMap, key, nextValue);
         if (!equalityToken.falsy) {
-          // console.log({
-          //   action: 'isPropsEqual',
-          //   reactionName: this._reaction?.name,
-          //   key,
-          //   graph: this.propsGraphMap,
-          //   diffKey: equalityToken.key,
-          //   nextValue: equalityToken.nextValue,
-          //   currentValue: equalityToken.currentValue,
-          // });
+          this.hydrateFalsyScreenshot(falsyScreenShot, equalityToken, 'props');
           return false;
         }
       } else if (nextValue !== value) {
+        this.hydrateFalsyScreenshot(
+          falsyScreenShot,
+          {
+            nextValue,
+            currentValue: value,
+            key,
+            falsy: false,
+          },
+          'props'
+        );
         return false;
       }
     }
@@ -154,7 +184,11 @@ class StateTrackerNode {
     return true;
   }
 
-  isStateEqual(state: NextState, rootPath: Array<string> = []) {
+  isStateEqual(
+    state: NextState,
+    rootPath: Array<string> = [],
+    falsyScreenShot?: FalsyScreenShot
+  ) {
     const nextRootState = StateTrackerUtil.peek(state, rootPath);
     const rootPoint = rootPath[0];
     const graph = this.stateGraphMap.get(rootPoint)!;
@@ -168,18 +202,7 @@ class StateTrackerNode {
       nextRootState
     );
 
-    if (!equalityToken.falsy) {
-      // console.log({
-      //   action: 'isStateEqual',
-      //   reaction: this._reaction,
-      //   reactionName: this._reaction?.name,
-      //   rootPoint,
-      //   graph: graph,
-      //   diffKey: equalityToken.key,
-      //   nextValue: equalityToken.nextValue,
-      //   currentValue: equalityToken.currentValue,
-      // });
-    }
+    this.hydrateFalsyScreenshot(falsyScreenShot, equalityToken, 'state');
 
     return equalityToken.falsy;
   }

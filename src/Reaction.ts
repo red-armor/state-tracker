@@ -40,7 +40,7 @@ class Reaction {
       reaction: this,
       name: this.name,
       shallowEqual: this._shallowEqual,
-      listener: this.listener.bind(this),
+      listener: this.log.bind(this),
     });
     this.props = props;
     this.fn = fn;
@@ -58,12 +58,37 @@ class Reaction {
     this._disposer = container.register(this);
   }
 
-  listener(options: any) {
+  resolverLogToken({
+    action,
+    ...rest
+  }: {
+    action: string;
+  }): {
+    reactionName: string;
+    reaction: Reaction;
+    action: string;
+  } {
+    return {
+      reactionName: this.name,
+      reaction: this,
+      action,
+      ...rest,
+    };
+  }
+
+  log(
+    action: string,
+    extra: {
+      [key: string]: any;
+    } = {}
+  ) {
     if (typeof this._listener === 'function') {
-      this._listener({
-        reaction: this,
-        ...options,
+      const token = this.resolverLogToken({
+        action,
+        ...extra,
       });
+
+      this._listener(token);
     }
   }
 
@@ -93,25 +118,13 @@ class Reaction {
   }
 
   teardown() {
-    if (this._listener) {
-      this.listener({
-        action: 'teardown',
-        reactionName: this.name,
-        reaction: this,
-      });
-    }
+    this.log('teardown');
     this.stateTrackerNode.cleanup();
   }
 
   // for state update trigger
   schedulerRun() {
-    if (this._listener) {
-      this.listener({
-        action: 'scheduler run',
-        reactionName: this.name,
-        reaction: this,
-      });
-    }
+    this.log('schedulerRun');
     this.teardown();
     this.scheduler(this.run.bind(this));
   }
@@ -161,6 +174,7 @@ class Reaction {
       truthy = this.stateTrackerNode.isRootEqual(state);
       if (!truthy) {
         token.isEqual = false;
+        this.log('performComparison', { token });
         return token;
       }
     } else {
@@ -169,18 +183,10 @@ class Reaction {
         truthy = this.stateTrackerNode.isStateEqual(state, root);
         if (!truthy) {
           token.isEqual = false;
+          this.log('performComparison', { token });
           return token;
         }
       }
-    }
-
-    if (this._listener) {
-      this.listener({
-        action: 'performComparison',
-        reactionName: this.name,
-        reaction: this,
-        token,
-      });
     }
 
     return token;
