@@ -13,6 +13,8 @@ class StateTrackerNode {
   private _listener?: Function;
   readonly _reaction?: Reaction;
 
+  readonly _logTrace?: boolean;
+
   private propsRootMetaMap: Map<
     string,
     {
@@ -33,20 +35,24 @@ class StateTrackerNode {
     props,
     listener,
     reaction,
+    logTrace,
   }: {
     name: string;
     shallowEqual?: boolean;
     props?: ObserverProps;
     listener?: Function;
     reaction?: Reaction;
+    logTrace?: Boolean;
   }) {
-    this.name = name || 'default';
+    this.name = name;
     this._shallowEqual =
       typeof shallowEqual === 'boolean' ? shallowEqual : true;
     this._observerProps = props || {};
 
     this._listener = listener;
     this._reaction = reaction;
+
+    this._logTrace = !!logTrace;
     this.registerObserverProps();
   }
 
@@ -245,15 +251,13 @@ class StateTrackerNode {
     // path will be changed, so use copy instead
     const path = base.slice();
 
-    if (this._listener) {
+    if (this._logTrace && this._listener) {
       this._listener({
-        function: 'tracker',
+        action: 'trace',
         propsTargetKey,
-        args: {
-          target,
-          path: path.slice(),
-          value,
-        },
+        target,
+        path: path.slice(),
+        value,
       });
     }
 

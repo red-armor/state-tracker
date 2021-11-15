@@ -1,7 +1,12 @@
 import StateTrackerNode from './StateTrackerNode';
 import StateTrackerUtil from './StateTrackerUtil';
 import { generateReactionName, noop } from './commons';
-import { ReactionProps, IStateTracker, NextState } from './types';
+import {
+  ReactionProps,
+  IStateTracker,
+  NextState,
+  FalsyScreenShot,
+} from './types';
 import StateTrackerError from './StateTrackerError';
 
 class Reaction {
@@ -12,6 +17,9 @@ class Reaction {
   private props?: ReactionProps;
   private scheduler: Function;
   private _shallowEqual: boolean = true;
+  private _falsyScreenShot?: FalsyScreenShot;
+
+  readonly _logTrace?: boolean;
 
   private _disposer: Function = noop;
   private _listener?: Function;
@@ -23,10 +31,22 @@ class Reaction {
       scheduler?: Function;
       shallowEqual?: boolean;
       listener?: Function;
+      falsyScreenShot?: FalsyScreenShot;
+
+      // For StateTrackerNode
+      logTrace?: boolean;
     },
     props?: ReactionProps
   ) {
-    const { fn, state, scheduler, shallowEqual, listener } = options;
+    const {
+      fn,
+      logTrace,
+      state,
+      scheduler,
+      shallowEqual,
+      listener,
+      falsyScreenShot,
+    } = options;
     this.name = (fn as any).displayName
       ? (fn as any).displayName
       : fn.name
@@ -36,11 +56,14 @@ class Reaction {
     this._shallowEqual =
       typeof shallowEqual === 'boolean' ? shallowEqual : true;
     this._listener = listener;
+    this._logTrace = logTrace;
+    this._falsyScreenShot = falsyScreenShot;
     this.stateTrackerNode = new StateTrackerNode({
       reaction: this,
       name: this.name,
       shallowEqual: this._shallowEqual,
       listener: this.log.bind(this),
+      logTrace: this._logTrace,
     });
     this.props = props;
     this.fn = fn;
@@ -138,7 +161,10 @@ class Reaction {
   }
 
   isPropsEqual(props: ReactionProps) {
-    const truthy = this.stateTrackerNode.isPropsEqual(props);
+    const truthy = this.stateTrackerNode.isPropsEqual(
+      props,
+      this._falsyScreenShot
+    );
     if (!truthy) {
       // if props not equal, then tear down.
       this.teardown();
@@ -180,7 +206,11 @@ class Reaction {
     } else {
       for (let idx = 0; idx < keys.length; idx++) {
         const root = [keys[idx]];
-        truthy = this.stateTrackerNode.isStateEqual(state, root);
+        truthy = this.stateTrackerNode.isStateEqual(
+          state,
+          root,
+          this._falsyScreenShot
+        );
         if (!truthy) {
           token.isEqual = false;
           this.log('performComparison', { token });
