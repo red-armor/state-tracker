@@ -148,7 +148,7 @@ class Reaction {
   // for state update trigger
   schedulerRun() {
     this.log('schedulerRun');
-    this.teardown();
+    // this.teardown();
     this.scheduler(this.run.bind(this));
   }
 
@@ -167,7 +167,7 @@ class Reaction {
     );
     if (!truthy) {
       // if props not equal, then tear down.
-      this.teardown();
+      // this.teardown();
       this.updateObserverProps(props);
     }
     return truthy;

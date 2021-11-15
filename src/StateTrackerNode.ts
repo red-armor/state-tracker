@@ -74,6 +74,7 @@ class StateTrackerNode {
   }
 
   cleanup() {
+    if (this._listener) this._listener('cleanup');
     this.stateGraphMap = new Map();
     this.propsGraphMap = new Map();
     this._propsProxyToKeyMap = new Map();
@@ -169,6 +170,7 @@ class StateTrackerNode {
         const equalityToken = this.isEqual(this.propsGraphMap, key, nextValue);
         if (!equalityToken.falsy) {
           this.hydrateFalsyScreenshot(falsyScreenShot, equalityToken, 'props');
+          this.cleanup();
           return false;
         }
       } else if (nextValue !== value) {
@@ -182,6 +184,7 @@ class StateTrackerNode {
           },
           'props'
         );
+        this.cleanup();
         return false;
       }
     }
@@ -209,6 +212,7 @@ class StateTrackerNode {
     );
 
     this.hydrateFalsyScreenshot(falsyScreenShot, equalityToken, 'state');
+    if (!equalityToken.falsy) this.cleanup();
 
     return equalityToken.falsy;
   }
