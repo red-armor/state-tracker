@@ -18,6 +18,6 @@ export type ComparisonToken = {
   currentValue: any;
 };
 
-export type FalsyScreenShot = {
+export type ChangedValue = {
   [key: string]: any;
 };

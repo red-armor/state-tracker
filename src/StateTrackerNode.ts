@@ -1,9 +1,12 @@
 import { isPlainObject, isTrackable, raw } from './commons';
-import { ObserverProps, NextState, FalsyScreenShot } from './types';
+import { ObserverProps, NextState, ChangedValue } from './types';
 import StateTrackerUtil from './StateTrackerUtil';
 import { Graph } from './Graph';
 import { Reaction } from '.';
 import { EqualityToken } from './types/stateTrackerNode';
+
+const DEBUG = false;
+const name = '';
 class StateTrackerNode {
   public name: string;
   public stateGraphMap: Map<string, Graph> = new Map();
@@ -57,12 +60,16 @@ class StateTrackerNode {
   }
 
   registerObserverProps() {
+    if (DEBUG && this.name === name) {
+      console.log('register ', this._observerProps);
+    }
+
     for (const key in this._observerProps) {
       if (this._observerProps.hasOwnProperty(key)) {
         const value = this._observerProps[key];
-        if (!this._propsProxyToKeyMap.has(raw(value))) {
+        const rawValue = raw(value);
+        if (!this._propsProxyToKeyMap.has(rawValue)) {
           // proxy should not be key
-          const rawValue = raw(value);
           this._propsProxyToKeyMap.set(rawValue, key);
           this.propsRootMetaMap.set(key, {
             target: rawValue,
@@ -73,9 +80,23 @@ class StateTrackerNode {
     }
   }
 
-  cleanup() {
-    if (this._listener) this._listener('cleanup');
+  // when state changes, props derived temp Map should not be cleanup.
+  // because on every rerender, props will be compared. if it's empty,
+  // the propsEqual will always be true
+  stateChangedCleanup() {
+    if (DEBUG && this.name === name) {
+      console.log('state cleanup ', this.name);
+    }
     this.stateGraphMap = new Map();
+    // this._affectedPathValue is used to temp save access path value.
+    // It should be cleanup on each `false` equality !!
+    this._affectedPathValue = new Map();
+  }
+
+  propsChangedCleanup() {
+    if (DEBUG && this.name === name) {
+      console.log('props cleanup ', this.name);
+    }
     this.propsGraphMap = new Map();
     this._propsProxyToKeyMap = new Map();
     this._affectedPathValue = new Map();
@@ -133,13 +154,13 @@ class StateTrackerNode {
   }
 
   hydrateFalsyScreenshot(
-    target: FalsyScreenShot | undefined,
+    target: ChangedValue | undefined,
     token: EqualityToken,
     type: string
   ) {
     if (!isPlainObject(target) || !target) return;
     if (token.falsy) return;
-    target.reactionName = this._reaction?.name;
+    target.reaction = this._reaction;
     target.diffKey = token.key;
     target.nextValue = token.nextValue;
     target.currentValue = token.currentValue;
@@ -156,11 +177,17 @@ class StateTrackerNode {
   }
 
   // only shallow compare used props. So the root path is very important.
-  isPropsEqual(nextProps: ObserverProps, falsyScreenShot?: FalsyScreenShot) {
+  isPropsEqual(nextProps: ObserverProps, changedValue?: ChangedValue) {
     const nextKeys = Object.keys(nextProps || {});
     const keys = Object.keys(this._observerProps || {});
     const len = keys.length;
+
+    if (DEBUG && this.name === name) {
+      console.log('is props equal ', keys);
+    }
+
     if (nextKeys.length !== keys.length) return false;
+
     for (let idx = 0; idx < len; idx++) {
       const key = nextKeys[idx];
       const nextValue = nextProps[key];
@@ -169,13 +196,13 @@ class StateTrackerNode {
       if (isTrackable(value) && isTrackable(nextValue)) {
         const equalityToken = this.isEqual(this.propsGraphMap, key, nextValue);
         if (!equalityToken.falsy) {
-          this.hydrateFalsyScreenshot(falsyScreenShot, equalityToken, 'props');
-          this.cleanup();
+          this.hydrateFalsyScreenshot(changedValue, equalityToken, 'props');
+          this.propsChangedCleanup();
           return false;
         }
       } else if (nextValue !== value) {
         this.hydrateFalsyScreenshot(
-          falsyScreenShot,
+          changedValue,
           {
             nextValue,
             currentValue: value,
@@ -184,19 +211,17 @@ class StateTrackerNode {
           },
           'props'
         );
-        this.cleanup();
+        this.propsChangedCleanup();
         return false;
       }
     }
-
-    this._observerProps = nextProps;
     return true;
   }
 
   isStateEqual(
     state: NextState,
     rootPath: Array<string> = [],
-    falsyScreenShot?: FalsyScreenShot
+    changedValue?: ChangedValue
   ) {
     const nextRootState = StateTrackerUtil.peek(state, rootPath);
     const rootPoint = rootPath[0];
@@ -211,8 +236,8 @@ class StateTrackerNode {
       nextRootState
     );
 
-    this.hydrateFalsyScreenshot(falsyScreenShot, equalityToken, 'state');
-    if (!equalityToken.falsy) this.cleanup();
+    this.hydrateFalsyScreenshot(changedValue, equalityToken, 'state');
+    if (!equalityToken.falsy) this.stateChangedCleanup();
 
     return equalityToken.falsy;
   }
@@ -252,9 +277,13 @@ class StateTrackerNode {
     value: any;
   }) {
     const propsTargetKey = this._propsProxyToKeyMap.get(raw(target));
-    // path will be changed, so use copy instead
-    const path = base.slice();
 
+    if (this.name === 'VideoItem') {
+      console.log('props target ', propsTargetKey, target, base);
+    }
+
+    // path will be changedValue, so use copy instead
+    const path = base.slice();
     if (this._logTrace && this._listener) {
       this._listener({
         action: 'trace',

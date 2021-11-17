@@ -80,11 +80,15 @@ export const Type = {
 };
 
 export function shallowCopy(o: any) {
+  // shallowCopy should not track key
+  const tracker = StateTrackerUtil.getTracker(o) || { _isPeeking: true };
+  tracker._isPeeking = true;
   if (Array.isArray(o)) return o.slice();
   const value = Object.create(Object.getPrototypeOf(o));
   ownKeys(o).forEach(key => {
     value[key] = o[key];
   });
+  tracker._isPeeking = false;
 
   return value;
 }

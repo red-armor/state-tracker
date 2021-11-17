@@ -5,7 +5,8 @@ import {
   ReactionProps,
   IStateTracker,
   NextState,
-  FalsyScreenShot,
+  ChangedValue,
+  ReactionComparisonToken,
 } from './types';
 import StateTrackerError from './StateTrackerError';
 
@@ -17,7 +18,7 @@ class Reaction {
   private props?: ReactionProps;
   private scheduler: Function;
   private _shallowEqual: boolean = true;
-  private _falsyScreenShot?: FalsyScreenShot;
+  private _changedValue?: ChangedValue;
 
   readonly _logTrace?: boolean;
 
@@ -31,7 +32,7 @@ class Reaction {
       scheduler?: Function;
       shallowEqual?: boolean;
       listener?: Function;
-      falsyScreenShot?: FalsyScreenShot;
+      changedValue?: ChangedValue;
 
       // For StateTrackerNode
       logTrace?: boolean;
@@ -45,7 +46,7 @@ class Reaction {
       scheduler,
       shallowEqual,
       listener,
-      falsyScreenShot,
+      changedValue,
     } = options;
     this.name = (fn as any).displayName
       ? (fn as any).displayName
@@ -57,7 +58,7 @@ class Reaction {
       typeof shallowEqual === 'boolean' ? shallowEqual : true;
     this._listener = listener;
     this._logTrace = logTrace;
-    this._falsyScreenShot = falsyScreenShot;
+    this._changedValue = changedValue;
     this.stateTrackerNode = new StateTrackerNode({
       reaction: this,
       name: this.name,
@@ -115,6 +116,10 @@ class Reaction {
     }
   }
 
+  getChangedValue() {
+    return this._changedValue;
+  }
+
   dispose() {
     this._disposer();
   }
@@ -142,14 +147,15 @@ class Reaction {
 
   teardown() {
     this.log('teardown');
-    this.stateTrackerNode.cleanup();
+    this.stateTrackerNode.stateChangedCleanup();
+    this.stateTrackerNode.propsChangedCleanup();
   }
 
   // for state update trigger
-  schedulerRun() {
+  schedulerRun(token: ReactionComparisonToken) {
     this.log('schedulerRun');
     // this.teardown();
-    this.scheduler(this.run.bind(this));
+    this.scheduler(this.run.bind(this), token);
   }
 
   enter() {
@@ -163,8 +169,9 @@ class Reaction {
   isPropsEqual(props: ReactionProps) {
     const truthy = this.stateTrackerNode.isPropsEqual(
       props,
-      this._falsyScreenShot
+      this._changedValue
     );
+
     if (!truthy) {
       // if props not equal, then tear down.
       // this.teardown();
@@ -209,7 +216,7 @@ class Reaction {
         truthy = this.stateTrackerNode.isStateEqual(
           state,
           root,
-          this._falsyScreenShot
+          this._changedValue
         );
         if (!truthy) {
           token.isEqual = false;

@@ -39,7 +39,7 @@ class Container {
 
     tokens
       .filter(({ isEqual }) => !isEqual)
-      .forEach(({ reaction }) => reaction.schedulerRun());
+      .forEach(token => token.reaction.schedulerRun(token));
   }
 }
 
