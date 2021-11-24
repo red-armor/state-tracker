@@ -17,7 +17,7 @@ export function produceImpl(
   affected?: WeakMap<object, IStateTracker>,
   proxyCache?: WeakMap<object, IStateTracker>
 ) {
-  const container = new Container();
+  const container = new Container({ state });
   const stateTrackerContext = new StateTrackerContext({
     proxyCache,
     affected,

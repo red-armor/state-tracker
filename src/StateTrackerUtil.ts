@@ -74,17 +74,17 @@ const StateTrackerUtil = {
           [key: string]: any;
         },
     configs?: {
-      enableRootComparison?: boolean;
+      stateCompareLevel?: number;
       afterCallback?: Function;
     }
   ) {
     const tracker = state[TRACKER];
     const context = tracker._stateTrackerContext;
     const { container } = context;
-    const { afterCallback, enableRootComparison = true } = configs || {};
+    const { afterCallback, stateCompareLevel } = configs || {};
     container.perform(nextState, {
       afterCallback,
-      enableRootComparison,
+      stateCompareLevel,
     });
   },
 
@@ -125,9 +125,7 @@ const StateTrackerUtil = {
 
     // 2. use value in context cached proxy
     const cachedProxy = stateTrackerContext.getCachedProxy(rawNextValue);
-    // let producedChildProxy = null;
     const rootPoint = nextAccessPath[0];
-    // let setContextCachedProxy = true;
 
     if (cachedProxy) {
       const cachedTracker = StateTrackerUtil.getTracker(cachedProxy);

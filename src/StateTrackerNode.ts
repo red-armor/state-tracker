@@ -1,22 +1,31 @@
-import { isPlainObject, isTrackable, raw } from './commons';
-import { ObserverProps, NextState, ChangedValue } from './types';
+import { isPlainObject, isTrackable, raw, noop } from './commons';
+import {
+  Activity,
+  NextState,
+  EntityType,
+  ChangedValue,
+  ObserverProps,
+  EqualityToken,
+  ScreenshotToken,
+  ResolveActivityTokenPayload,
+} from './types';
 import StateTrackerUtil from './StateTrackerUtil';
-import { Graph } from './Graph';
-import { Reaction } from '.';
-import { EqualityToken } from './types/stateTrackerNode';
-
-const DEBUG = false;
-const name = '';
+import Graph from './Graph';
+import Reaction from './Reaction';
+import { resolveActivityToken } from './reporter';
 class StateTrackerNode {
   public name: string;
   public stateGraphMap: Map<string, Graph> = new Map();
-  private propsGraphMap: Map<string, Graph> = new Map();
-  private _observerProps: ObserverProps;
-  readonly _shallowEqual: boolean;
-  private _listener?: Function;
-  readonly _reaction?: Reaction;
+  public propsGraphMap: Map<string, Graph> = new Map();
 
-  readonly _logTrace?: boolean;
+  private _observerProps: ObserverProps;
+
+  readonly _shallowEqual: boolean;
+  readonly _reaction?: Reaction;
+  public activityListener?: Function;
+  public changedValueListener?: (payload: ScreenshotToken) => void;
+  public logActivity: Function;
+  public logChangedValue?: Function;
 
   private propsRootMetaMap: Map<
     string,
@@ -36,33 +45,62 @@ class StateTrackerNode {
     name,
     shallowEqual,
     props,
-    listener,
     reaction,
-    logTrace,
+    activityListener,
+    changedValueListener,
   }: {
     name: string;
     shallowEqual?: boolean;
     props?: ObserverProps;
-    listener?: Function;
     reaction?: Reaction;
-    logTrace?: Boolean;
+    activityListener?: Function;
+    changedValueListener?: (payload: ScreenshotToken) => void;
   }) {
     this.name = name;
     this._shallowEqual =
       typeof shallowEqual === 'boolean' ? shallowEqual : true;
     this._observerProps = props || {};
 
-    this._listener = listener;
+    this.activityListener = activityListener;
+    this.changedValueListener = changedValueListener;
     this._reaction = reaction;
 
-    this._logTrace = !!logTrace;
+    this.logActivity = this.isActivityLoggerEnabled()
+      ? this._logActivity.bind(this)
+      : noop;
+    this.logChangedValue = this.isChangedValueLoggerEnabled()
+      ? this._logChangedValue.bind(this)
+      : () => {};
     this.registerObserverProps();
   }
 
+  isActivityLoggerEnabled() {
+    return typeof this.activityListener === 'function';
+  }
+
+  isChangedValueLoggerEnabled() {
+    return typeof this.changedValueListener === 'function';
+  }
+
+  _logActivity<T extends Activity>(
+    activity: T,
+    payload?: ResolveActivityTokenPayload<T>
+  ) {
+    const token = resolveActivityToken<T>({
+      activity,
+      stateTrackerNode: this,
+      payload,
+    });
+
+    this.activityListener!(token);
+  }
+
+  _logChangedValue(payload: ScreenshotToken) {
+    this.changedValueListener!(payload);
+  }
+
   registerObserverProps() {
-    if (DEBUG && this.name === name) {
-      console.log('register ', this._observerProps);
-    }
+    this.logActivity('registerProps');
 
     for (const key in this._observerProps) {
       if (this._observerProps.hasOwnProperty(key)) {
@@ -70,13 +108,40 @@ class StateTrackerNode {
         const rawValue = raw(value);
         if (!this._propsProxyToKeyMap.has(rawValue)) {
           // proxy should not be key
-          this._propsProxyToKeyMap.set(rawValue, key);
+          this.setPropsProxyToKeyMapValue(rawValue, key);
           this.propsRootMetaMap.set(key, {
             target: rawValue,
             path: [],
           });
         }
+
+        // if (!isTrackable(rawValue)) {
+        //   this.__observerProps[key] = value
+        //   // delete this._observerProps[key]
+        //   Object.defineProperty(this._observerProps, key, {
+        //     get: () => {
+        //       console.log('access ===== ', key)
+        //       return this.__observerProps[key]
+        //     }
+        //   })
+        // }
+        this._affectedPathValue.set(key, value);
       }
+    }
+  }
+
+  getProps() {
+    return this._observerProps;
+  }
+
+  getShallowEqual() {
+    return !!this._shallowEqual;
+  }
+
+  setPropsProxyToKeyMapValue(value: any, key: string) {
+    if (isTrackable(value)) {
+      const rawValue = raw(value);
+      this._propsProxyToKeyMap.set(rawValue, key);
     }
   }
 
@@ -84,19 +149,16 @@ class StateTrackerNode {
   // because on every rerender, props will be compared. if it's empty,
   // the propsEqual will always be true
   stateChangedCleanup() {
-    if (DEBUG && this.name === name) {
-      console.log('state cleanup ', this.name);
-    }
+    this.logActivity('cleanupStateDeps');
     this.stateGraphMap = new Map();
     // this._affectedPathValue is used to temp save access path value.
     // It should be cleanup on each `false` equality !!
     this._affectedPathValue = new Map();
+    this._reaction!.disposeFineGrainListener();
   }
 
   propsChangedCleanup() {
-    if (DEBUG && this.name === name) {
-      console.log('props cleanup ', this.name);
-    }
+    this.logActivity('cleanupPropsDeps');
     this.propsGraphMap = new Map();
     this._propsProxyToKeyMap = new Map();
     this._affectedPathValue = new Map();
@@ -107,33 +169,65 @@ class StateTrackerNode {
     return path.join('_');
   }
 
-  isEqual(graphMap: Map<string, Graph>, key: string, nextValue: any) {
+  isEqual(
+    type: EntityType,
+    graphMap: Map<string, Graph>,
+    key: string,
+    nextValue: any
+  ): EqualityToken {
     const token = this.equalityToken();
-    const graph = graphMap.get(key);
-    // 证明props并没有被用到；所以，直接返回true就可以了
-    if (!graph) {
-      token.falsy = true;
-      return token;
+    let graph = null;
+    let childrenMap = new Map();
+
+    if (key) {
+      graph = graphMap.get(key);
+      // 证明props并没有被用到；所以，直接返回true就可以了
+      if (!graph) {
+        token.isEqual = true;
+        return token;
+      } else {
+        childrenMap = graph.childrenMap;
+      }
+    } else {
+      childrenMap = graphMap;
     }
 
-    const childrenMap = graph.childrenMap;
-    const keys = Object.keys(childrenMap);
-    const len = keys.length;
-
-    for (let idx = 0; idx < len; idx++) {
-      const key = keys[idx];
-      const graph = childrenMap[key];
+    // @ts-ignore
+    for (const [key, graph] of childrenMap.entries()) {
       const newValue = nextValue[key];
       const affectedPath = graph.getPath();
       const affectedKey = this.generateAffectedPathKey(affectedPath);
       const currentValue = this._affectedPathValue.get(affectedKey);
 
-      if (raw(newValue) !== raw(currentValue)) {
-        token.falsy = false;
-        token.key = key;
-        token.nextValue = raw(newValue);
-        token.currentValue = raw(currentValue);
-        return token;
+      if (!this._shallowEqual) {
+        if (!graph.childrenMap.size) {
+          if (raw(newValue) !== raw(currentValue)) {
+            token.isEqual = false;
+            token.key = key;
+            token.nextValue = raw(newValue);
+            token.currentValue = raw(currentValue);
+            return token;
+          }
+        } else {
+          const childEqualityToken = this.isEqual(type, graph, '', newValue);
+          if (!childEqualityToken.isEqual) return childEqualityToken;
+        }
+      } else {
+        if (raw(newValue) !== raw(currentValue)) {
+          token.isEqual = false;
+          token.key = key;
+          token.nextValue = raw(newValue);
+          token.currentValue = raw(currentValue);
+
+          this.logActivity('makeComparisonFailed', {
+            type,
+            affectedPath,
+            affectedKey,
+            currentValue,
+            nextValue,
+          });
+          return token;
+        }
       }
     }
     return token;
@@ -147,7 +241,7 @@ class StateTrackerNode {
   equalityToken(): EqualityToken {
     return {
       key: '',
-      falsy: true,
+      isEqual: true,
       nextValue: null,
       currentValue: null,
     };
@@ -158,64 +252,102 @@ class StateTrackerNode {
     token: EqualityToken,
     type: string
   ) {
-    if (!isPlainObject(target) || !target) return;
-    if (token.falsy) return;
-    target.reaction = this._reaction;
-    target.diffKey = token.key;
-    target.nextValue = token.nextValue;
-    target.currentValue = token.currentValue;
+    if (
+      (!isPlainObject(target) || !target) &&
+      !this.isChangedValueLoggerEnabled()
+    )
+      return;
+    if (token.isEqual) return;
+    const v = (target || {}) as ScreenshotToken;
+
+    v.reaction = this._reaction;
+    v.diffKey = token.key;
+    v.nextValue = token.nextValue;
+    v.currentValue = token.currentValue;
 
     if (type === 'props') {
-      target.action = 'isPropsEqual';
-      target.graph = this.propsGraphMap;
+      v.action = 'isPropsEqual';
+      v.graph = this.propsGraphMap;
     }
 
     if (type === 'state') {
-      target.action = 'isStateEqual';
-      target.graph = this.stateGraphMap;
+      v.action = 'isStateEqual';
+      v.graph = this.stateGraphMap;
     }
+
+    if (this.isChangedValueLoggerEnabled()) {
+      this._logChangedValue(v);
+    }
+  }
+
+  // because props is not a proxy, for value
+  // { a: 1, b: 3: c: {c1: 2}}; if a's value changes, 'a' will not be tracked
+  // So it'd better to make props['a'] trackable.
+  // TODO: currently. unused props key will be compared as well
+  //       which need to be fixed for performance
+  isPropsShallowEqual(nextProps: ObserverProps, changedValue?: ChangedValue) {
+    const currentKeys = Object.keys(this._observerProps);
+    const nextKeys = Object.keys(nextProps);
+    const currentKeysLength = currentKeys.length;
+    const nextKeysLength = nextKeys.length;
+    const equalityToken = this.equalityToken();
+
+    if (currentKeysLength !== nextKeysLength) {
+      equalityToken.isEqual = false;
+      return equalityToken;
+    }
+
+    for (let idx = 0; idx < nextKeysLength; idx++) {
+      const key = nextKeys[idx];
+      const newValue = nextProps[key];
+      const currentValue = this._observerProps[key];
+
+      if (newValue !== currentValue) {
+        equalityToken.isEqual = false;
+        equalityToken.key = key;
+        equalityToken.nextValue = raw(newValue);
+        equalityToken.currentValue = raw(currentValue);
+        this.hydrateFalsyScreenshot(changedValue, equalityToken, 'props');
+        this.propsChangedCleanup();
+        return equalityToken;
+      }
+    }
+
+    return equalityToken;
   }
 
   // only shallow compare used props. So the root path is very important.
   isPropsEqual(nextProps: ObserverProps, changedValue?: ChangedValue) {
-    const nextKeys = Object.keys(nextProps || {});
-    const keys = Object.keys(this._observerProps || {});
-    const len = keys.length;
-
-    if (DEBUG && this.name === name) {
-      console.log('is props equal ', keys);
+    // on shallow compare, props should start from root.
+    // so rootPoint set to empty string to make it work.
+    if (this._shallowEqual) {
+      this.logActivity('comparisonStart', { type: 'props' });
+      const equalityToken = this.isPropsShallowEqual(nextProps, changedValue);
+      this.logActivity('comparisonResult', {
+        type: 'props',
+        equalityToken,
+      });
+      this.logActivity('comparisonEnd', { type: 'props' });
+      return equalityToken.isEqual;
     }
 
-    if (nextKeys.length !== keys.length) return false;
+    // TODO: the following has a bug, if props's has a literal value
+    //       or a plain object, it will not be tracked. for example,
+    //       on parent, there is a new value {a: 1, c: { c1: 2 }}, it
+    //       actually, it is not a observable object. maybe it's reasonable,
+    //       the new value is not belong to proxyState, it no need to care.
+    const rootPoint = '';
+    const equalityToken = this.isEqual(
+      'props',
+      this.propsGraphMap,
+      rootPoint,
+      nextProps
+    );
 
-    for (let idx = 0; idx < len; idx++) {
-      const key = nextKeys[idx];
-      const nextValue = nextProps[key];
-      const value = this._observerProps[key];
+    this.hydrateFalsyScreenshot(changedValue, equalityToken, 'props');
+    if (!equalityToken.isEqual) this.propsChangedCleanup();
 
-      if (isTrackable(value) && isTrackable(nextValue)) {
-        const equalityToken = this.isEqual(this.propsGraphMap, key, nextValue);
-        if (!equalityToken.falsy) {
-          this.hydrateFalsyScreenshot(changedValue, equalityToken, 'props');
-          this.propsChangedCleanup();
-          return false;
-        }
-      } else if (nextValue !== value) {
-        this.hydrateFalsyScreenshot(
-          changedValue,
-          {
-            nextValue,
-            currentValue: value,
-            key,
-            falsy: false,
-          },
-          'props'
-        );
-        this.propsChangedCleanup();
-        return false;
-      }
-    }
-    return true;
+    return equalityToken.isEqual;
   }
 
   isStateEqual(
@@ -225,37 +357,27 @@ class StateTrackerNode {
   ) {
     const nextRootState = StateTrackerUtil.peek(state, rootPath);
     const rootPoint = rootPath[0];
-    const graph = this.stateGraphMap.get(rootPoint)!;
-
-    // 如果说没有访问过state的话，也就是graph就没有创建这个时候直接返回true就行
-    if (!graph) return true;
-
+    this.logActivity('comparisonStart', { type: 'state' });
     const equalityToken = this.isEqual(
+      'state',
       this.stateGraphMap,
       rootPoint,
       nextRootState
     );
-
+    this.logActivity('comparisonResult', {
+      type: 'state',
+      equalityToken,
+    });
+    this.logActivity('comparisonEnd', { type: 'state' });
     this.hydrateFalsyScreenshot(changedValue, equalityToken, 'state');
-    if (!equalityToken.falsy) this.stateChangedCleanup();
+    if (!equalityToken.isEqual) this.stateChangedCleanup();
 
-    return equalityToken.falsy;
-  }
-
-  isRootEqual(state: NextState) {
-    for (const [key] of this.stateGraphMap.entries()) {
-      const newValue = state[key];
-      const currentValue = this._affectedPathValue.get(key);
-      if (raw(newValue) !== raw(currentValue)) {
-        return false;
-      }
-    }
-
-    return true;
+    return equalityToken.isEqual;
   }
 
   // 设置props root path
   attemptToUpdatePropsRootMetaInfo(target: object, path: Array<string>) {
+    // @ts-ignore
     for (const value of this.propsRootMetaMap.values()) {
       // es5 will make value.target !== target, so raw!!!
       if (raw(value.target) === raw(target)) {
@@ -277,29 +399,20 @@ class StateTrackerNode {
     value: any;
   }) {
     const propsTargetKey = this._propsProxyToKeyMap.get(raw(target));
-
-    if (this.name === 'VideoItem') {
-      console.log('props target ', propsTargetKey, target, base);
-    }
-
     // path will be changedValue, so use copy instead
     const path = base.slice();
-    if (this._logTrace && this._listener) {
-      this._listener({
-        action: 'trace',
-        propsTargetKey,
-        target,
-        path: path.slice(),
-        value,
-      });
-    }
+
+    this.logActivity('track', {
+      path,
+      propsTargetKey,
+      target,
+      value,
+    });
 
     let nextPath = path;
     // 如果是props的，需要进行特殊处理
     if (propsTargetKey) {
-      if (isTrackable(value)) {
-        this._propsProxyToKeyMap.set(raw(value), propsTargetKey);
-      }
+      this.setPropsProxyToKeyMapValue(value, propsTargetKey);
       this.attemptToUpdatePropsRootMetaInfo(target, path);
       const { path: rootPath } = this.propsRootMetaMap.get(propsTargetKey)!;
       nextPath = [propsTargetKey].concat(path.slice(rootPath.length));
@@ -307,7 +420,9 @@ class StateTrackerNode {
 
     const graphMap = !!propsTargetKey ? this.propsGraphMap : this.stateGraphMap;
     const graphMapKey = !!propsTargetKey ? propsTargetKey : nextPath[0];
-
+    if (!propsTargetKey) {
+      this._reaction?.registerFineGrainListener(graphMapKey);
+    }
     // 存储path对应的value，这个可以认为是oldValue
     const affectedPathKey = this.generateAffectedPathKey(nextPath);
     this._affectedPathValue.set(affectedPathKey, value);
@@ -322,6 +437,7 @@ class StateTrackerNode {
     const result: {
       [key: string]: Array<Array<string>>;
     } = {};
+    // @ts-ignore
     for (const [key, value] of this.stateGraphMap.entries()) {
       result[key] = value.getPaths();
     }

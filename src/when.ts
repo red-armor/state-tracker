@@ -12,10 +12,10 @@ function when(
   predicate: (state: IStateTracker) => boolean,
   effect?: () => void
 ) {
-  function when_reaction() {
+  function when_reaction(this: Reaction) {
     const falsy = predicate(state);
     if (falsy) {
-      reaction.dispose();
+      this.dispose();
       if (typeof effect === 'function') effect();
     }
   }
@@ -24,8 +24,6 @@ function when(
     state,
     fn: when_reaction,
   });
-
-  reaction.run();
 
   return reaction.dispose;
 }

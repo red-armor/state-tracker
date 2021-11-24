@@ -1,19 +1,14 @@
 import StateTrackerError from './StateTrackerError';
 
-export class Graph {
-  public childrenMap: {
-    [key: string]: Graph;
-  };
+export default class Graph {
+  public childrenMap: Map<string | number, Graph> = new Map();
   private slug: Array<string | number>;
   private _point: string | number;
-  private _pathSet: Set<string>;
+  private _pathSet: Set<string> = new Set();
 
   constructor(point: string | number, slug: Array<string | number> = []) {
-    this.childrenMap = {};
     this.slug = slug || [];
     this._point = point;
-
-    this._pathSet = new Set();
   }
 
   access(path: Array<string | number>) {
@@ -36,12 +31,12 @@ export class Graph {
       (acc, cur) => {
         const { graph, slug, prev } = acc;
         const nextSlug = slug.concat(prev);
-        if ((cur || cur === 0) && !graph.childrenMap[cur]) {
-          graph.childrenMap[cur] = new Graph(cur, nextSlug);
+        if ((cur || cur === 0) && !graph.childrenMap.has(cur)) {
+          graph.childrenMap.set(cur, new Graph(cur, nextSlug));
         }
 
         return {
-          graph: graph.childrenMap[cur],
+          graph: graph.childrenMap.get(cur)!,
           prev: cur,
           slug: nextSlug,
         };

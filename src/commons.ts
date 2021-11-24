@@ -250,4 +250,4 @@ export function raw(obj: any) {
   return obj;
 }
 
-export const noop = (fn: Function) => fn.call(null);
+export const noop = () => {};
