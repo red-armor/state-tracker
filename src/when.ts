@@ -1,35 +1,31 @@
+// https://www.mobxjs.com/refguide/when.html
+// > when observes & runs the given predicate until it returns true.
+// > Once that happens, the given effect is executed and the
+// > autoRunner is disposed. The function returns a disposer to
+// > cancel the autoRunner prematurely.
+
 import { IStateTracker } from './types';
-import StateTrackerUtil from './StateTrackerUtil';
-import collection from './collection';
-import { isFunction } from './commons';
-import Runner from './Runner';
+import Reaction from './Reaction';
 
 function when(
   state: IStateTracker,
   predicate: (state: IStateTracker) => boolean,
   effect?: () => void
 ) {
-  const autoRunFn = () => {
-    StateTrackerUtil.enter(state);
+  function when_reaction(this: Reaction) {
     const falsy = predicate(state);
-    if (!falsy) {
-      const tracker = StateTrackerUtil.getContext(state).getCurrent();
-      const paths = tracker.getRemarkable();
-      const pathTree = collection.getPathTree(state);
-      runner.updateAccessPaths(paths);
-      pathTree!.addRunner(runner);
-    } else if (isFunction(effect)) {
-      effect!();
+    if (falsy) {
+      this.dispose();
+      if (typeof effect === 'function') effect();
     }
-    StateTrackerUtil.leave(state);
-    return falsy;
-  };
+  }
 
-  const runner = new Runner({
-    autoRun: autoRunFn,
+  const reaction = new Reaction({
+    state,
+    fn: when_reaction,
   });
 
-  autoRunFn();
+  return reaction.dispose;
 }
 
 export default when;

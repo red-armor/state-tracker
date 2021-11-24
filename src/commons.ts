@@ -1,3 +1,4 @@
+import StateTrackerUtil from './StateTrackerUtil';
 import { SeenKeys } from './types';
 
 const toString = Function.call.bind<Function>(Object.prototype.toString);
@@ -14,18 +15,19 @@ export const arrayProtoOwnKeys = () => ownKeys(Object.getPrototypeOf([]));
 export const objectProtoOwnKeys = () => ownKeys(Object.getPrototypeOf({}));
 
 export const emptyFunction = () => {};
-export const isObject = (o: any) => o ? (typeof o === 'object' || typeof o === 'function') : false // eslint-disable-line
+export const isObject = (o: any) =>
+  o ? typeof o === 'object' || typeof o === 'function' : false; // eslint-disable-line
 export const hasSymbol = typeof Symbol !== 'undefined';
 export const TRACKER: unique symbol = hasSymbol
   ? Symbol.for('tracker')
   : ('__tracker__' as any);
-export const PATH_TRACKER: unique symbol = hasSymbol
-  ? Symbol.for('path_tracker')
-  : ('__path_tracker__' as any);
+export const IS_PROXY: unique symbol = hasSymbol
+  ? Symbol.for('is_proxy')
+  : ('__is_proxy__' as any);
 
 export const canIUseProxy = () => {
   try {
-    new Proxy({}, {}) // eslint-disable-line
+    new Proxy({}, {}); // eslint-disable-line
   } catch (err) {
     return false;
   }
@@ -33,9 +35,11 @@ export const canIUseProxy = () => {
   return true;
 };
 
-export const hasOwnProperty = (o: object, prop: PropertyKey) => o.hasOwnProperty(prop) // eslint-disable-line
+export const hasOwnProperty = (o: object, prop: PropertyKey) =>
+  o.hasOwnProperty(prop); // eslint-disable-line
 
-export const isTrackable = (o: any) => { // eslint-disable-line
+export const isTrackable = (o: any) => {
+  // eslint-disable-line
   return ['[object Object]', '[object Array]'].indexOf(toString(o)) !== -1;
 };
 
@@ -76,11 +80,15 @@ export const Type = {
 };
 
 export function shallowCopy(o: any) {
+  // shallowCopy should not track key
+  const tracker = StateTrackerUtil.getTracker(o) || { _isPeeking: true };
+  tracker._isPeeking = true;
   if (Array.isArray(o)) return o.slice();
   const value = Object.create(Object.getPrototypeOf(o));
   ownKeys(o).forEach(key => {
     value[key] = o[key];
   });
+  tracker._isPeeking = false;
 
   return value;
 }
@@ -123,12 +131,13 @@ export const generateTrackerMapKey = (accessPath: Array<string>): string => {
 };
 
 const seenKeys: SeenKeys = {};
-const MULTIPLIER = Math.pow(2, 24) // eslint-disable-line
+const MULTIPLIER = Math.pow(2, 24); // eslint-disable-line
 
 export const generateRandomKey = (prefix = '') => {
   let key;
 
-  while (key === undefined || seenKeys.hasOwnProperty(key) || !isNaN(+key)) { // eslint-disable-line
+  while (key === undefined || seenKeys.hasOwnProperty(key) || !isNaN(+key)) {
+    // eslint-disable-line
     key = Math.floor(Math.random() * MULTIPLIER).toString(32);
   }
 
@@ -195,3 +204,50 @@ export function shallowEqual(objA: any, objB: any) {
 
   return true;
 }
+
+export const pathEqual = (
+  a: Array<string | number>,
+  b: Array<string | number>
+) => {
+  if (a && b && is(JSON.stringify(a), JSON.stringify(b))) return true;
+  return false;
+};
+
+let reactionNameCounter = 0;
+export const generateReactionName = () =>
+  `anonymous_reaction_${reactionNameCounter++}`;
+
+export function peek(
+  obj: Object,
+  rootPath: Array<string>,
+  accessPath: Array<string>
+) {
+  if (!isTrackable(obj)) return null;
+  const rootPathString = rootPath.join('_');
+  const accessPathString = accessPath.join('_');
+
+  const index = accessPathString.indexOf(rootPathString);
+
+  if (index === -1) return null;
+
+  const left = accessPathString.slice(index + rootPathString.length);
+  const parts = left.split('_').filter(v => v);
+  return parts.reduce((n: { [key: string]: any }, c: string) => {
+    return n[c];
+  }, obj);
+}
+
+export function isProxy(obj: any) {
+  if (isTrackable(obj) && obj[IS_PROXY]) return true;
+  return false;
+}
+
+export function raw(obj: any) {
+  if (isProxy(obj)) {
+    return StateTrackerUtil.getTracker(obj)._base;
+  }
+
+  return obj;
+}
+
+export const noop = () => {};

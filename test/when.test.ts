@@ -1,5 +1,5 @@
-import { produce as ES5Produce } from '../src/es5';
-import { produce as ES6Produce } from '../src/proxy';
+import { produceImpl as ES5Produce } from '../src/es5';
+import { produceImpl as ES6Produce } from '../src/proxy';
 import StateTrackerUtil from '../src/StateTrackerUtil';
 import when from '../src/when';
 
@@ -27,20 +27,49 @@ function testTracker(useProxy: boolean) {
         return state.a.a2 === 3;
       });
 
-      StateTrackerUtil.relink(proxyState, ['a'], {
+      let nextA = {
+        ...proxyState.a,
         a2: 2,
-      });
+      };
+      StateTrackerUtil.perform(
+        proxyState,
+        { a: nextA },
+        {
+          afterCallback: () => (proxyState.a = nextA),
+          enableRootComparison: false,
+        }
+      );
 
       expect(count).toBe(2);
 
-      StateTrackerUtil.relink(proxyState, ['a'], {
+      nextA = {
+        ...proxyState.a,
         a2: 3,
-      });
+      };
+      StateTrackerUtil.perform(
+        proxyState,
+        { a: nextA },
+        {
+          afterCallback: () => (proxyState.a = nextA),
+          enableRootComparison: false,
+        }
+      );
+
       expect(count).toBe(3);
 
-      StateTrackerUtil.relink(proxyState, ['a'], {
+      nextA = {
+        ...proxyState.a,
         a2: 4,
-      });
+      };
+      StateTrackerUtil.perform(
+        proxyState,
+        { a: nextA },
+        {
+          enableRootComparison: false,
+          afterCallback: () => (proxyState.a = nextA),
+        }
+      );
+
       expect(count).toBe(3);
     });
 
@@ -59,20 +88,76 @@ function testTracker(useProxy: boolean) {
         return state.a.a2 === 3;
       });
 
-      StateTrackerUtil.relink(proxyState, ['a', 'a2'], 2);
+      let nextA = {
+        ...proxyState.a,
+        a2: 2,
+      };
+      StateTrackerUtil.perform(
+        proxyState,
+        { a: nextA },
+        {
+          enableRootComparison: false,
+          afterCallback: () => (proxyState.a = nextA),
+        }
+      );
 
       expect(count).toBe(2);
 
-      StateTrackerUtil.relink(proxyState, ['a', 'a1'], 2);
+      nextA = {
+        ...proxyState.a,
+        a2: 2,
+      };
+      StateTrackerUtil.perform(
+        proxyState,
+        { a: nextA },
+        {
+          enableRootComparison: false,
+          afterCallback: () => (proxyState.a = nextA),
+        }
+      );
+
       expect(count).toBe(2);
 
-      StateTrackerUtil.relink(proxyState, ['a', 'a1'], 3);
+      nextA = {
+        ...proxyState.a,
+        a1: 3,
+      };
+      StateTrackerUtil.perform(
+        proxyState,
+        { a: nextA },
+        {
+          enableRootComparison: false,
+          afterCallback: () => (proxyState.a = nextA),
+        }
+      );
       expect(count).toBe(2);
 
-      StateTrackerUtil.relink(proxyState, ['a', 'a2'], 3);
+      nextA = {
+        ...proxyState.a,
+        a2: 3,
+      };
+      StateTrackerUtil.perform(
+        proxyState,
+        { a: nextA },
+        {
+          enableRootComparison: false,
+          afterCallback: () => (proxyState.a = nextA),
+        }
+      );
       expect(count).toBe(3);
 
-      StateTrackerUtil.relink(proxyState, ['a', 'a2'], 3);
+      nextA = {
+        ...proxyState.a,
+        a2: 3,
+      };
+      StateTrackerUtil.perform(
+        proxyState,
+        { a: nextA },
+        {
+          enableRootComparison: false,
+          afterCallback: () => (proxyState.a = nextA),
+        }
+      );
       expect(count).toBe(3);
     });
 
@@ -98,22 +183,49 @@ function testTracker(useProxy: boolean) {
         }
       );
 
-      StateTrackerUtil.relink(proxyState, ['a'], {
+      let nextA = {
+        ...proxyState.a,
         a2: 2,
-      });
+      };
+      StateTrackerUtil.perform(
+        proxyState,
+        { a: nextA },
+        {
+          enableRootComparison: false,
+          afterCallback: () => (proxyState.a = nextA),
+        }
+      );
 
       expect(count).toBe(2);
       expect(finished).toBe(false);
 
-      StateTrackerUtil.relink(proxyState, ['a'], {
+      nextA = {
+        ...proxyState.a,
         a2: 3,
-      });
+      };
+      StateTrackerUtil.perform(
+        proxyState,
+        { a: nextA },
+        {
+          enableRootComparison: false,
+          afterCallback: () => (proxyState.a = nextA),
+        }
+      );
       expect(count).toBe(3);
       expect(finished).toBe(true);
 
-      StateTrackerUtil.relink(proxyState, ['a'], {
+      nextA = {
+        ...proxyState.a,
         a2: 4,
-      });
+      };
+      StateTrackerUtil.perform(
+        proxyState,
+        { a: nextA },
+        {
+          enableRootComparison: false,
+          afterCallback: () => (proxyState.a = nextA),
+        }
+      );
       expect(count).toBe(3);
       expect(finished).toBe(true);
     });

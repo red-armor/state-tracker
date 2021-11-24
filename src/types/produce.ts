@@ -1,12 +1,14 @@
-import {
-  IStateTracker,
-  StateTrackerInterface,
-  StateTrackerProperties,
-} from './stateTracker';
+import { IStateTracker, StateTrackerInterface } from './stateTracker';
 import StateTrackerContext from '../StateTrackerContext';
 
-export interface ProduceState {
+export interface State {
   [key: string]: any;
+}
+
+export interface ProduceProps {
+  state: State;
+  affected?: WeakMap<object, unknown>;
+  proxyCache?: WeakMap<object, unknown>;
 }
 
 export interface ProduceProxyOptions {
@@ -14,9 +16,7 @@ export interface ProduceProxyOptions {
   parentProxy?: IStateTracker;
   rootPath: Array<string>;
   stateTrackerContext: StateTrackerContext;
-  mayReusedTracker: null | StateTrackerProperties;
   context?: string;
-  focusKey: string | null;
   isDraft?: boolean;
 }
 
@@ -31,10 +31,7 @@ export interface ProduceOptions {
   isDraft?: boolean;
 }
 
-export type Produce = (
-  state: ProduceState,
-  options?: ProduceOptions
-) => IStateTracker;
+export type Produce = (state: State, options?: ProduceOptions) => IStateTracker;
 
 export type RelinkValue = {
   path: Array<string>;

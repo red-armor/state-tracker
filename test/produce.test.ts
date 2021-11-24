@@ -1,6 +1,6 @@
 import { TRACKER } from '../src/commons';
-import { produce as ES5Produce } from '../src/es5';
-import { produce as ES6Produce } from '../src/proxy';
+import { produceImpl as ES5Produce } from '../src/es5';
+import { produceImpl as ES6Produce } from '../src/proxy';
 import StateTrackerUtil from '../src/StateTrackerUtil';
 
 testTracker(true);
@@ -30,28 +30,17 @@ function testTracker(useProxy: boolean) {
         expect(v.value).toBe(index)
       );
       const trackerNode = StateTrackerUtil.getContext(proxyState).getCurrent();
-      const paths = trackerNode.getPaths();
-      if (useProxy) {
-        expect(paths).toEqual([
-          ['a'],
-          ['a', 'a1'],
-          ['a', 'a1', 'length'],
-          ['a', 'a1', '0'],
-          ['a', 'a1', '0', 'value'],
-          ['a', 'a1', '1'],
-          ['a', 'a1', '1', 'value'],
-        ]);
-      } else {
-        expect(paths).toEqual([
-          ['a'],
-          ['a', 'a1'],
-          ['a', 'a1', 'length'],
-          ['a', 'a1', 0],
-          ['a', 'a1', 0, 'value'],
-          ['a', 'a1', 1],
-          ['a', 'a1', 1, 'value'],
-        ]);
-      }
+      const paths = trackerNode.stateGraphMap.get('a')!.getPaths();
+
+      expect(paths).toEqual([
+        ['a'],
+        ['a', 'a1'],
+        ['a', 'a1', 'length'],
+        ['a', 'a1', '0'],
+        ['a', 'a1', '0', 'value'],
+        ['a', 'a1', '1'],
+        ['a', 'a1', '1', 'value'],
+      ]);
       StateTrackerUtil.leave(proxyState);
     });
 
@@ -67,7 +56,7 @@ function testTracker(useProxy: boolean) {
         '[object Object]'
       );
       const trackerNode = StateTrackerUtil.getContext(proxyState).getCurrent();
-      const paths = trackerNode.getPaths();
+      const paths = trackerNode.stateGraphMap.get('a')!.getPaths();
       expect(paths).toEqual([['a']]);
       StateTrackerUtil.leave(proxyState);
     });
@@ -88,21 +77,31 @@ function testTracker(useProxy: boolean) {
       expect(listData.length).toBe(0);
       StateTrackerUtil.leave(state);
 
-      StateTrackerUtil.relink(state, ['goods'], {
+      let nextGoods = {
+        ...state.goods,
         listData: [{ id: '1' }, { id: '2' }],
-      });
+      };
+      StateTrackerUtil.perform(
+        state,
+        { a: nextGoods },
+        {
+          afterCallback: () => (state.goods = nextGoods),
+          enableRootComparison: false,
+        }
+      );
 
       StateTrackerUtil.enter(state);
       const {
         goods: { listData: nextListData },
       } = state;
+
       expect(nextListData.length).toBe(2);
       StateTrackerUtil.leave(state);
     });
   });
 
   describe(decorateDesc('child proxies'), () => {
-    it('Access a key which has object value will add prop to childProxies', () => {
+    it('Access a key with object value will add prop to childProxies', () => {
       const state = {
         a: {
           a1: 1,
@@ -122,12 +121,14 @@ function testTracker(useProxy: boolean) {
 
       expect(proxyState.a).toEqual({ a1: 1, a2: 2 });
       expect(proxyState.c).toEqual(3);
-      const childProxies = tracker._childProxies;
-      const keys = Object.keys(childProxies);
-      expect(keys).toEqual(['a']);
+      const childProxies = tracker._nextChildProxies;
+
+      expect(childProxies.has(state.a)).toBeTruthy();
+      expect(childProxies.has(state.c)).toBeFalsy();
+      expect(childProxies.size).toBe(1);
     });
 
-    it('Access a key which has array value will add prop to childProxies', () => {
+    it('Access a key with array value will add prop to childProxies', () => {
       const state = {
         a: [2, 3, 4],
         b: {
@@ -144,9 +145,47 @@ function testTracker(useProxy: boolean) {
 
       expect(proxyState.a).toEqual([2, 3, 4]);
       expect(proxyState.c).toEqual(3);
-      const childProxies = tracker._childProxies;
-      const keys = Object.keys(childProxies);
-      expect(keys).toEqual(['a']);
+      const childProxies = tracker._nextChildProxies;
+      expect(childProxies.has(state.a)).toBeTruthy();
+      expect(childProxies.has(state.c)).toBeFalsy();
+      expect(childProxies.size).toBe(1);
+    });
+
+    it('Access a key with primitive value will not add prop to childProxies', () => {
+      const state = {
+        a: [2, 3, 4],
+        b: {
+          b1: {
+            b11: 1,
+            b12: 2,
+          },
+          b2: 2,
+        },
+        c: 3,
+      };
+      const proxyState = produce(state);
+      const tracker = StateTrackerUtil.getTracker(proxyState.b);
+      expect(proxyState.c).toEqual(3);
+      const childProxies = tracker._nextChildProxies;
+      expect(childProxies.size).toBe(0);
+    });
+
+    it('Access a key with undefined value will not add prop to childProxies', () => {
+      const state = {
+        a: [2, 3, 4],
+        b: {
+          b1: {
+            b11: 1,
+            b12: 2,
+          },
+        },
+        c: 3,
+      };
+      const proxyState = produce(state);
+      const tracker = StateTrackerUtil.getTracker(proxyState.b);
+      expect(proxyState.b.b2).toEqual(undefined);
+      const childProxies = tracker._nextChildProxies;
+      expect(childProxies.size).toBe(0);
     });
 
     it('Set a key with different type value which will cause clear up childProxies', () => {
@@ -166,36 +205,105 @@ function testTracker(useProxy: boolean) {
 
       expect(proxyState.a).toEqual([2, 3, 4]);
       expect(proxyState.c).toEqual(3);
+      const childProxies = tracker._nextChildProxies;
+      expect(childProxies.size).toBe(1);
       proxyState.a = { a1: 1 };
-      const childProxies = tracker._childProxies;
-      const keys = Object.keys(childProxies);
-      expect(keys).toEqual([]);
+      const nextChildProxies = tracker._nextChildProxies;
+
+      expect(nextChildProxies.size).toBe(0);
     });
 
-    it('childProxies will not update even if set to value with less keys than before', () => {
+    it('childProxies key will be deleted after set with new value', () => {
+      const list = [
+        {
+          v: 1,
+        },
+        {
+          v: 2,
+        },
+        {
+          v: 3,
+        },
+      ];
+
       const state = {
         a: [2, 3, 4],
         b: {
-          b1: {
-            b11: 1,
-            b12: 2,
-          },
-          b2: 2,
+          list: list,
+          b1: 3,
         },
         c: 3,
       };
       const proxyState = produce(state);
-      const tracker = StateTrackerUtil.getTracker(proxyState.b);
+      expect(proxyState.b.list).toEqual(list);
+      const tracker = StateTrackerUtil.getTracker(proxyState);
+      const childProxies = tracker._nextChildProxies;
+      expect(childProxies.size).toBe(1);
 
-      expect(proxyState.b.b1).toEqual({ b11: 1, b12: 2 });
-      expect(proxyState.c).toEqual(3);
-      proxyState.b = { b1: 1 };
-      const childProxies = tracker._childProxies;
-      const keys = Object.keys(childProxies);
-      expect(keys).toEqual(['b1']);
-      expect(proxyState.b.b1).toEqual(1);
-      const keys2 = Object.keys(childProxies);
-      expect(keys2).toEqual([]);
+      proxyState.b = { b1: [1] };
+
+      expect(childProxies.size).toBe(0);
+    });
+
+    it('reuse array trackerable item', () => {
+      const list = [
+        {
+          v: 1,
+        },
+        {
+          v: 2,
+        },
+        {
+          v: 3,
+        },
+      ];
+
+      const state = {
+        a: [2, 3, 4],
+        b: {
+          list,
+          b1: 3,
+        },
+        c: 3,
+      };
+
+      const proxyState = produce(state);
+      expect(proxyState.b.list[0].v).toEqual(1);
+      expect(proxyState.b.list[1].v).toEqual(2);
+      expect(proxyState.b.list[2].v).toEqual(3);
+
+      const list_1_tracker = StateTrackerUtil.getTracker(proxyState.b.list);
+      const list_1_0_tracker = StateTrackerUtil.getTracker(
+        proxyState.b.list[0]
+      );
+      const list_1_1_tracker = StateTrackerUtil.getTracker(
+        proxyState.b.list[1]
+      );
+      const list_1_2_tracker = StateTrackerUtil.getTracker(
+        proxyState.b.list[2]
+      );
+
+      proxyState.b.list = list.slice();
+
+      const list_2_tracker = StateTrackerUtil.getTracker(proxyState.b.list);
+      const list_2_0_tracker = StateTrackerUtil.getTracker(
+        proxyState.b.list[0]
+      );
+      const list_2_1_tracker = StateTrackerUtil.getTracker(
+        proxyState.b.list[1]
+      );
+      const list_2_2_tracker = StateTrackerUtil.getTracker(
+        proxyState.b.list[2]
+      );
+
+      expect(list_1_tracker._id).not.toEqual(list_2_tracker._id);
+      expect(list_1_0_tracker).toBe(list_2_0_tracker);
+      expect(list_1_1_tracker).toBe(list_2_1_tracker);
+      expect(list_1_2_tracker).toBe(list_2_2_tracker);
+
+      expect(proxyState.b.list[0].v).toEqual(1);
+      expect(proxyState.b.list[1].v).toEqual(2);
+      expect(proxyState.b.list[2].v).toEqual(3);
     });
   });
 
@@ -220,10 +328,8 @@ function testTracker(useProxy: boolean) {
       /* eslint-enable */
 
       const trackerNode = StateTrackerUtil.getContext(proxyState).getCurrent();
-      const paths = trackerNode.getPaths();
-      expect(paths).toEqual([['a'], ['a'], ['a', 'a1'], ['a'], ['a', 'a2']]);
-      const remarkable = trackerNode.getRemarkable();
-      expect(remarkable).toEqual([['a', 'a1'], ['a', 'a2'], ['a']]);
+      const paths = trackerNode.stateGraphMap.get('a')!.getPaths();
+      expect(paths).toEqual([['a'], ['a', 'a1'], ['a', 'a2']]);
       StateTrackerUtil.leave(proxyState);
     });
 
@@ -254,13 +360,9 @@ function testTracker(useProxy: boolean) {
       b.b12
 
       const subNode = StateTrackerUtil.getContext(b).getCurrent()
-      const subPaths = subNode.getPaths()
-      const subRemarkable = subNode.getRemarkable()
+      // const subPaths = subNode.getPaths()
+      const subPaths = subNode.stateGraphMap.get('b')!.getPaths()
       expect(subPaths).toEqual([
-        ['b', 'b1', 'b11'],
-        ['b', 'b1', 'b12'],
-      ])
-      expect(subRemarkable).toEqual([
         ['b', 'b1', 'b11'],
         ['b', 'b1', 'b12'],
       ])
@@ -268,67 +370,12 @@ function testTracker(useProxy: boolean) {
       /* eslint-enable */
 
       const trackerNode = StateTrackerUtil.getContext(proxyState).getCurrent();
-      const paths = trackerNode.getPaths();
-      expect(paths).toEqual([
-        ['a'],
-        ['a'],
-        ['a', 'a1'],
-        ['a'],
-        ['a', 'a2'],
-        ['b'],
-        ['b', 'b1'],
-      ]);
-      const remarkable = trackerNode.getRemarkable();
-      expect(remarkable).toEqual([
-        ['a', 'a1'],
-        ['a', 'a2'],
-        ['a'],
-        ['b', 'b1'],
-      ]);
+      const apaths = trackerNode.stateGraphMap.get('a')!.getPaths();
+      expect(apaths).toEqual([['a'], ['a', 'a1'], ['a', 'a2']]);
+      const bpaths = trackerNode.stateGraphMap.get('b')!.getPaths();
+      expect(bpaths).toEqual([['b'], ['b', 'b1']]);
       StateTrackerUtil.leave(proxyState);
     });
-  });
-
-  describe(decorateDesc('return a proxy state with TRACKER prop'), () => {
-    // it('If value is an object, then it should be a proxy state with TRACKER prop', () => {
-    //   const state = {
-    //     a: {
-    //       a1: 1,
-    //       a2: 2,
-    //     },
-    //     b: {
-    //       b1: {
-    //         b11: 1,
-    //         b12: 2,
-    //       },
-    //       b2: 2,
-    //     },
-    //   };
-    //   const proxyState = produce(state);
-    //   const ap = proxyState.a;
-    //   const bp = proxyState.b;
-    //   const b1p = proxyState.b.b1;
-    //   expect(ap.getTracker()).toEqual(expect.any(StateTracker));
-    //   expect(bp.getTracker()).toEqual(expect.any(StateTracker));
-    //   expect(b1p.getTracker()).toEqual(expect.any(StateTracker));
-    // });
-    // it('If value is an array, then it should be a proxy state with TRACKER prop', () => {
-    //   const state = {
-    //     a: [1, 2],
-    //     b: [
-    //       {
-    //         b1: 1,
-    //       },
-    //     ],
-    //   };
-    //   const proxyState = produce(state);
-    //   const ap = proxyState.a;
-    //   const bp = proxyState.b;
-    //   const b1p = proxyState.b[0];
-    //   expect(ap.getTracker()).toEqual(expect.any(StateTracker));
-    //   expect(bp.getTracker()).toEqual(expect.any(StateTracker));
-    //   expect(b1p.getTracker()).toEqual(expect.any(StateTracker));
-    // });
   });
 
   describe(decorateDesc('change value'), () => {
@@ -350,11 +397,7 @@ function testTracker(useProxy: boolean) {
       const id1 = getTrackerId(StateTrackerUtil.getTracker(proxyState.a)._id);
       proxyState.a = state.a;
       const id2 = getTrackerId(StateTrackerUtil.getTracker(proxyState.a)._id);
-      if (useProxy) {
-        expect(id1).toBe(id2);
-      } else {
-        expect(id1).toBe(id2 - 1);
-      }
+      expect(id1).toBe(id2);
     });
 
     it('Set with different value will create new tracker', () => {
@@ -456,23 +499,37 @@ function testTracker(useProxy: boolean) {
       proxyState.a.a2;
       /* eslint-enable */
 
-      StateTrackerUtil.relink(proxyState, ['a'], {
+      let nextA = {
         a1: {
           a11: 3,
         },
         a2: 4,
-      });
+      };
+      StateTrackerUtil.perform(
+        proxyState,
+        { a: nextA },
+        {
+          afterCallback: () => (proxyState.a = nextA),
+          enableRootComparison: false,
+        }
+      );
 
-      const childProxies = StateTrackerUtil.getTracker(proxyState.a)
-        ._childProxies;
-      expect(Object.keys(childProxies)).toEqual(['a1', 'a2']);
       expect(proxyState.a.a2).toBe(4);
-      expect(Object.keys(childProxies)).toEqual(['a1']);
 
-      StateTrackerUtil.relink(proxyState, ['a'], {
+      nextA = {
+        // @ts-ignore
         a1: 5,
         a2: 6,
-      });
+      };
+      StateTrackerUtil.perform(
+        proxyState,
+        { a: nextA },
+        {
+          afterCallback: () => (proxyState.a = nextA),
+          enableRootComparison: false,
+        }
+      );
+
       expect(proxyState.a.a1).toBe(5);
       expect(proxyState.a.a2).toBe(6);
     });
@@ -493,21 +550,25 @@ function testTracker(useProxy: boolean) {
       };
 
       const proxyState = produce(state);
-      const draft = StateTrackerUtil.batchRelink(proxyState, [
-        {
-          path: ['a'],
-          value: {
-            a1: {
-              a11: 3,
-            },
-          },
-        },
-      ]);
 
-      expect(draft.a.a1.a11).toBe(1);
+      let nextA = {
+        ...proxyState.a,
+        a1: {
+          a11: 3,
+        },
+      };
+      StateTrackerUtil.perform(
+        proxyState,
+        { ...proxyState, a: nextA },
+        {
+          afterCallback: () => (proxyState.a = nextA),
+          enableRootComparison: false,
+        }
+      );
+
+      // expect(proxyState.a.a1.a11).toBe(1);
       expect(proxyState.a.a1.a11).toBe(3);
       proxyState.b.b1 = 4;
-      // expect(draft.b.b1).toBe(2);
       expect(proxyState.b.b1).toBe(4);
     });
   });
@@ -525,7 +586,8 @@ function testTracker(useProxy: boolean) {
       Object.prototype.toString.call(proxyState.a)
       /* eslint-enable */
       const trackerNode = StateTrackerUtil.getContext(proxyState).getCurrent();
-      expect(trackerNode.getPaths()).toEqual([['a']]);
+      const paths = trackerNode.stateGraphMap.get('a')!.getPaths();
+      expect(paths).toEqual([['a']]);
       StateTrackerUtil.leave(proxyState);
     });
 
@@ -576,14 +638,23 @@ function testTracker(useProxy: boolean) {
       StateTrackerUtil.leave(state);
       StateTrackerUtil.leave(state);
 
-      StateTrackerUtil.relink(state, ['promotionInfo'], {
+      let nextPromotionInfo = {
+        ...state.promotionInfo,
         header: {
           presellDeposit: {
             deposit: 2,
             deduction: 3,
           },
         },
-      });
+      };
+      StateTrackerUtil.perform(
+        state,
+        { promotionInfo: nextPromotionInfo },
+        {
+          afterCallback: () => (state.promotionInfo = nextPromotionInfo),
+          enableRootComparison: false,
+        }
+      );
 
       StateTrackerUtil.enter(state, 'level2');
       header = StateTrackerUtil.peek(state, ['promotionInfo', 'header']);
@@ -608,9 +679,18 @@ function testTracker(useProxy: boolean) {
       expect(listData.length).toBe(0);
       StateTrackerUtil.leave(state);
 
-      StateTrackerUtil.relink(state, ['goods'], {
+      let nextGoods = {
+        ...state.goods,
         listData: [{ id: '1' }, { id: '2' }],
-      });
+      };
+      StateTrackerUtil.perform(
+        state,
+        { a: nextGoods },
+        {
+          afterCallback: () => (state.goods = nextGoods),
+          enableRootComparison: false,
+        }
+      );
 
       StateTrackerUtil.enter(state);
       const {
@@ -650,14 +730,23 @@ function testTracker(useProxy: boolean) {
 
       StateTrackerUtil.leave(state);
 
-      StateTrackerUtil.relink(state, ['promotionInfo'], {
+      let nextPromotionInfo = {
+        ...state.promotionInfo,
         header: {
           presellDeposit: {
             deposit: 2,
             deduction: 3,
           },
         },
-      });
+      };
+      StateTrackerUtil.perform(
+        state,
+        { promotionInfo: nextPromotionInfo },
+        {
+          afterCallback: () => (state.promotionInfo = nextPromotionInfo),
+          enableRootComparison: false,
+        }
+      );
 
       StateTrackerUtil.enter(state, 'level2');
       header = StateTrackerUtil.peek(state, ['promotionInfo', 'header']);
@@ -709,7 +798,8 @@ function testTracker(useProxy: boolean) {
       let header = promotionInfo.header;
       StateTrackerUtil.leave(state);
 
-      StateTrackerUtil.relink(state, ['promotionInfo'], {
+      let nextPromotionInfo = {
+        ...state.promotionInfo,
         header: {
           presellDeposit: {
             deposit: 2,
@@ -718,7 +808,15 @@ function testTracker(useProxy: boolean) {
           price: 6,
           selected: true,
         },
-      });
+      };
+      StateTrackerUtil.perform(
+        state,
+        { promotionInfo: nextPromotionInfo },
+        {
+          afterCallback: () => (state.promotionInfo = nextPromotionInfo),
+          enableRootComparison: false,
+        }
+      );
 
       StateTrackerUtil.enter(state, 'level2');
       header = StateTrackerUtil.peek(state, ['promotionInfo', 'header']);
@@ -748,7 +846,8 @@ function testTracker(useProxy: boolean) {
       let header = promotionInfo.header;
       StateTrackerUtil.leave(state);
 
-      StateTrackerUtil.relink(state, ['promotionInfo'], {
+      let nextPromotionInfo = {
+        ...state.promotionInfo,
         header: {
           presellDeposit: {
             deposit: 2,
@@ -757,7 +856,15 @@ function testTracker(useProxy: boolean) {
           price: 6,
           selected: true,
         },
-      });
+      };
+      StateTrackerUtil.perform(
+        state,
+        { promotionInfo: nextPromotionInfo },
+        {
+          afterCallback: () => (state.promotionInfo = nextPromotionInfo),
+          enableRootComparison: false,
+        }
+      );
 
       StateTrackerUtil.enter(state, 'level2');
       header = StateTrackerUtil.peek(state, ['promotionInfo', 'header']);
