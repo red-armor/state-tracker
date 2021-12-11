@@ -59,7 +59,7 @@ function testTracker(useProxy: boolean) {
         { a: nextA },
         {
           afterCallback: () => (proxyState.a = nextA),
-          enableRootComparison: false,
+          stateCompareLevel: 1,
         }
       );
 
@@ -103,7 +103,7 @@ function testTracker(useProxy: boolean) {
         { a: nextA },
         {
           afterCallback: () => (proxyState.a = nextA),
-          enableRootComparison: false,
+          stateCompareLevel: 1,
         }
       );
 
