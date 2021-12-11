@@ -1,6 +1,6 @@
 import StateTrackerNode from './StateTrackerNode';
 import StateTrackerUtil from './StateTrackerUtil';
-import { generateReactionName } from './commons';
+import { generateReactionName, isPlainObject } from './commons';
 import {
   ReactionProps,
   IStateTracker,
@@ -25,6 +25,8 @@ class Reaction {
   private _disposer?: Function | null;
   private _fineGrainListenerDisposer?: Function | null;
   private _affectedFineGrainKeys = new Set<string>();
+
+  private _reactionResult: null | any;
 
   constructor(
     options: {
@@ -69,9 +71,15 @@ class Reaction {
       changedValueListener,
       activityListener,
     });
-    this.props = props;
+
+    if (props && isPlainObject(props)) {
+      this.initializeObserverProps(props);
+    }
+
     this.fn = fn;
     this.scheduler = scheduler || ((fn: Function) => fn.call(this));
+
+    this._reactionResult = null;
 
     this.register();
     this.dispose = this.dispose.bind(this);
@@ -89,6 +97,10 @@ class Reaction {
 
   getChangedValue() {
     return this._changedValue;
+  }
+
+  getResult() {
+    return this._reactionResult;
   }
 
   register() {
@@ -164,6 +176,8 @@ class Reaction {
       console.error(new StateTrackerError(`Reaction fn run with error ${err}`));
     }
 
+    this._reactionResult = result;
+
     StateTrackerUtil.leave(this.state);
     return result;
   }
@@ -205,8 +219,7 @@ class Reaction {
   }
 
   initializeObserverProps(props: ReactionProps) {
-    this._stateTrackerNode.setObserverProps(props);
-    this.props = props;
+    this.updateObserverProps(props);
   }
 
   updateObserverProps(props: ReactionProps) {

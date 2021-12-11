@@ -86,7 +86,7 @@ function testTracker(useProxy: boolean) {
         { a: nextGoods },
         {
           afterCallback: () => (state.goods = nextGoods),
-          enableRootComparison: false,
+          stateCompareLevel: 1,
         }
       );
 
@@ -510,7 +510,7 @@ function testTracker(useProxy: boolean) {
         { a: nextA },
         {
           afterCallback: () => (proxyState.a = nextA),
-          enableRootComparison: false,
+          stateCompareLevel: 1,
         }
       );
 
@@ -526,7 +526,7 @@ function testTracker(useProxy: boolean) {
         { a: nextA },
         {
           afterCallback: () => (proxyState.a = nextA),
-          enableRootComparison: false,
+          stateCompareLevel: 1,
         }
       );
 
@@ -562,7 +562,7 @@ function testTracker(useProxy: boolean) {
         { ...proxyState, a: nextA },
         {
           afterCallback: () => (proxyState.a = nextA),
-          enableRootComparison: false,
+          stateCompareLevel: 1,
         }
       );
 
@@ -652,7 +652,7 @@ function testTracker(useProxy: boolean) {
         { promotionInfo: nextPromotionInfo },
         {
           afterCallback: () => (state.promotionInfo = nextPromotionInfo),
-          enableRootComparison: false,
+          stateCompareLevel: 1,
         }
       );
 
@@ -688,7 +688,7 @@ function testTracker(useProxy: boolean) {
         { a: nextGoods },
         {
           afterCallback: () => (state.goods = nextGoods),
-          enableRootComparison: false,
+          stateCompareLevel: 1,
         }
       );
 
@@ -744,7 +744,7 @@ function testTracker(useProxy: boolean) {
         { promotionInfo: nextPromotionInfo },
         {
           afterCallback: () => (state.promotionInfo = nextPromotionInfo),
-          enableRootComparison: false,
+          stateCompareLevel: 1,
         }
       );
 
@@ -814,7 +814,7 @@ function testTracker(useProxy: boolean) {
         { promotionInfo: nextPromotionInfo },
         {
           afterCallback: () => (state.promotionInfo = nextPromotionInfo),
-          enableRootComparison: false,
+          stateCompareLevel: 1,
         }
       );
 
@@ -862,7 +862,7 @@ function testTracker(useProxy: boolean) {
         { promotionInfo: nextPromotionInfo },
         {
           afterCallback: () => (state.promotionInfo = nextPromotionInfo),
-          enableRootComparison: false,
+          stateCompareLevel: 1,
         }
       );
 
