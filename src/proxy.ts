@@ -1,17 +1,18 @@
 import {
+  env,
+  raw,
+  Type,
+  isProxy,
   TRACKER,
   IS_PROXY,
-  createHiddenProperty,
   arrayProtoOwnKeys,
   objectProtoOwnKeys,
-  Type,
-  raw,
-  isProxy,
+  createHiddenProperty,
 } from './commons';
 import { createPlainTrackerObject } from './StateTracker';
 import {
-  IStateTracker,
   State,
+  IStateTracker,
   ProduceProxyOptions,
   StateTrackerProperties,
 } from './types';
@@ -161,6 +162,17 @@ export function createProxy(
     lastUpdateAt: Date.now(),
   });
 
+  // use case: In React, useRef value could not be proxied.
+  //           Value could be tracked, maybe it will cause a bug..
+  if (!Object.isExtensible(nextState)) {
+    if (env !== 'production') {
+      console.warn(
+        `[state-tracker]: ${nextState} is not an extensible object, So its value ` +
+          `change will not be tracked`
+      );
+    }
+    return nextState as any;
+  }
   const proxy = new Proxy(nextState, handler) as IStateTracker;
 
   // TODO: Cannot add property x, object is not extensible
