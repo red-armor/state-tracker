@@ -1,4 +1,4 @@
-import { TRACKER } from '../src/commons';
+import { TRACKER, isProxy } from '../src/commons';
 import { produceImpl as ES5Produce } from '../src/es5';
 import { produceImpl as ES6Produce } from '../src/proxy';
 import StateTrackerUtil from '../src/StateTrackerUtil';
@@ -876,6 +876,29 @@ function testTracker(useProxy: boolean) {
 
       expect(presellDeposit.deposit).toBe(2);
       expect(presellDeposit.deduction).toBe(3);
+    });
+  });
+
+  describe.only(decorateDesc('description'), () => {
+    it('not extensible object, should not be proxied', () => {
+      const state = {};
+      const a = Object.defineProperty({}, 'current', {
+        writable: true,
+        configurable: true,
+        value: 3,
+      });
+      Object.defineProperty(state, 'a', {
+        writable: true,
+        configurable: true,
+        value: a,
+      });
+
+      // @ts-ignore
+      Object.preventExtensions(state.a);
+
+      const proxyState = produce(state);
+      expect(proxyState.a.current).toBe(3);
+      expect(isProxy(proxyState.a)).toBe(false);
     });
   });
 }

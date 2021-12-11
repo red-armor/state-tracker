@@ -1,4 +1,5 @@
 import {
+  env,
   raw,
   each,
   TRACKER,
@@ -24,7 +25,7 @@ export function produceImpl(
     container,
   });
 
-  const proxy = createProxy(state, {
+  const proxy = createES5Proxy(state, {
     stateTrackerContext,
     accessPath: [],
     rootPath: [],
@@ -33,7 +34,7 @@ export function produceImpl(
   return proxy;
 }
 
-export function createProxy(
+export function createES5Proxy(
   state: State,
   options: ProduceProxyOptions
 ): IStateTracker {
@@ -43,6 +44,16 @@ export function createProxy(
     rootPath = [],
     stateTrackerContext,
   } = options || {};
+
+  if (!Object.isExtensible(state)) {
+    if (env !== 'production') {
+      console.warn(
+        `[state-tracker]: ${state} is not an extensible object, So its value ` +
+          `change will not be tracked`
+      );
+    }
+    return state as any;
+  }
   const copy = shallowCopy(state);
   const outerAccessPath = accessPath;
 
@@ -76,7 +87,7 @@ export function createProxy(
           nextAccessPath: nextAccessPath.slice(),
           proxy: copy,
           rootPath,
-          createProxy,
+          createProxy: createES5Proxy,
         });
 
         if (!isPeeking) {
@@ -134,12 +145,12 @@ export function createProxy(
       enumerable,
       configurable,
     });
-    createHiddenProperty(copy, IS_PROXY, true);
   });
 
   // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Errors/Cant_define_property_object_not_extensible
   // if property value is not extensible, it will cause error. such as a ref value..
   createHiddenProperty(copy, TRACKER, tracker);
+  createHiddenProperty(copy, IS_PROXY, true);
   createHiddenProperty(copy, 'unlink', function(this: IStateTracker) {
     const tracker = this[TRACKER];
     return tracker._base;
