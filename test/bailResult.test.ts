@@ -25,7 +25,7 @@ function testTracker(useProxy: boolean) {
       };
       const proxyState = produce(state);
       let count = 0;
-      let falsy;
+      let value;
 
       const getState = () => proxyState;
 
@@ -34,7 +34,7 @@ function testTracker(useProxy: boolean) {
           const state = getState();
 
           const result = bailResult(state, [() => !!state.app.name]);
-          falsy = result;
+          value = result;
           count++;
         },
         state: proxyState,
@@ -44,7 +44,7 @@ function testTracker(useProxy: boolean) {
       });
 
       expect(count).toBe(1);
-      expect(falsy).toBe(false);
+      expect(value).toBe(false);
     });
     it('return true', () => {
       const state = {
@@ -59,7 +59,7 @@ function testTracker(useProxy: boolean) {
       };
       const proxyState = produce(state);
       let count = 0;
-      let falsy;
+      let value;
 
       const getState = () => proxyState;
 
@@ -68,7 +68,7 @@ function testTracker(useProxy: boolean) {
           const state = getState();
 
           const result = bailResult(state, [() => !!state.app.title]);
-          falsy = result;
+          value = result;
           count++;
         },
         state: proxyState,
@@ -78,7 +78,7 @@ function testTracker(useProxy: boolean) {
       });
 
       expect(count).toBe(1);
-      expect(falsy).toBe(true);
+      expect(value).toBe(true);
     });
     it('return true with predicate function', () => {
       const state = {
@@ -93,7 +93,7 @@ function testTracker(useProxy: boolean) {
       };
       const proxyState = produce(state);
       let count = 0;
-      let falsy;
+      let value;
 
       const getState = () => proxyState;
 
@@ -106,7 +106,7 @@ function testTracker(useProxy: boolean) {
             [() => !!state.app.name, () => !!state.app.title],
             result => !!result
           );
-          falsy = result;
+          value = result;
           count++;
         },
         state: proxyState,
@@ -116,7 +116,7 @@ function testTracker(useProxy: boolean) {
       });
 
       expect(count).toBe(1);
-      expect(falsy).toBe(true);
+      expect(value).toBe(true);
     });
     it('basic return predicate value', () => {
       const state = {
@@ -131,7 +131,7 @@ function testTracker(useProxy: boolean) {
       };
       const proxyState = produce(state);
       let count = 0;
-      let falsy;
+      let value;
 
       const getState = () => proxyState;
 
@@ -144,7 +144,7 @@ function testTracker(useProxy: boolean) {
             [() => !!state.content.name, () => !!state.app.title],
             result => !!result
           );
-          falsy = result;
+          value = result;
           count++;
         },
         state: proxyState,
@@ -154,7 +154,7 @@ function testTracker(useProxy: boolean) {
       });
 
       expect(count).toBe(1);
-      expect(falsy).toBe(true);
+      expect(value).toBe(true);
     });
     it('has Error & return predicate resolved value', () => {
       const state = {
@@ -170,7 +170,7 @@ function testTracker(useProxy: boolean) {
       };
       const proxyState = produce(state);
       let count = 0;
-      let falsy;
+      let value;
 
       const getState = () => proxyState;
 
@@ -183,7 +183,7 @@ function testTracker(useProxy: boolean) {
             result => !!result
           );
 
-          falsy = result;
+          value = result;
           count++;
         },
         state: proxyState,
@@ -193,7 +193,7 @@ function testTracker(useProxy: boolean) {
       });
 
       expect(count).toBe(1);
-      expect(falsy).toBe(undefined);
+      expect(value).toBe(undefined);
 
       const content = {
         name: 'name',
@@ -212,7 +212,7 @@ function testTracker(useProxy: boolean) {
       );
 
       expect(count).toBe(2);
-      expect(falsy).toBe(true);
+      expect(value).toBe(true);
     });
     it('return second valid value', () => {
       const state = {
@@ -228,7 +228,7 @@ function testTracker(useProxy: boolean) {
       };
       const proxyState = produce(state);
       let count = 0;
-      let falsy;
+      let value;
 
       const getState = () => proxyState;
 
@@ -240,7 +240,7 @@ function testTracker(useProxy: boolean) {
             () => state.content.title,
           ]);
 
-          falsy = result;
+          value = result;
           count++;
         },
         state: proxyState,
@@ -250,7 +250,7 @@ function testTracker(useProxy: boolean) {
       });
 
       expect(count).toBe(1);
-      expect(falsy).toBe(undefined);
+      expect(value).toBe(undefined);
 
       let content = { name: 'name' };
 
@@ -268,7 +268,7 @@ function testTracker(useProxy: boolean) {
       );
 
       expect(count).toBe(2);
-      expect(falsy).toBe('name');
+      expect(value).toBe('name');
 
       // @ts-ignore
       content = { title: 'title' };
@@ -285,7 +285,43 @@ function testTracker(useProxy: boolean) {
         }
       );
       expect(count).toBe(3);
-      expect(falsy).toBe('title');
+      expect(value).toBe('title');
+
+      // @ts-ignore
+      // not rerun if not used key's value changed
+      content = { title: 'title', location: 'shanghai' };
+      StateTrackerUtil.perform(
+        proxyState,
+        {
+          ...proxyState,
+          content,
+        },
+        {
+          afterCallback: () => {
+            proxyState.content = content;
+          },
+        }
+      );
+      expect(count).toBe(3);
+      expect(value).toBe('title');
+
+      // @ts-ignore
+      // will rerun if used key's value changed
+      content = { title: 'next', location: 'shanghai' };
+      StateTrackerUtil.perform(
+        proxyState,
+        {
+          ...proxyState,
+          content,
+        },
+        {
+          afterCallback: () => {
+            proxyState.content = content;
+          },
+        }
+      );
+      expect(count).toBe(4);
+      expect(value).toBe('next');
     });
   });
 }
