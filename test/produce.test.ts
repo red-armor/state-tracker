@@ -2,6 +2,7 @@ import { TRACKER, isProxy } from '../src/commons';
 import { produceImpl as ES5Produce } from '../src/es5';
 import { produceImpl as ES6Produce } from '../src/proxy';
 import StateTrackerUtil from '../src/StateTrackerUtil';
+import Reaction from '../src/Reaction';
 
 testTracker(true);
 testTracker(false);
@@ -879,7 +880,7 @@ function testTracker(useProxy: boolean) {
     });
   });
 
-  describe.only(decorateDesc('description'), () => {
+  describe(decorateDesc('description'), () => {
     it('not extensible object, should not be proxied', () => {
       const state = {};
       const a = Object.defineProperty({}, 'current', {
@@ -899,6 +900,132 @@ function testTracker(useProxy: boolean) {
       const proxyState = produce(state);
       expect(proxyState.a.current).toBe(3);
       expect(isProxy(proxyState.a)).toBe(false);
+    });
+  });
+
+  // TODO dynamic add state props
+  describe(decorateDesc('dynamic props'), () => {
+    it("es5 will not react to undefined key's value change", () => {
+      const state = {
+        app: {
+          list: [{ id: 1, label: 'first' }],
+          location: {
+            city: 'shanghai',
+          },
+          title: 'current',
+          description: 'testing',
+        },
+      };
+      const proxyState = produce(state);
+      let count = 0;
+      let value;
+
+      const getState = () => proxyState;
+
+      new Reaction({
+        fn: ({ getState }: { getState: Function }) => {
+          const state = getState();
+          const stc = StateTrackerUtil.getContext(state);
+          const stn = stc.getCurrent();
+          const reaction = stn.getReaction();
+          try {
+            count++;
+            value = state.content.name;
+            reaction?.setStateCompareLevel(1);
+          } catch (err) {
+            reaction?.setStateCompareLevel(0);
+          }
+        },
+        state: proxyState,
+        scheduler: (fn: Function) => {
+          fn({ getState });
+        },
+      });
+
+      expect(count).toBe(1);
+      expect(value).toBe(undefined);
+
+      let content = { name: 'name' };
+
+      StateTrackerUtil.perform(
+        proxyState,
+        {
+          ...proxyState,
+          content,
+        },
+        {
+          afterCallback: () => {
+            proxyState.content = content;
+          },
+        }
+      );
+
+      if (useProxy) {
+        expect(count).toBe(2);
+        expect(value).toBe('name');
+      } else {
+        expect(count).toBe(1);
+        expect(value).toBe(undefined);
+      }
+    });
+    it('es5 should be declare first', () => {
+      const state = {
+        app: {
+          list: [{ id: 1, label: 'first' }],
+          location: {
+            city: 'shanghai',
+          },
+          title: 'current',
+          description: 'testing',
+        },
+        content: undefined,
+      };
+      const proxyState = produce(state);
+      let count = 0;
+      let value;
+
+      const getState = () => proxyState;
+
+      new Reaction({
+        fn: ({ getState }: { getState: Function }) => {
+          const state = getState();
+          const stc = StateTrackerUtil.getContext(state);
+          const stn = stc.getCurrent();
+          const reaction = stn.getReaction();
+          try {
+            count++;
+            value = state.content.name;
+            reaction?.setStateCompareLevel(1);
+          } catch (err) {
+            reaction?.setStateCompareLevel(0);
+          }
+        },
+        state: proxyState,
+        scheduler: (fn: Function) => {
+          fn({ getState });
+        },
+      });
+
+      expect(count).toBe(1);
+      expect(value).toBe(undefined);
+
+      let content = { name: 'name' };
+
+      StateTrackerUtil.perform(
+        proxyState,
+        {
+          ...proxyState,
+          content,
+        },
+        {
+          afterCallback: () => {
+            proxyState.content = content;
+          },
+        }
+      );
+
+      expect(count).toBe(2);
+      expect(value).toBe('name');
     });
   });
 }

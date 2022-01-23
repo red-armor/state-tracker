@@ -14,7 +14,7 @@
     "start": "tsdx watch",
     "build": "tsdx build",
     "lint": "tsdx lint --fix",
-    "test": "tsdx test --silent",
+    "test": "tsdx test",
     "prepare": "tsdx build",
     "size": "size-limit",
     "analyze": "size-limit --why",
@@ -25,6 +25,9 @@
     "hooks": {
       "pre-commit": "tsdx lint && npm run test"
     }
+  },
+  "jest": {
+    "setupFilesAfterEnv": ["./test/setup.ts"]
   },
   "prettier": {
     "printWidth": 80,
