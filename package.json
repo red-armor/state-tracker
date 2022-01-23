@@ -1,5 +1,5 @@
 {
-  "version": "2.1.0",
+  "version": "2.2.0",
   "license": "MIT",
   "main": "dist/index.js",
   "typings": "dist/index.d.ts",
@@ -27,7 +27,9 @@
     }
   },
   "jest": {
-    "setupFilesAfterEnv": ["./test/setup.ts"]
+    "setupFilesAfterEnv": [
+      "./test/setup.ts"
+    ]
   },
   "prettier": {
     "printWidth": 80,
