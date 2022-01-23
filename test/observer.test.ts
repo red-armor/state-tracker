@@ -3,7 +3,7 @@ import { produceImpl as ES6Produce } from '../src/proxy';
 import observer from '../src/observer';
 import { StateTrackerUtil } from '../src';
 
-// testTracker(true);
+testTracker(true);
 testTracker(false);
 
 function testTracker(useProxy: boolean) {

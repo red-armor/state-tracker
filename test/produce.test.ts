@@ -879,7 +879,7 @@ function testTracker(useProxy: boolean) {
     });
   });
 
-  describe.only(decorateDesc('description'), () => {
+  describe(decorateDesc('description'), () => {
     it('not extensible object, should not be proxied', () => {
       const state = {};
       const a = Object.defineProperty({}, 'current', {
@@ -901,4 +901,6 @@ function testTracker(useProxy: boolean) {
       expect(isProxy(proxyState.a)).toBe(false);
     });
   });
+
+  // TODO dynamic add state props
 }

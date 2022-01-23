@@ -74,6 +74,10 @@ class StateTrackerNode {
     this.registerObserverProps();
   }
 
+  getReaction() {
+    return this._reaction;
+  }
+
   isActivityLoggerEnabled() {
     return typeof this.activityListener === 'function';
   }
