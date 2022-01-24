@@ -68,9 +68,19 @@ class Container {
       afterCallback.call(null);
     }
 
+    const seen: {
+      [key: string]: boolean;
+    } = {};
+
     tokens
       .filter(({ isEqual }) => !isEqual)
-      .forEach(token => token.reaction.schedulerRun());
+      .forEach(token => {
+        const id = token.reaction._id;
+        if (!seen[id]) {
+          token.reaction.schedulerRun();
+          seen[id] = true;
+        }
+      });
 
     this._state = nextState;
   }

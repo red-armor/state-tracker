@@ -10,6 +10,8 @@ import {
 } from './types';
 import StateTrackerError from './StateTrackerError';
 
+let reactionId = 0;
+
 class Reaction {
   private fn: Function;
   public name: string;
@@ -27,6 +29,8 @@ class Reaction {
   private _affectedFineGrainKeys = new Set<string>();
 
   private _reactionResult: null | any;
+
+  readonly _id: string = `__reaction_${reactionId++}`;
 
   constructor(
     options: {
