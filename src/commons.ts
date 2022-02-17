@@ -1,7 +1,7 @@
 import StateTrackerUtil from './StateTrackerUtil';
 import { SeenKeys } from './types';
 
-export const env = process?.env?.NODE_ENV;
+export const env = process ? process?.env?.NODE_ENV : 'production';
 
 const toString = Function.call.bind<Function>(Object.prototype.toString);
 const ownKeys = (o: any) =>
