@@ -47,14 +47,15 @@ const config = {
         logo: {
           alt: 'State-tracker Logo',
           src: 'img/logo.svg',
+          href: '/docs/introduction/getting-started',
         },
         items: [
-          {
-            type: 'doc',
-            docId: 'introduction',
-            position: 'left',
-            label: 'Tutorial',
-          },
+          // {
+          //   type: 'doc',
+          //   docId: 'introduction',
+          //   position: 'left',
+          //   label: 'Tutorial',
+          // },
           {
             href: 'https://github.com/red-armor/state-tracker',
             label: 'Github',
@@ -65,15 +66,15 @@ const config = {
       footer: {
         style: 'dark',
         links: [
-          {
-            title: 'Docs',
-            items: [
-              {
-                label: 'Tutorial',
-                to: '/docs/introduction',
-              },
-            ],
-          },
+          // {
+          //   title: 'Docs',
+          //   items: [
+          //     {
+          //       label: 'Tutorial',
+          //       to: '/docs/introduction/getting-started',
+          //     },
+          //   ],
+          // },
           {
             title: 'More',
             items: [
