@@ -3347,6 +3347,13 @@ dns-txt@^2.0.2:
   dependencies:
     buffer-indexof "^1.0.0"
 
+docusaurus-plugin-image-zoom@^0.1.1:
+  version "0.1.1"
+  resolved "http://npm.devops.xiaohongshu.com:7001/docusaurus-plugin-image-zoom/download/docusaurus-plugin-image-zoom-0.1.1.tgz#f5e16ae568f7b74e8a357ee67ea7922521f64539"
+  integrity sha1-9eFq5Wj3t06KNX7mfqeSJSH2RTk=
+  dependencies:
+    medium-zoom "^1.0.6"
+
 dom-converter@^0.2.0:
   version "0.2.0"
   resolved "https://registry.yarnpkg.com/dom-converter/-/dom-converter-0.2.0.tgz#6721a9daee2e293682955b6afe416771627bb768"
@@ -5069,6 +5076,11 @@ media-typer@0.3.0:
   version "0.3.0"
   resolved "https://registry.yarnpkg.com/media-typer/-/media-typer-0.3.0.tgz#8710d7af0aa626f8fffa1ce00168545263255748"
   integrity sha1-hxDXrwqmJvj/+hzgAWhUUmMlV0g=
+
+medium-zoom@^1.0.6:
+  version "1.0.6"
+  resolved "http://npm.devops.xiaohongshu.com:7001/medium-zoom/download/medium-zoom-1.0.6.tgz#9247f21ca9313d8bbe9420aca153a410df08d027"
+  integrity sha1-kkfyHKkxPYu+lCCsoVOkEN8I0Cc=
 
 memfs@^3.1.2, memfs@^3.4.1:
   version "3.4.1"

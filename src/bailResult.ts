@@ -26,6 +26,7 @@ const bailResult = (
         break;
       }
     } catch (err) {
+      console.log('err ', err);
       hasError = true;
     }
   }

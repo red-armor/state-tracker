@@ -21,7 +21,6 @@ const createPlainTrackerObject = function({
     _type: Array.isArray(base) ? Type.Array : Type.Object,
     _base: base,
     _parentProxy: parentProxy,
-    _childProxies: {},
     _nextChildProxies: new Map(),
     _isPeeking: false,
     _isStrictPeeking: false,

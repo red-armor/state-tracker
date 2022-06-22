@@ -108,6 +108,8 @@ class Reaction {
     this._disposer = container.register(this);
   }
 
+  // 当state发生变化时，尽量聚焦当前Reaction所关联的state对应的key的变化，
+  // 如果不是的话，则自动忽略
   registerFineGrainListener(key: string) {
     const container = this.getContainer();
     this._fineGrainListenerDisposer = container.registerFineGrainListener(

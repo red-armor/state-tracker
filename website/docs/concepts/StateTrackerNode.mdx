@@ -1,0 +1,91 @@
+---
+title: StateTrackerNode
+sidebar_position: 2
+---
+
+## Functions
+
+### track
+
+```ts
+track({ target, path: base, value, key }: {
+    target: object;
+    path: Array<string>;
+    key: string | number;
+    value: any;
+}) => void
+```
+
+处理依赖收集的，那么它在什么情况下会进行依赖收集呢？
+
+- `tracker._isPeeking`控制，但是这个是`internal property`；比如在进行`shallowCopy`或者`peek`操作的时候会进行设置
+- `stateTrackerContext.getCurrent()`不存在，那么
+  - `reaction.scheduleRun`: 自动创建scope，`reaction`中的`fn`方法在执行时会进行依赖收集
+  - `reaction.enter`: 方法显式声明进入`tracker context`
+
+```ts
+// proxy.ts
+const handler = {
+  get: () => {
+    if (!isPeeking) {
+      if (stateTrackerContext.getCurrent()) {
+        stateTrackerContext.getCurrent().track({
+          target,
+          key: prop,
+          value: nextValue,
+          path: nextAccessPath,
+        });
+      }
+    }
+  }
+}
+```
+
+#### Scenario
+
+##### observe in relinx
+在`observe`的实现中，通过`EnterHelper`和`LeaveHelper`的方式，主动调用`enter`和`leave`方法；从而实现在observed component中所有的值的获取是一个`tracker`
+```ts
+const reaction = useMemo(() => {
+  return new Reaction({
+    fn,
+    state: store.getState(),
+    scheduler: () => {
+      // Even though, reaction.dispose is called on unmounted.
+      // but, if component detect values change first. then current
+      // forceUpdate may cause `memory leak` issue.
+      if (initialRef.current || !mountedRef.current) return;
+      setV(v => v + 1);
+    },
+    changedValue,
+    activityListener,
+    ...restOptions,
+  });
+}, [store, fn]);
+```
+
+##### subscription in relinx
+只要`fn`中使用到的`state`发生变化时，`fn`就会被自动trigger
+```ts
+const reactionOptions: any = {
+  fn: nextFunc,
+  state: applicationState,
+  scheduler: this.subscriptionScheduler(
+    syntheticKeyModel,
+    nextFunc.displayName,
+    getReaction
+  ),
+  ...options,
+};
+
+// TODO: in synthetic mode, not used model reaction should be destroyed
+reaction = new Reaction(reactionOptions);
+```
+
+##### reducer in relinx
+
+注意在进行reducer的处理的时候，使用到的`state`并没有被track，因为这个时候没有`tracker context`的存在
+
+<img src={require('./assets/reducer.png').default} style={{ width: '300px' }} />
+<img src={require('./assets/model.png').default} style={{ width: '300px' }} />
+<img src={require('./assets/tracker.png').default} style={{ width: '300px' }} />

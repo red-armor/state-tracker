@@ -19,6 +19,7 @@ class StateTrackerNode {
   public propsGraphMap: Map<string, Graph> = new Map();
 
   private _observerProps: ObserverProps;
+  private _derivedValueMap: WeakMap<any, any> = new WeakMap();
 
   readonly _shallowEqual: boolean;
   readonly _reaction?: Reaction;
@@ -35,10 +36,13 @@ class StateTrackerNode {
     }
   > = new Map();
 
+  // 存储被访问path对应的值，可以认为是old value
   private _affectedPathValue: Map<string, any> = new Map();
 
   // For es5, proxy target may not match a value. In this condition
   // compare raw value key will be better.
+  // 为了props value能够拿到对应的props key
+  // 比如 { data: { id: 1 } } 形式可以通过{id: 1} => 'data'
   private _propsProxyToKeyMap: Map<object, string> = new Map();
 
   constructor({
@@ -203,13 +207,16 @@ class StateTrackerNode {
       const affectedKey = this.generateAffectedPathKey(affectedPath);
       const currentValue = this._affectedPathValue.get(affectedKey);
 
+      const rawNewValue = raw(newValue);
+      const rawCurrentValue = raw(currentValue);
+
       if (!this._shallowEqual) {
         if (!graph.childrenMap.size) {
-          if (raw(newValue) !== raw(currentValue)) {
+          if (rawNewValue !== rawCurrentValue) {
             token.isEqual = false;
             token.key = key;
-            token.nextValue = raw(newValue);
-            token.currentValue = raw(currentValue);
+            token.nextValue = rawNewValue;
+            token.currentValue = rawCurrentValue;
             return token;
           }
         } else {
@@ -217,11 +224,17 @@ class StateTrackerNode {
           if (!childEqualityToken.isEqual) return childEqualityToken;
         }
       } else {
-        if (raw(newValue) !== raw(currentValue)) {
+        // 之所以有derivedValueMap的使用，
+        if (
+          rawNewValue !== rawCurrentValue &&
+          (!this._derivedValueMap.get(rawNewValue) ||
+            (this._derivedValueMap.get(rawNewValue) &&
+              raw(this._derivedValueMap.get(rawNewValue)) !== rawCurrentValue))
+        ) {
           token.isEqual = false;
           token.key = key;
-          token.nextValue = raw(newValue);
-          token.currentValue = raw(currentValue);
+          token.nextValue = rawNewValue;
+          token.currentValue = rawCurrentValue;
 
           this.logActivity('makeComparisonFailed', {
             type,
@@ -393,15 +406,21 @@ class StateTrackerNode {
   }
 
   track({
+    key,
+    value,
     target,
     path: base,
-    value,
+    isDerived = false,
   }: {
-    target: object;
+    target: {
+      [key: string]: any;
+    };
     path: Array<string>;
     key: string | number;
     value: any;
+    isDerived?: boolean;
   }) {
+    // 如果propsTargetKey存在的话，说明我们在track一个props value
     const propsTargetKey = this._propsProxyToKeyMap.get(raw(target));
     // path will be changedValue, so use copy instead
     const path = base.slice();
@@ -419,9 +438,16 @@ class StateTrackerNode {
       this.setPropsProxyToKeyMapValue(value, propsTargetKey);
       this.attemptToUpdatePropsRootMetaInfo(target, path);
       const { path: rootPath } = this.propsRootMetaMap.get(propsTargetKey)!;
+
+      // 相当于从数据层面将`rootPath`拿掉，比如说，['goods', 'listData', '0']通过
+      // props.data传给子组件 {title: 'first'}, 假如说我们访问`title`的话，
+      // path的值是['goods', 'listData', '0', 'title']，但是对于`propsGraphMap`,
+      // 它的根节点是`data`, 所以我们需要将['goods', 'listData', '0']拿掉
+
       nextPath = [propsTargetKey].concat(path.slice(rootPath.length));
     }
 
+    // 记录到底是属于props的依赖还是state的依赖
     const graphMap = !!propsTargetKey ? this.propsGraphMap : this.stateGraphMap;
     const graphMapKey = !!propsTargetKey ? propsTargetKey : nextPath[0];
     if (!propsTargetKey) {
@@ -429,6 +455,11 @@ class StateTrackerNode {
     }
     // 存储path对应的value，这个可以认为是oldValue
     const affectedPathKey = this.generateAffectedPathKey(nextPath);
+
+    if (isDerived) {
+      this._derivedValueMap.set(raw(target[key]), value);
+    }
+
     this._affectedPathValue.set(affectedPathKey, value);
 
     const graph = graphMap.has(graphMapKey)

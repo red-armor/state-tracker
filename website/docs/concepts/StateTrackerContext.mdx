@@ -1,0 +1,20 @@
+---
+title: StateTrackerContext
+sidebar_position: 1
+---
+
+解决如何尽可能的复用已经创建的Proxy对象，目前主要是通过下面的方式解决
+- `_nextChildProxies`: 在tracker中，它主要是解决在当前的scope下，
+- `swap item`
+- `delete item`
+- `set item to others`
+  - 到另一个子域
+  - 当前子域下的其它模块
+
+## properties
+
+### proxyNextCache
+
+它的使用场景，`dispatch`一个`proxy value`到另一个子域下面
+
+## 如何做deep equal

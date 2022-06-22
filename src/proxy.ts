@@ -89,7 +89,7 @@ export function createProxy(
 
         const nextAccessPath = accessPath.slice().concat(prop as string);
         const isPeeking = tracker._isPeeking;
-        const nextValue = StateTrackerUtil.resolveNextValue({
+        const { isDerived, value } = StateTrackerUtil.resolveNextValue({
           value: target[prop],
           tracker,
           stateTrackerContext,
@@ -104,13 +104,14 @@ export function createProxy(
             stateTrackerContext.getCurrent().track({
               target,
               key: prop,
-              value: nextValue,
+              isDerived,
+              value: value,
               path: nextAccessPath,
             });
           }
         }
 
-        return nextValue;
+        return value;
       } catch (err) {
         console.log('[state-tracker] ', err);
       }

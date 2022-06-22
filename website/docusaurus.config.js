@@ -15,7 +15,7 @@ const config = {
   favicon: 'img/favicon.ico',
   organizationName: 'facebook', // Usually your GitHub org/user name.
   projectName: 'docusaurus', // Usually your repo name.
-
+  plugins: [require.resolve("docusaurus-plugin-image-zoom")],
   presets: [
     [
       'classic',
@@ -62,6 +62,16 @@ const config = {
             position: 'right',
           },
         ],
+      },
+      zoom: {
+        selector: '.markdown > img',
+        config: {
+          // options you can specify via https://github.com/francoischalifour/medium-zoom#usage
+          background: {
+            light: 'rgb(255, 255, 255)',
+            dark: 'rgb(50, 50, 50)'
+          }
+        }
       },
       footer: {
         style: 'dark',
