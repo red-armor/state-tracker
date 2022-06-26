@@ -12,9 +12,9 @@ export interface ProduceProps {
 }
 
 export interface ProduceProxyOptions {
-  accessPath: Array<string>;
+  accessPath?: Array<string>;
   parentProxy?: IStateTracker;
-  rootPath: Array<string>;
+  rootPath?: Array<string>;
   stateTrackerContext: StateTrackerContext;
   context?: string;
   isDraft?: boolean;

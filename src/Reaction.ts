@@ -16,10 +16,10 @@ class Reaction {
   private fn: ReactionFn;
   public name: string;
   private state: IStateTracker;
-  private _stateTrackerNode: StateTrackerNode;
+  public _stateTrackerNode: StateTrackerNode;
   private props?: ReactionProps;
   private scheduler: Function;
-  private _shallowEqual: boolean = true;
+  public _shallowEqual: boolean = true;
   private _changedValue?: ChangedValue;
 
   private _stateCompareLevel: null | number = null;
@@ -244,7 +244,6 @@ class Reaction {
     const { stateCompareLevel = 0 } = options || {};
 
     const keys = Array.from(this._affectedFineGrainKeys);
-    let truthy = true;
     const token = {
       reaction: this,
       isEqual: true,
@@ -260,37 +259,23 @@ class Reaction {
       affectedRootKeys: keys,
     });
 
-    for (let idx = 0; idx < keys.length; idx++) {
-      // this._stateCompareLevel === 0, which means comparison start from root.
-      // const state  = {
-      //    app: { list: [] },
-      //    bar: { name: ''}
-      // }
-      // if app not equal, it will return false
-      const root = ([] as Array<string>)
-        .concat(keys[idx])
-        .slice(0, stateCompareLevel_);
-      truthy = this._stateTrackerNode.isStateEqual(
-        state,
-        root,
-        this._changedValue
-      );
-      if (!truthy) {
-        token.isEqual = false;
-        this._stateTrackerNode.logActivity('performComparisonEnd');
-        return token;
-      }
-    }
-
+    token.isEqual = this._stateTrackerNode.isStateEqual(
+      state,
+      stateCompareLevel_,
+      this._changedValue
+    );
     this._stateTrackerNode.logActivity('performComparisonEnd');
-
     return token;
   }
 
-  getAffects() {
+  getAffectedPaths() {
+    const paths = this._stateTrackerNode.getAffectedPaths();
+    return paths;
+  }
+
+  buildAffectedPathsGraph(paths: { [key: string]: Array<string> }) {
     const graphMap = new Map();
 
-    const paths = this._stateTrackerNode.getAffectedPaths();
     const keys = Object.keys(paths);
 
     keys.forEach(graphMapKey => {
@@ -302,9 +287,15 @@ class Reaction {
       p.forEach(path => graph?.access(path));
     });
 
-    console.log('graph ', graphMap);
+    return graphMap;
+  }
 
-    return paths;
+  getAffects() {
+    return this._stateTrackerNode._affectedPathValue || new Map();
+  }
+
+  getDerivedValueMap() {
+    return this._stateTrackerNode._derivedValueMap || new WeakMap();
   }
 }
 

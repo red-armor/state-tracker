@@ -18,7 +18,7 @@ class StateTrackerNode {
   public propsGraphMap: Map<string, Graph> = new Map();
 
   private _observerProps: ObserverProps;
-  private _derivedValueMap: WeakMap<any, any> = new WeakMap();
+  public _derivedValueMap: WeakMap<any, any> = new WeakMap();
 
   readonly _shallowEqual: boolean;
   readonly _reaction?: Reaction;
@@ -36,7 +36,7 @@ class StateTrackerNode {
   > = new Map();
 
   // 存储被访问path对应的值，可以认为是old value
-  private _affectedPathValue: Map<string, any> = new Map();
+  public _affectedPathValue: Map<string, any> = new Map();
 
   // For es5, proxy target may not match a value. In this condition
   // compare raw value key will be better.
@@ -270,15 +270,10 @@ class StateTrackerNode {
     //       on parent, there is a new value {a: 1, c: { c1: 2 }}, it
     //       actually, it is not a observable object. maybe it's reasonable,
     //       the new value is not belong to proxyState, it no need to care.
-    const rootPoint = '';
-    const equalityToken = StateTrackerUtil.isEqual({
+    // const rootPoint = '';
+    const equalityToken = StateTrackerUtil.isEqual(nextProps, this._reaction!, {
       type: 'props',
-      shallowEqual: this._shallowEqual,
-      affects: this._affectedPathValue,
-      graphMap: this.propsGraphMap,
-      startPoint: rootPoint,
-      nextValue: nextProps,
-      derivedValueMap: this._derivedValueMap,
+      stateCompareLevel: 0,
     });
 
     this.hydrateFalsyScreenshot(changedValue, equalityToken, 'props');
@@ -288,25 +283,20 @@ class StateTrackerNode {
   }
 
   isStateEqual(
-    state: NextState,
-    rootPath: Array<string> = [],
+    nextRootState: NextState,
+    stateCompareLevel: number,
     changedValue?: ChangedValue
   ) {
-    const nextRootState = StateTrackerUtil.peek(state, rootPath);
-    const rootPoint = rootPath[0];
     this.logActivity('comparisonStart', { type: 'state' });
+    const equalityToken = StateTrackerUtil.isEqual(
+      nextRootState,
+      this._reaction!,
+      {
+        type: 'state',
+        stateCompareLevel,
+      }
+    );
 
-    console.log('is equal ===== ', this._shallowEqual);
-
-    const equalityToken = StateTrackerUtil.isEqual({
-      type: 'state',
-      shallowEqual: this._shallowEqual,
-      graphMap: this.stateGraphMap,
-      startPoint: rootPoint,
-      nextValue: nextRootState,
-      affects: this._affectedPathValue,
-      derivedValueMap: this._derivedValueMap,
-    });
     this.logActivity('comparisonResult', {
       type: 'state',
       equalityToken,

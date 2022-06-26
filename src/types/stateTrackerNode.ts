@@ -2,7 +2,7 @@ import { Reaction } from '..';
 import Graph from '../Graph';
 
 export type EqualityToken = {
-  key: string;
+  key: string | number;
   isEqual: boolean;
   nextValue: any;
   currentValue: any;
@@ -21,7 +21,7 @@ export type ComparisonToken = {
 
 export type ScreenshotToken = {
   reaction?: Reaction;
-  diffKey: string;
+  diffKey: string | number;
   nextValue: any;
   currentValue: any;
   action: string;

@@ -18,6 +18,7 @@ import {
   StateTrackerProperties,
 } from './types';
 import Graph from './Graph';
+import Reaction from './Reaction';
 import StateTrackerContext from './StateTrackerContext';
 import StateTrackerNode from './StateTrackerNode';
 
@@ -118,12 +119,19 @@ const StateTrackerUtil = {
     });
   },
 
-  createEqualityToken(): EqualityToken {
+  createEqualityToken(
+    options: {
+      key?: string | number;
+      isEqual?: boolean;
+      nextValue?: any;
+      currentValue?: any;
+    } = {}
+  ): EqualityToken {
     return {
-      key: '',
-      isEqual: true,
-      nextValue: null,
-      currentValue: null,
+      key: options.key || '',
+      isEqual: !!options.isEqual || true,
+      nextValue: options.nextValue || null,
+      currentValue: options.currentValue || null,
     };
   },
 
@@ -132,7 +140,7 @@ const StateTrackerUtil = {
   },
 
   resolveEqualityToken(options: {
-    key: string;
+    key: string | number;
     currentValue: any;
     nextValue: any;
     derivedValueMap?: WeakMap<any, any>;
@@ -145,7 +153,11 @@ const StateTrackerUtil = {
     } = options;
     const rawNewValue = raw(nextValue);
     const rawCurrentValue = raw(currentValue);
-    const token = this.createEqualityToken();
+    const token = this.createEqualityToken({
+      key,
+      nextValue,
+      currentValue,
+    });
 
     if (
       rawNewValue !== rawCurrentValue &&
@@ -162,45 +174,47 @@ const StateTrackerUtil = {
     return token;
   },
 
-  isEqual(options: {
-    nextValue: any;
-    type: EntityType;
-    startPoint: string;
-    shallowEqual?: boolean;
-    graphMap: Map<string, Graph>;
-    affects?: Map<string, any>;
-    derivedValueMap?: WeakMap<any, any>;
-  }): EqualityToken {
-    const {
-      type,
+  isEqual(
+    nextValue: any,
+    reaction: Reaction,
+    {
+      type = 'state',
+      stateCompareLevel,
       graphMap,
-      nextValue,
-      startPoint,
-      affects = new Map(),
-      shallowEqual = true,
-      derivedValueMap = new WeakMap(),
-    } = options;
-
-    let graph = null;
-    let childrenMap = new Map();
+    }: {
+      type?: EntityType;
+      stateCompareLevel: number;
+      graphMap?: Map<string | number, Graph>;
+    }
+  ): EqualityToken {
+    const shallowEqual = reaction._shallowEqual;
+    const affects = reaction.getAffects();
+    const derivedValueMap = reaction.getDerivedValueMap();
     const token = this.createEqualityToken();
 
-    if (startPoint) {
-      graph = graphMap.get(startPoint);
-      // 证明props并没有被用到；所以，直接返回true就可以了
-      if (!graph) {
-        token.isEqual = true;
-        return token;
-      } else {
-        childrenMap = graph.childrenMap;
+    const nextGraphMap =
+      graphMap ||
+      (type === 'state'
+        ? reaction._stateTrackerNode.stateGraphMap
+        : reaction._stateTrackerNode.propsGraphMap);
+
+    if (stateCompareLevel) {
+      for (const [key, graph] of nextGraphMap.entries()) {
+        const newValue = nextValue[key];
+        const token = this.isEqual(newValue, reaction, {
+          type,
+          stateCompareLevel: stateCompareLevel - 1,
+          graphMap: graph.childrenMap,
+        });
+        if (!token.isEqual) return token;
       }
-    } else {
-      childrenMap = graphMap;
+      return token;
     }
 
     // @ts-ignore
-    for (const [key, graph] of childrenMap.entries()) {
+    for (const [key, graph] of nextGraphMap.entries()) {
       const newValue = nextValue[key];
+
       const affectedPath = graph.getPath();
       const affectedKey = this.generateAffectedPathKey(affectedPath);
       const currentValue = affects.get(affectedKey);
@@ -213,19 +227,13 @@ const StateTrackerUtil = {
             nextValue: newValue,
             derivedValueMap,
           });
-          console.log('token ', token);
           if (!token.isEqual) return token;
         } else {
-          const childEqualityToken = this.isEqual({
-            type: type,
+          const childEqualityToken = this.isEqual(newValue, reaction, {
+            type,
+            stateCompareLevel,
             graphMap: graph.childrenMap,
-            startPoint: '',
-            nextValue: newValue,
-            shallowEqual,
-            affects,
-            derivedValueMap,
           });
-          console.log('children ', graph.childrenMap, childEqualityToken);
           if (!childEqualityToken.isEqual) return childEqualityToken;
         }
       } else {
