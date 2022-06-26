@@ -194,8 +194,9 @@ class Reaction {
   // for state update trigger
   schedulerRun() {
     this._stateTrackerNode.logActivity('schedulerRunStart');
-    this.scheduler(this.run);
+    const result = this.scheduler(this.run);
     this._stateTrackerNode.logActivity('schedulerRunEnd');
+    return result;
   }
 
   enter() {

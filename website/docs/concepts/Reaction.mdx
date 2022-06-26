@@ -5,14 +5,18 @@ sidebar_position: 4
 
 ```ts
 const reaction = new Reaction({
-  fn: function(state) {
-    console.log('state ', state.app.list)
-  },
+  fn: (state: ProxyState) => any,
   state: proxyState,
-});
+  scheduler: (fn: Function) => any,
+}, props?: any | Array<any>);
 ```
 
-## props
+## Params
+
+- `fn`: `autoRun`函数，它会在`Reaction`初始化的时候执行一次，然后在每一次记录的`state`中的值发生变化的时候重新执行一次
+- `state`: `produce`生成的`Proxy object`，它会作为`fn`的第一个参数被使用，`fn`中所有使用到它的节点都会被跟踪
+- `scheduler`: 默认是`(fn: Function) => fn.call(this)`；但是假如你想将`fn`放到下一个`event loop`可以通过这个方式实现
+- `props`: 作为`fn`的第二个参数传递给`fn`，这个就类似组件渲染时的`props`
 
 ### fn
 
@@ -21,3 +25,9 @@ type Fn = (state: ProxyState) => any
 ```
 
 - 第一个参数是`state`
+
+## State & Props
+
+在`Reaction`中它有两个重要的概念是`state`和`props`；之所以，这么设计是借鉴了目前组件的普遍的渲染模式，
+- 组件有自己的域值，称之为`state`
+- 组件有上游传下来的值，称之为`props`
