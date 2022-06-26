@@ -15,7 +15,7 @@ import Graph from './Graph';
 class Reaction {
   private fn: ReactionFn;
   public name: string;
-  private state: IStateTracker;
+  public state: IStateTracker;
   public _stateTrackerNode: StateTrackerNode;
   private props?: ReactionProps;
   private scheduler: Function;

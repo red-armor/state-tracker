@@ -219,7 +219,14 @@ class StateTrackerNode {
   // So it'd better to make props['a'] trackable.
   // TODO: currently. unused props key will be compared as well
   //       which need to be fixed for performance
-  isPropsShallowEqual(nextProps: ObserverProps, changedValue?: ChangedValue) {
+  isPropsShallowEqual(
+    nextProps: ObserverProps,
+    options: {
+      changedValue?: ChangedValue;
+      omitKeys?: Array<string>;
+    }
+  ) {
+    const { changedValue, omitKeys = [] } = options || {};
     const currentKeys = Object.keys(this._observerProps);
     const nextKeys = Object.keys(nextProps);
     const currentKeysLength = currentKeys.length;
@@ -233,6 +240,7 @@ class StateTrackerNode {
 
     for (let idx = 0; idx < nextKeysLength; idx++) {
       const key = nextKeys[idx];
+      if (omitKeys.indexOf(key) !== -1) continue;
       const newValue = nextProps[key];
       const currentValue = this._observerProps[key];
 
@@ -256,7 +264,9 @@ class StateTrackerNode {
     // so rootPoint set to empty string to make it work.
     if (this._shallowEqual) {
       this.logActivity('comparisonStart', { type: 'props' });
-      const equalityToken = this.isPropsShallowEqual(nextProps, changedValue);
+      const equalityToken = this.isPropsShallowEqual(nextProps, {
+        changedValue,
+      });
       this.logActivity('comparisonResult', {
         type: 'props',
         equalityToken,
@@ -264,17 +274,26 @@ class StateTrackerNode {
       this.logActivity('comparisonEnd', { type: 'props' });
       return equalityToken.isEqual;
     }
+    // 针对props的话，我们只能够做到部分的粒度化
 
-    // TODO: the following has a bug, if props's has a literal value
-    //       or a plain object, it will not be tracked. for example,
-    //       on parent, there is a new value {a: 1, c: { c1: 2 }}, it
-    //       actually, it is not a observable object. maybe it's reasonable,
-    //       the new value is not belong to proxyState, it no need to care.
-    // const rootPoint = '';
-    const equalityToken = StateTrackerUtil.isEqual(nextProps, this._reaction!, {
-      type: 'props',
-      stateCompareLevel: 0,
+    const trackerKeys = Array.from(this.propsGraphMap.keys()) || [];
+    let equalityToken = this.isPropsShallowEqual(nextProps, {
+      changedValue,
+      omitKeys: trackerKeys,
     });
+
+    if (equalityToken.isEqual) {
+      // TODO: the following has a bug, if props's has a literal value
+      //       or a plain object, it will not be tracked. for example,
+      //       on parent, there is a new value {a: 1, c: { c1: 2 }}, it
+      //       actually, it is not a observable object. maybe it's reasonable,
+      //       the new value is not belong to proxyState, it no need to care.
+      // const rootPoint = '';
+      equalityToken = StateTrackerUtil.isEqual(nextProps, this._reaction!, {
+        type: 'props',
+        stateCompareLevel: 0,
+      });
+    }
 
     this.hydrateFalsyScreenshot(changedValue, equalityToken, 'props');
     if (!equalityToken.isEqual) this.propsChangedCleanup();

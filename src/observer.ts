@@ -17,11 +17,7 @@ export default (
   return function(...args: Array<any>) {
     const props = args[0];
 
-    if (!reaction)
-      reaction = new Reaction(
-        { fn, state, scheduler: options.scheduler },
-        props
-      );
+    if (!reaction) reaction = new Reaction({ fn, state, ...options }, props);
 
     if (props && !isPlainObject(props)) {
       throw new StateTrackerError(

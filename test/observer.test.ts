@@ -91,6 +91,118 @@ function testTracker(useProxy: boolean) {
       }
     );
 
+    it('deep equal', () => {
+      const state = {
+        app: {
+          list: [
+            { id: 1, label: 'first' },
+            { id: 2, label: 'second' },
+          ],
+        },
+      };
+
+      const funcCache = new Map();
+      const proxyState = produce(state);
+      let runCount = 0;
+
+      // @ts-ignore
+      const fn = observer(
+        proxyState,
+        // @ts-ignore
+        (state: any, props: any) => {
+          const { app } = props;
+          return app.list.forEach((item: any) => {
+            const func = funcCache.has(item.id)
+              ? funcCache.get(item.id)
+              : funcCache
+                  .set(
+                    item.id,
+                    // @ts-ignore
+                    observer(proxyState, (state: any, props: any) => {
+                      const { item } = props;
+                      const { id } = item;
+                      runCount++;
+                      return `${id}`;
+                    })
+                  )
+                  .get(item.id);
+            func({ item });
+          });
+        },
+        {
+          shallowEqual: false,
+        }
+      );
+
+      fn({ app: proxyState.app });
+      expect(runCount).toBe(2);
+
+      const app = state.app;
+      const nextList = app.list.slice();
+      nextList[0] = { ...nextList[0] };
+      proxyState.app = { ...app, list: nextList };
+
+      fn({ app: proxyState.app });
+
+      expect(runCount).toBe(2);
+    });
+
+    it('deep equal v2', () => {
+      const state = {
+        app: {
+          list: [
+            { id: 1, label: 'first' },
+            { id: 2, label: 'second' },
+          ],
+        },
+      };
+
+      const funcCache = new Map();
+      const proxyState = produce(state);
+      let runCount = 0;
+
+      // @ts-ignore
+      const fn = observer(proxyState, (state: any, props: any) => {
+        const { app } = props;
+        return app.list.forEach((item: any) => {
+          const func = funcCache.has(item.id)
+            ? funcCache.get(item.id)
+            : funcCache
+                .set(
+                  item.id,
+                  // @ts-ignore
+                  observer(
+                    proxyState,
+                    // @ts-ignore
+                    (state: any, props: any) => {
+                      const { item } = props;
+                      const { id } = item;
+                      runCount++;
+                      return `${id}`;
+                    },
+                    {
+                      shallowEqual: false,
+                    }
+                  )
+                )
+                .get(item.id);
+          func({ item });
+        });
+      });
+      expect(runCount).toBe(0);
+      fn({ app: proxyState.app });
+      expect(runCount).toBe(2);
+
+      const app = state.app;
+      const nextList = app.list.slice();
+      nextList[0] = { ...nextList[0] };
+      proxyState.app = { ...app, list: nextList };
+
+      fn({ app: proxyState.app });
+
+      expect(runCount).toBe(2);
+    });
+
     it('observer: state', done => {
       const state = {
         app: {

@@ -4,5 +4,6 @@ export type ObserverProps = {
 
 export type ObserverOptions = {
   scheduler?: Function;
-  props?: ObserverProps;
+  shallowEqual?: boolean;
+  // props?: ObserverProps;
 };

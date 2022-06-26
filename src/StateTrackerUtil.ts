@@ -177,16 +177,13 @@ const StateTrackerUtil = {
   isEqual(
     nextValue: any,
     reaction: Reaction,
-    {
-      type = 'state',
-      stateCompareLevel,
-      graphMap,
-    }: {
+    options: {
       type?: EntityType;
       stateCompareLevel: number;
       graphMap?: Map<string | number, Graph>;
     }
   ): EqualityToken {
+    const { type = 'state', stateCompareLevel, graphMap } = options || {};
     const shallowEqual = reaction._shallowEqual;
     const affects = reaction.getAffects();
     const derivedValueMap = reaction.getDerivedValueMap();
