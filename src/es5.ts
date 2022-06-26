@@ -78,7 +78,7 @@ export function createES5Proxy(
         const nextAccessPath = accessPath.concat(prop as string);
         const isPeeking = tracker._isPeeking;
         // const nextValue = base[prop as string];
-        // const nextChildProxies = tracker._nextChildProxies;
+        // const childrenProxies = tracker._childrenProxies;
 
         const { isDerived, value } = StateTrackerUtil.resolveNextValue({
           value: base[prop],
@@ -108,13 +108,13 @@ export function createES5Proxy(
         const tracker = this[TRACKER];
         const base = tracker._base;
         const currentValue = base[prop as string];
-        const nextChildProxies = tracker._nextChildProxies;
+        const childrenProxies = tracker._childrenProxies;
 
         if (raw(currentValue) === raw(newValue)) return true;
 
         base[prop as IndexType] = newValue;
 
-        nextChildProxies.delete(currentValue);
+        childrenProxies.delete(currentValue);
         return true;
       },
     };

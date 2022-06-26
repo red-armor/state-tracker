@@ -85,7 +85,7 @@ export function createProxy(
         // Note: `getBase` can get the latest value, Maybe it's the dispatched value.
         // It means if you call relink to update a key's value, then we can get the
         // value here...
-        // const nextChildProxies = tracker._nextChildProxies;
+        // const childrenProxies = tracker._childrenProxies;
 
         const nextAccessPath = accessPath.slice().concat(prop as string);
         const isPeeking = tracker._isPeeking;
@@ -126,7 +126,7 @@ export function createProxy(
       const tracker = Reflect.get(target, TRACKER) as StateTrackerProperties;
       const base = tracker._base;
       const currentValue = base[prop as string];
-      const nextChildProxies = tracker._nextChildProxies;
+      const childrenProxies = tracker._childrenProxies;
       // if (base === newValue) return true;
       // TODO：可能还需要查看value是不是match，万一被设置了一个ref一样，但是path不一样的怎么搞。。
       if (raw(currentValue) === raw(newValue)) return true;
@@ -140,7 +140,7 @@ export function createProxy(
       // if (StateTrackerUtil.hasTracker(newValue)) {
       //   nextValue = StateTrackerUtil.getTracker(newValue)._base
       // }
-      nextChildProxies.delete(currentValue);
+      childrenProxies.delete(currentValue);
       return Reflect.set(target, prop, nextValue, receiver);
     },
   };

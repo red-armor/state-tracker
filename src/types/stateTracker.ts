@@ -39,7 +39,7 @@ export interface StateTrackerProperties {
   _base: Base;
   // _shadowBase: Base;
   _parentProxy: IStateTracker | null;
-  _nextChildProxies: any;
+  _childrenProxies: any;
   // _focusKeyToTrackerMap: FocusKeyToTrackerMap;
   _isPeeking: boolean;
   _isStrictPeeking: boolean;

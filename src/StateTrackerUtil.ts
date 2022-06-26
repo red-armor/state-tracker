@@ -137,7 +137,7 @@ const StateTrackerUtil = {
     stateTrackerContext: StateTrackerContext;
     createProxy: (state: State, options: ProduceProxyOptions) => IStateTracker;
   }) {
-    const nextChildProxies = tracker._nextChildProxies;
+    const childrenProxies = tracker._childrenProxies;
     const token = {
       isDerived: false,
       value,
@@ -149,9 +149,9 @@ const StateTrackerUtil = {
     // used for cached key
     const rawNextValue = raw(token.value);
 
-    // 1. use value in nextChildProxies
-    if (nextChildProxies.has(rawNextValue)) {
-      token.value = nextChildProxies.get(rawNextValue);
+    // 1. use value in childrenProxies
+    if (childrenProxies.has(rawNextValue)) {
+      token.value = childrenProxies.get(rawNextValue);
       return token;
     }
 
@@ -173,7 +173,7 @@ const StateTrackerUtil = {
         // so we only care the path except the end point !!!
         // not matched, will be placed in getCachedNextProxy...But, it still has a issue.
         // set more than once, then it may have overlap!!
-        nextChildProxies.set(rawNextValue, cachedProxy);
+        childrenProxies.set(rawNextValue, cachedProxy);
         token.value = cachedProxy;
         return token;
       }
@@ -189,7 +189,7 @@ const StateTrackerUtil = {
         const cachedNextTracker = StateTrackerUtil.getTracker(cachedNextProxy);
 
         if (rootPoint === cachedNextTracker._accessPath[0]) {
-          // nextChildProxies.set(rawNextValue, cachedNextProxy);
+          // childrenProxies.set(rawNextValue, cachedNextProxy);
           token.value = cachedNextProxy;
           return token;
         }
@@ -213,7 +213,7 @@ const StateTrackerUtil = {
         rawNextValue,
         token.value
       );
-      // nextChildProxies.set(rawNextValue, token.value);
+      // childrenProxies.set(rawNextValue, token.value);
       return token;
     }
 
@@ -244,7 +244,7 @@ const StateTrackerUtil = {
     }
 
     stateTrackerContext.setCachedProxy(rawNextValue, token.value);
-    nextChildProxies.set(rawNextValue, token.value);
+    childrenProxies.set(rawNextValue, token.value);
     return token;
   },
 };

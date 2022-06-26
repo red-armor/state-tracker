@@ -5,13 +5,15 @@ import {
   ProxyNextCache,
   StateTrackerContextProps,
 } from './types/stateTrackerContext';
-import { IStateTracker, ObserverProps } from '.';
+import { IStateTracker, ObserverProps } from './types';
 import Container from './Container';
 
 class StateTrackerContext {
   private queue: Array<StateTrackerNode>;
   private _lastUpdateAt: number;
   private _id: string;
+  // 原则上，还是先用`childrenProxies`中的值，只有当是一个被经过createProxy处理
+  // 过的对象才能够放到cache里面
   private proxyCache: ProxyCache;
   private proxyNextCache: ProxyNextCache;
   readonly container: Container;

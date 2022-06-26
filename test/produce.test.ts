@@ -122,7 +122,7 @@ function testTracker(useProxy: boolean) {
 
       expect(proxyState.a).toEqual({ a1: 1, a2: 2 });
       expect(proxyState.c).toEqual(3);
-      const childProxies = tracker._nextChildProxies;
+      const childProxies = tracker._childrenProxies;
 
       expect(childProxies.has(state.a)).toBeTruthy();
       expect(childProxies.has(state.c)).toBeFalsy();
@@ -146,7 +146,7 @@ function testTracker(useProxy: boolean) {
 
       expect(proxyState.a).toEqual([2, 3, 4]);
       expect(proxyState.c).toEqual(3);
-      const childProxies = tracker._nextChildProxies;
+      const childProxies = tracker._childrenProxies;
       expect(childProxies.has(state.a)).toBeTruthy();
       expect(childProxies.has(state.c)).toBeFalsy();
       expect(childProxies.size).toBe(1);
@@ -167,7 +167,7 @@ function testTracker(useProxy: boolean) {
       const proxyState = produce(state);
       const tracker = StateTrackerUtil.getTracker(proxyState.b);
       expect(proxyState.c).toEqual(3);
-      const childProxies = tracker._nextChildProxies;
+      const childProxies = tracker._childrenProxies;
       expect(childProxies.size).toBe(0);
     });
 
@@ -185,7 +185,7 @@ function testTracker(useProxy: boolean) {
       const proxyState = produce(state);
       const tracker = StateTrackerUtil.getTracker(proxyState.b);
       expect(proxyState.b.b2).toEqual(undefined);
-      const childProxies = tracker._nextChildProxies;
+      const childProxies = tracker._childrenProxies;
       expect(childProxies.size).toBe(0);
     });
 
@@ -206,12 +206,12 @@ function testTracker(useProxy: boolean) {
 
       expect(proxyState.a).toEqual([2, 3, 4]);
       expect(proxyState.c).toEqual(3);
-      const childProxies = tracker._nextChildProxies;
+      const childProxies = tracker._childrenProxies;
       expect(childProxies.size).toBe(1);
       proxyState.a = { a1: 1 };
-      const nextChildProxies = tracker._nextChildProxies;
+      const childrenProxies = tracker._childrenProxies;
 
-      expect(nextChildProxies.size).toBe(0);
+      expect(childrenProxies.size).toBe(0);
     });
 
     it('childProxies key will be deleted after set with new value', () => {
@@ -238,7 +238,7 @@ function testTracker(useProxy: boolean) {
       const proxyState = produce(state);
       expect(proxyState.b.list).toEqual(list);
       const tracker = StateTrackerUtil.getTracker(proxyState);
-      const childProxies = tracker._nextChildProxies;
+      const childProxies = tracker._childrenProxies;
       expect(childProxies.size).toBe(1);
 
       proxyState.b = { b1: [1] };
