@@ -47,18 +47,15 @@ function testTracker(useProxy: boolean) {
       let count = 0;
       let title = '';
 
-      const getState = () => proxyState;
-
       new Reaction({
-        fn: ({ getState }: { getState: Function }) => {
-          const state = getState();
+        fn: (state: any) => {
           title = state.app.title;
           count++;
         },
         state: proxyState,
-        scheduler: (fn: Function) => {
-          fn({ getState });
-        },
+        // scheduler: (fn: Function) => {
+        //   fn({ getState });
+        // },
       });
       expect(count).toBe(1);
       expect(title).toBe('current');

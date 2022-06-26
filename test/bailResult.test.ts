@@ -27,20 +27,18 @@ function testTracker(useProxy: boolean) {
       let count = 0;
       let value;
 
-      const getState = () => proxyState;
+      // const getState = () => proxyState;
 
       new Reaction({
-        fn: ({ getState }: { getState: Function }) => {
-          const state = getState();
-
+        fn: (state: any) => {
           const result = bailResult(state, [() => !!state.app.name]);
           value = result;
           count++;
         },
         state: proxyState,
-        scheduler: (fn: Function) => {
-          fn({ getState });
-        },
+        // scheduler: (fn: Function) => {
+        //   fn({ getState });
+        // },
       });
 
       expect(count).toBe(1);
@@ -61,20 +59,16 @@ function testTracker(useProxy: boolean) {
       let count = 0;
       let value;
 
-      const getState = () => proxyState;
-
       new Reaction({
-        fn: ({ getState }: { getState: Function }) => {
-          const state = getState();
-
+        fn: (state: any) => {
           const result = bailResult(state, [() => !!state.app.title]);
           value = result;
           count++;
         },
         state: proxyState,
-        scheduler: (fn: Function) => {
-          fn({ getState });
-        },
+        // scheduler: (fn: Function) => {
+        //   fn({ getState });
+        // },
       });
 
       expect(count).toBe(1);
@@ -95,12 +89,10 @@ function testTracker(useProxy: boolean) {
       let count = 0;
       let value;
 
-      const getState = () => proxyState;
+      // const getState = () => proxyState;
 
       new Reaction({
-        fn: ({ getState }: { getState: Function }) => {
-          const state = getState();
-
+        fn: (state: any) => {
           const result = bailResult(
             state,
             [() => !!state.app.name, () => !!state.app.title],
@@ -110,9 +102,9 @@ function testTracker(useProxy: boolean) {
           count++;
         },
         state: proxyState,
-        scheduler: (fn: Function) => {
-          fn({ getState });
-        },
+        // scheduler: (fn: Function) => {
+        //   fn({ getState });
+        // },
       });
 
       expect(count).toBe(1);
@@ -133,12 +125,10 @@ function testTracker(useProxy: boolean) {
       let count = 0;
       let value;
 
-      const getState = () => proxyState;
+      // const getState = () => proxyState;
 
       new Reaction({
-        fn: ({ getState }: { getState: Function }) => {
-          const state = getState();
-
+        fn: (state: any) => {
           const result = bailResult(
             state,
             [() => !!state.content.name, () => !!state.app.title],
@@ -148,9 +138,9 @@ function testTracker(useProxy: boolean) {
           count++;
         },
         state: proxyState,
-        scheduler: (fn: Function) => {
-          fn({ getState });
-        },
+        // scheduler: (fn: Function) => {
+        //   fn({ getState });
+        // },
       });
 
       expect(count).toBe(1);
@@ -172,11 +162,8 @@ function testTracker(useProxy: boolean) {
       let count = 0;
       let value;
 
-      const getState = () => proxyState;
-
       new Reaction({
-        fn: ({ getState }: { getState: Function }) => {
-          const state = getState();
+        fn: (state: any) => {
           const result = bailResult(
             state,
             [() => !!state.content.name, () => !!state.content.title],
@@ -187,9 +174,9 @@ function testTracker(useProxy: boolean) {
           count++;
         },
         state: proxyState,
-        scheduler: (fn: Function) => {
-          fn({ getState });
-        },
+        // scheduler: (fn: Function) => {
+        //   fn({ getState });
+        // },
       });
 
       expect(count).toBe(1);
@@ -230,11 +217,8 @@ function testTracker(useProxy: boolean) {
       let count = 0;
       let value;
 
-      const getState = () => proxyState;
-
       new Reaction({
-        fn: ({ getState }: { getState: Function }) => {
-          const state = getState();
+        fn: (state: any) => {
           const result = bailResult(state, [
             () => state.content.name,
             () => state.content.title,
@@ -244,9 +228,9 @@ function testTracker(useProxy: boolean) {
           count++;
         },
         state: proxyState,
-        scheduler: (fn: Function) => {
-          fn({ getState });
-        },
+        // scheduler: (fn: Function) => {
+        //   fn({ getState });
+        // },
       });
 
       expect(count).toBe(1);

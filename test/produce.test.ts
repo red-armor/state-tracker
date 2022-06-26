@@ -920,11 +920,10 @@ function testTracker(useProxy: boolean) {
       let count = 0;
       let value;
 
-      const getState = () => proxyState;
+      // const getState = () => proxyState;
 
       new Reaction({
-        fn: ({ getState }: { getState: Function }) => {
-          const state = getState();
+        fn: (state: any) => {
           const stc = StateTrackerUtil.getContext(state);
           const stn = stc.getCurrent();
           const reaction = stn.getReaction();
@@ -937,9 +936,9 @@ function testTracker(useProxy: boolean) {
           }
         },
         state: proxyState,
-        scheduler: (fn: Function) => {
-          fn({ getState });
-        },
+        // scheduler: (fn: Function) => {
+        //   fn({ getState });
+        // },
       });
 
       expect(count).toBe(1);
@@ -984,11 +983,10 @@ function testTracker(useProxy: boolean) {
       let count = 0;
       let value;
 
-      const getState = () => proxyState;
+      // const getState = () => proxyState;
 
       new Reaction({
-        fn: ({ getState }: { getState: Function }) => {
-          const state = getState();
+        fn: (state: any) => {
           const stc = StateTrackerUtil.getContext(state);
           const stn = stc.getCurrent();
           const reaction = stn.getReaction();
@@ -1001,9 +999,9 @@ function testTracker(useProxy: boolean) {
           }
         },
         state: proxyState,
-        scheduler: (fn: Function) => {
-          fn({ getState });
-        },
+        // scheduler: (fn: Function) => {
+        //   fn({ getState });
+        // },
       });
 
       expect(count).toBe(1);
@@ -1011,18 +1009,10 @@ function testTracker(useProxy: boolean) {
 
       let content = { name: 'name' };
 
-      StateTrackerUtil.perform(
-        proxyState,
-        {
-          ...proxyState,
-          content,
-        },
-        {
-          afterCallback: () => {
-            proxyState.content = content;
-          },
-        }
-      );
+      StateTrackerUtil.setValue(proxyState, {
+        ...proxyState,
+        content,
+      });
 
       expect(count).toBe(2);
       expect(value).toBe('name');

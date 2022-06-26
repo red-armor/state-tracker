@@ -88,6 +88,33 @@ const StateTrackerUtil = {
     });
   },
 
+  setValue(
+    state: IStateTracker,
+    nextState:
+      | IStateTracker
+      | {
+          [key: string]: any;
+        },
+    configs?: {
+      stateCompareLevel?: number;
+    }
+  ) {
+    const tracker = state[TRACKER];
+    const context = tracker._stateTrackerContext;
+    const { container } = context;
+    const { stateCompareLevel } = configs || {};
+    container.perform(nextState, {
+      afterCallback: () => {
+        const keys = Object.keys(nextState);
+        for (let index = 0; index < keys.length; index++) {
+          const key = keys[index];
+          if (state[key] !== nextState[key]) state[key] = nextState[key];
+        }
+      },
+      stateCompareLevel,
+    });
+  },
+
   getContext: function(proxy: IStateTracker) {
     const tracker = proxy[TRACKER];
     return tracker._stateTrackerContext;

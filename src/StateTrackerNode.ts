@@ -180,15 +180,15 @@ class StateTrackerNode {
   isEqual(
     type: EntityType,
     graphMap: Map<string, Graph>,
-    key: string,
+    startPoint: string,
     nextValue: any
   ): EqualityToken {
     const token = this.equalityToken();
     let graph = null;
     let childrenMap = new Map();
 
-    if (key) {
-      graph = graphMap.get(key);
+    if (startPoint) {
+      graph = graphMap.get(startPoint);
       // 证明props并没有被用到；所以，直接返回true就可以了
       if (!graph) {
         token.isEqual = true;
@@ -468,7 +468,7 @@ class StateTrackerNode {
     graph?.access(nextPath);
   }
 
-  getStateRemarkable() {
+  getAffectedPaths() {
     const result: {
       [key: string]: Array<Array<string>>;
     } = {};

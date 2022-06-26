@@ -1,0 +1,22 @@
+---
+title: Getting Started
+sidebar_position: 1
+---
+
+__A fast, intuitive, access path based reactive react state management__
+
+## Usage
+
+```ts
+import { produce, Reaction } from 'state-tracker'
+
+const state = {
+  app: {
+    list: [{ id: 1, label: 'first' }],
+    location: { city: 'shanghai' },
+    title: 'current',
+    description: 'testing',
+  },
+};
+const proxyState = produce(state);
+```

@@ -25,7 +25,8 @@ function testTracker(useProxy: boolean) {
       const fn = observer(proxyState, (props: any) => {
         const { app } = props;
         return app.list.forEach((item: any) => {
-          const func = observer(proxyState, (props: any) => {
+          // @ts-ignore
+          const func = observer(proxyState, (state: any, props: any) => {
             const { item } = props;
             return item.id;
           });
@@ -54,7 +55,8 @@ function testTracker(useProxy: boolean) {
         const proxyState = produce(state);
         let runCount = 0;
 
-        const fn = observer(proxyState, (props: any) => {
+        // @ts-ignore
+        const fn = observer(proxyState, (state: any, props: any) => {
           const { app } = props;
           return app.list.forEach((item: any) => {
             const func = funcCache.has(item.id)
@@ -62,7 +64,8 @@ function testTracker(useProxy: boolean) {
               : funcCache
                   .set(
                     item.id,
-                    observer(proxyState, (props: any) => {
+                    // @ts-ignore
+                    observer(proxyState, (state: any, props: any) => {
                       const { item } = props;
                       const { id } = item;
                       runCount++;
@@ -116,7 +119,9 @@ function testTracker(useProxy: boolean) {
           } catch (err) {
             done(err);
           }
-          const func = observer(proxyState, (props: any) => {
+
+          // @ts-ignore
+          const func = observer(proxyState, (state: any, props: any) => {
             const { item } = props;
             return item.id;
           });

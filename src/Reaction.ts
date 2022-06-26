@@ -166,7 +166,8 @@ class Reaction {
     // should not teardown, or props will cleaned two times
     // this.teardown();
     StateTrackerUtil.enterNode(this.state, this._stateTrackerNode);
-    const nextArgs = [...args];
+
+    const nextArgs = [this.state, ...args];
     let result;
     if (this.props) nextArgs.push(this.props);
     try {
@@ -193,7 +194,6 @@ class Reaction {
   // for state update trigger
   schedulerRun() {
     this._stateTrackerNode.logActivity('schedulerRunStart');
-    // this.teardown();
     this.scheduler(this.run);
     this._stateTrackerNode.logActivity('schedulerRunEnd');
   }
@@ -282,6 +282,10 @@ class Reaction {
     this._stateTrackerNode.logActivity('performComparisonEnd');
 
     return token;
+  }
+
+  getAffects() {
+    return this._stateTrackerNode.getAffectedPaths();
   }
 }
 

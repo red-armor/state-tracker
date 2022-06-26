@@ -1,0 +1,23 @@
+---
+title: Reaction
+sidebar_position: 4
+---
+
+```ts
+const reaction = new Reaction({
+  fn: function(state) {
+    console.log('state ', state.app.list)
+  },
+  state: proxyState,
+});
+```
+
+## props
+
+### fn
+
+```ts
+type Fn = (state: ProxyState) => any
+```
+
+- 第一个参数是`state`
