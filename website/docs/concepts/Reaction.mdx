@@ -31,3 +31,96 @@ type Fn = (state: ProxyState) => any
 在`Reaction`中它有两个重要的概念是`state`和`props`；之所以，这么设计是借鉴了目前组件的普遍的渲染模式，
 - 组件有自己的域值，称之为`state`
 - 组件有上游传下来的值，称之为`props`
+
+:::note
+1. fn中第一个参数是`state`，第二个参数是可选的`props`
+2. 如果只有使用到的`props`值发生变化，是不会触发`re-run`
+3. 如果`props`发生了变化，同时`state`发生了变化，那么在`fn`中可以拿到最新的`state`和`props`
+:::
+
+### Examples
+
+#### state中值的变化会触发re-run
+
+```ts
+const state = { app: { a1: 1, a2: 2 } };
+const proxyState = produce(state);
+let count = 0
+
+new Reaction({
+  fn: (state, props) => {
+    console.log('a1 ', state.app.a1);
+    count++;
+  },
+  state: proxyState,
+});
+
+console.log('count1 ', count)   // 1
+StateTrackerUtil.setValue(
+  proxyState, {
+    app: { a1: 2, a2: 2 },
+  }
+)
+
+console.log('count2 ', count) // 2
+```
+
+#### 只有props的变化，不会触发`rerun`
+
+```ts
+const state = { app: { a1: 1, a2: 2 } };
+const data = { data: [{ title: 'first' }]}
+const proxyState = produce(state);
+const proxyData = produce(data)
+let count = 0
+
+new Reaction({
+  fn: (state, props) => {
+    console.log('title ', props.data[0].title);
+    count++;
+  },
+  state: proxyState,
+}, proxyData);
+
+console.log('count1 ', count)   // 1
+StateTrackerUtil.setValue(
+  proxyData, {
+    data: [{ title: 'second' }]
+  }
+)
+
+console.log('count2 ', count) // 1
+```
+
+#### 当state也发生变化时，才能够将props的最新值应用上
+
+```ts
+const state = { app: { a1: 1, a2: 2 } };
+const data = { data: [{ title: 'first' }]}
+const proxyState = produce(state);
+const proxyData = produce(data)
+let count = 0
+
+new Reaction({
+  fn: (state, props) => {
+    console.log('a1 ', state.app.a1)
+    console.log('title ', props.data[0].title);
+    count++;
+  },
+  state: proxyState,
+}, proxyData);
+
+console.log('count1 ', count)   // 1
+StateTrackerUtil.setValue(
+  proxyData, {
+    data: [{ title: 'second' }]
+  }
+)
+StateTrackerUtil.setValue(
+  proxyState, {
+    app: { a1: 2, a2: 2 }
+  }
+)
+
+console.log('count2 ', count) // 1
+```
