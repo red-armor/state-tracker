@@ -22,7 +22,7 @@ import Container from './Container';
 
 export function produceImpl(
   state: State,
-  affected?: WeakMap<object, IStateTracker>,
+  // affected?: WeakMap<object, IStateTracker>,
   proxyCache?: WeakMap<object, IStateTracker>
 ) {
   const container = new Container({
@@ -30,7 +30,7 @@ export function produceImpl(
   });
   const stateTrackerContext = new StateTrackerContext({
     proxyCache,
-    affected,
+    // affected,
     container,
   });
 

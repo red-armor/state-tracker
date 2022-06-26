@@ -1,17 +1,19 @@
-import StateTrackerNode from './StateTrackerNode';
 import StateTrackerUtil from './StateTrackerUtil';
+import StateTrackerNode from './StateTrackerNode';
 import { generateReactionName, isPlainObject } from './commons';
 import {
   ReactionProps,
   IStateTracker,
   NextState,
   ChangedValue,
+  ReactionFn,
   ScreenshotToken,
 } from './types';
 import StateTrackerError from './StateTrackerError';
+import Graph from './Graph';
 
 class Reaction {
-  private fn: Function;
+  private fn: ReactionFn;
   public name: string;
   private state: IStateTracker;
   private _stateTrackerNode: StateTrackerNode;
@@ -30,7 +32,7 @@ class Reaction {
 
   constructor(
     options: {
-      fn: Function;
+      fn: ReactionFn;
       name?: string;
       state: IStateTracker;
       scheduler?: Function;
@@ -172,7 +174,7 @@ class Reaction {
     if (this.props) nextArgs.push(this.props);
     try {
       this._stateTrackerNode.logActivity('trackDepsStart');
-      result = this.fn.apply(this, nextArgs);
+      result = this.fn.apply(this, nextArgs as any);
       this._stateTrackerNode.logActivity('trackDepsEnd');
     } catch (err) {
       this._stateTrackerNode.logActivity('trackDepsEnd');
@@ -286,7 +288,23 @@ class Reaction {
   }
 
   getAffects() {
-    return this._stateTrackerNode.getAffectedPaths();
+    const graphMap = new Map();
+
+    const paths = this._stateTrackerNode.getAffectedPaths();
+    const keys = Object.keys(paths);
+
+    keys.forEach(graphMapKey => {
+      const graph = graphMap.has(graphMapKey)
+        ? graphMap.get(graphMapKey)
+        : graphMap.set(graphMapKey, new Graph(graphMapKey)).get(graphMapKey);
+
+      const p = paths[graphMapKey];
+      p.forEach(path => graph?.access(path));
+    });
+
+    console.log('graph ', graphMap);
+
+    return paths;
   }
 }
 

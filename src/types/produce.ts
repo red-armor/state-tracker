@@ -7,7 +7,7 @@ export interface State {
 
 export interface ProduceProps {
   state: State;
-  affected?: WeakMap<object, unknown>;
+  // affected?: WeakMap<object, unknown>;
   proxyCache?: WeakMap<object, unknown>;
 }
 

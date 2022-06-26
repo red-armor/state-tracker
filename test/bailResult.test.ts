@@ -228,9 +228,6 @@ function testTracker(useProxy: boolean) {
           count++;
         },
         state: proxyState,
-        // scheduler: (fn: Function) => {
-        //   fn({ getState });
-        // },
       });
 
       expect(count).toBe(1);
@@ -238,72 +235,40 @@ function testTracker(useProxy: boolean) {
 
       let content = { name: 'name' };
 
-      StateTrackerUtil.perform(
-        proxyState,
-        {
-          ...proxyState,
-          content,
-        },
-        {
-          afterCallback: () => {
-            proxyState.content = content;
-          },
-        }
-      );
+      StateTrackerUtil.setValue(proxyState, {
+        ...proxyState,
+        content,
+      });
 
       expect(count).toBe(2);
       expect(value).toBe('name');
 
       // @ts-ignore
       content = { title: 'title' };
-      StateTrackerUtil.perform(
-        proxyState,
-        {
-          ...proxyState,
-          content,
-        },
-        {
-          afterCallback: () => {
-            proxyState.content = content;
-          },
-        }
-      );
+      StateTrackerUtil.setValue(proxyState, {
+        ...proxyState,
+        content,
+      });
       expect(count).toBe(3);
       expect(value).toBe('title');
 
       // @ts-ignore
       // not rerun if not used key's value changed
       content = { title: 'title', location: 'shanghai' };
-      StateTrackerUtil.perform(
-        proxyState,
-        {
-          ...proxyState,
-          content,
-        },
-        {
-          afterCallback: () => {
-            proxyState.content = content;
-          },
-        }
-      );
+      StateTrackerUtil.setValue(proxyState, {
+        ...proxyState,
+        content,
+      });
       expect(count).toBe(3);
       expect(value).toBe('title');
 
       // @ts-ignore
       // will rerun if used key's value changed
       content = { title: 'next', location: 'shanghai' };
-      StateTrackerUtil.perform(
-        proxyState,
-        {
-          ...proxyState,
-          content,
-        },
-        {
-          afterCallback: () => {
-            proxyState.content = content;
-          },
-        }
-      );
+      StateTrackerUtil.setValue(proxyState, {
+        ...proxyState,
+        content,
+      });
       expect(count).toBe(4);
       expect(value).toBe('next');
     });

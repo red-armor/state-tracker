@@ -8,5 +8,5 @@ export type StateTrackerContextProps = {
   container: Container;
   proxyCache?: ProxyCache;
   proxyNextCache?: ProxyNextCache;
-  affected?: any;
+  // affected?: any;
 };

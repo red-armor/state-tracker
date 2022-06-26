@@ -2,7 +2,6 @@ import { isPlainObject, isTrackable, raw, noop } from './commons';
 import {
   Activity,
   NextState,
-  EntityType,
   ChangedValue,
   ObserverProps,
   EqualityToken,
@@ -177,91 +176,9 @@ class StateTrackerNode {
     return path.join('_');
   }
 
-  isEqual(
-    type: EntityType,
-    graphMap: Map<string, Graph>,
-    startPoint: string,
-    nextValue: any
-  ): EqualityToken {
-    const token = this.equalityToken();
-    let graph = null;
-    let childrenMap = new Map();
-
-    if (startPoint) {
-      graph = graphMap.get(startPoint);
-      // 证明props并没有被用到；所以，直接返回true就可以了
-      if (!graph) {
-        token.isEqual = true;
-        return token;
-      } else {
-        childrenMap = graph.childrenMap;
-      }
-    } else {
-      childrenMap = graphMap;
-    }
-
-    // @ts-ignore
-    for (const [key, graph] of childrenMap.entries()) {
-      const newValue = nextValue[key];
-      const affectedPath = graph.getPath();
-      const affectedKey = this.generateAffectedPathKey(affectedPath);
-      const currentValue = this._affectedPathValue.get(affectedKey);
-
-      const rawNewValue = raw(newValue);
-      const rawCurrentValue = raw(currentValue);
-
-      if (!this._shallowEqual) {
-        if (!graph.childrenMap.size) {
-          if (rawNewValue !== rawCurrentValue) {
-            token.isEqual = false;
-            token.key = key;
-            token.nextValue = rawNewValue;
-            token.currentValue = rawCurrentValue;
-            return token;
-          }
-        } else {
-          const childEqualityToken = this.isEqual(type, graph, '', newValue);
-          if (!childEqualityToken.isEqual) return childEqualityToken;
-        }
-      } else {
-        // 之所以有derivedValueMap的使用，
-        if (
-          rawNewValue !== rawCurrentValue &&
-          (!this._derivedValueMap.get(rawNewValue) ||
-            (this._derivedValueMap.get(rawNewValue) &&
-              raw(this._derivedValueMap.get(rawNewValue)) !== rawCurrentValue))
-        ) {
-          token.isEqual = false;
-          token.key = key;
-          token.nextValue = rawNewValue;
-          token.currentValue = rawCurrentValue;
-
-          this.logActivity('makeComparisonFailed', {
-            type,
-            affectedPath,
-            affectedKey,
-            currentValue,
-            nextValue,
-          });
-          return token;
-        }
-      }
-    }
-    return token;
-  }
-
   setObserverProps(props?: ObserverProps) {
     this._observerProps = props || {};
     this.registerObserverProps();
-  }
-
-  equalityToken(): EqualityToken {
-    return {
-      key: '',
-      isEqual: true,
-      nextValue: null,
-      currentValue: null,
-    };
   }
 
   hydrateFalsyScreenshot(
@@ -307,7 +224,7 @@ class StateTrackerNode {
     const nextKeys = Object.keys(nextProps);
     const currentKeysLength = currentKeys.length;
     const nextKeysLength = nextKeys.length;
-    const equalityToken = this.equalityToken();
+    const equalityToken = StateTrackerUtil.createEqualityToken();
 
     if (currentKeysLength !== nextKeysLength) {
       equalityToken.isEqual = false;
@@ -354,12 +271,15 @@ class StateTrackerNode {
     //       actually, it is not a observable object. maybe it's reasonable,
     //       the new value is not belong to proxyState, it no need to care.
     const rootPoint = '';
-    const equalityToken = this.isEqual(
-      'props',
-      this.propsGraphMap,
-      rootPoint,
-      nextProps
-    );
+    const equalityToken = StateTrackerUtil.isEqual({
+      type: 'props',
+      shallowEqual: this._shallowEqual,
+      affects: this._affectedPathValue,
+      graphMap: this.propsGraphMap,
+      startPoint: rootPoint,
+      nextValue: nextProps,
+      derivedValueMap: this._derivedValueMap,
+    });
 
     this.hydrateFalsyScreenshot(changedValue, equalityToken, 'props');
     if (!equalityToken.isEqual) this.propsChangedCleanup();
@@ -375,12 +295,18 @@ class StateTrackerNode {
     const nextRootState = StateTrackerUtil.peek(state, rootPath);
     const rootPoint = rootPath[0];
     this.logActivity('comparisonStart', { type: 'state' });
-    const equalityToken = this.isEqual(
-      'state',
-      this.stateGraphMap,
-      rootPoint,
-      nextRootState
-    );
+
+    console.log('is equal ===== ', this._shallowEqual);
+
+    const equalityToken = StateTrackerUtil.isEqual({
+      type: 'state',
+      shallowEqual: this._shallowEqual,
+      graphMap: this.stateGraphMap,
+      startPoint: rootPoint,
+      nextValue: nextRootState,
+      affects: this._affectedPathValue,
+      derivedValueMap: this._derivedValueMap,
+    });
     this.logActivity('comparisonResult', {
       type: 'state',
       equalityToken,
@@ -454,7 +380,7 @@ class StateTrackerNode {
       this._reaction?.registerFineGrainListener(graphMapKey);
     }
     // 存储path对应的value，这个可以认为是oldValue
-    const affectedPathKey = this.generateAffectedPathKey(nextPath);
+    const affectedPathKey = StateTrackerUtil.generateAffectedPathKey(nextPath);
 
     if (isDerived) {
       this._derivedValueMap.set(raw(target[key]), value);

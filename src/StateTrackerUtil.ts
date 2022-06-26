@@ -10,11 +10,14 @@ import {
 import {
   State,
   NextState,
+  EntityType,
+  EqualityToken,
   IStateTracker,
   ObserverProps,
   ProduceProxyOptions,
   StateTrackerProperties,
 } from './types';
+import Graph from './Graph';
 import StateTrackerContext from './StateTrackerContext';
 import StateTrackerNode from './StateTrackerNode';
 
@@ -113,6 +116,130 @@ const StateTrackerUtil = {
       },
       stateCompareLevel,
     });
+  },
+
+  createEqualityToken(): EqualityToken {
+    return {
+      key: '',
+      isEqual: true,
+      nextValue: null,
+      currentValue: null,
+    };
+  },
+
+  generateAffectedPathKey(path: Array<string | number> = []) {
+    return path.join('_');
+  },
+
+  resolveEqualityToken(options: {
+    key: string;
+    currentValue: any;
+    nextValue: any;
+    derivedValueMap?: WeakMap<any, any>;
+  }) {
+    const {
+      key,
+      currentValue,
+      nextValue,
+      derivedValueMap = new WeakMap(),
+    } = options;
+    const rawNewValue = raw(nextValue);
+    const rawCurrentValue = raw(currentValue);
+    const token = this.createEqualityToken();
+
+    if (
+      rawNewValue !== rawCurrentValue &&
+      (!derivedValueMap.get(rawNewValue) ||
+        (derivedValueMap.get(rawNewValue) &&
+          raw(derivedValueMap.get(rawNewValue)) !== rawCurrentValue))
+    ) {
+      token.isEqual = false;
+      token.key = key;
+      token.nextValue = rawNewValue;
+      token.currentValue = rawCurrentValue;
+    }
+
+    return token;
+  },
+
+  isEqual(options: {
+    nextValue: any;
+    type: EntityType;
+    startPoint: string;
+    shallowEqual?: boolean;
+    graphMap: Map<string, Graph>;
+    affects?: Map<string, any>;
+    derivedValueMap?: WeakMap<any, any>;
+  }): EqualityToken {
+    const {
+      type,
+      graphMap,
+      nextValue,
+      startPoint,
+      affects = new Map(),
+      shallowEqual = true,
+      derivedValueMap = new WeakMap(),
+    } = options;
+
+    let graph = null;
+    let childrenMap = new Map();
+    const token = this.createEqualityToken();
+
+    if (startPoint) {
+      graph = graphMap.get(startPoint);
+      // 证明props并没有被用到；所以，直接返回true就可以了
+      if (!graph) {
+        token.isEqual = true;
+        return token;
+      } else {
+        childrenMap = graph.childrenMap;
+      }
+    } else {
+      childrenMap = graphMap;
+    }
+
+    // @ts-ignore
+    for (const [key, graph] of childrenMap.entries()) {
+      const newValue = nextValue[key];
+      const affectedPath = graph.getPath();
+      const affectedKey = this.generateAffectedPathKey(affectedPath);
+      const currentValue = affects.get(affectedKey);
+
+      if (!shallowEqual) {
+        if (!graph.childrenMap.size) {
+          const token = this.resolveEqualityToken({
+            key,
+            currentValue: currentValue,
+            nextValue: newValue,
+            derivedValueMap,
+          });
+          console.log('token ', token);
+          if (!token.isEqual) return token;
+        } else {
+          const childEqualityToken = this.isEqual({
+            type: type,
+            graphMap: graph.childrenMap,
+            startPoint: '',
+            nextValue: newValue,
+            shallowEqual,
+            affects,
+            derivedValueMap,
+          });
+          console.log('children ', graph.childrenMap, childEqualityToken);
+          if (!childEqualityToken.isEqual) return childEqualityToken;
+        }
+      } else {
+        const token = this.resolveEqualityToken({
+          key,
+          currentValue,
+          nextValue: newValue,
+          derivedValueMap,
+        });
+
+        if (!token.isEqual) return token;
+      }
+    }
+    return token;
   },
 
   getContext: function(proxy: IStateTracker) {

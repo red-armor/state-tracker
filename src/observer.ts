@@ -1,4 +1,4 @@
-import { IStateTracker, ObserverOptions } from './types';
+import { IStateTracker, ObserverOptions, ReactionFn } from './types';
 import Reaction from './Reaction';
 import { isPlainObject } from './commons';
 import StateTrackerError from './StateTrackerError';
@@ -6,7 +6,7 @@ import StateTrackerError from './StateTrackerError';
 // TODO: Now not work !!!, because reaction will run auto
 export default (
   state: IStateTracker,
-  fn: Function,
+  fn: ReactionFn,
   options: ObserverOptions = {}
 ) => {
   let reaction: Reaction | null = null;

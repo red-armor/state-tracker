@@ -1,8 +1,10 @@
 import Reaction from '../Reaction';
 import { IStateTracker } from './stateTracker';
 
+export type ReactionFn = (state: IStateTracker, ...rest: Array<any>) => any;
+
 export type ReactionOptions = {
-  fn: Function;
+  fn: ReactionFn;
   state: IStateTracker;
   scheduler?: Function;
 };

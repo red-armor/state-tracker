@@ -12,18 +12,19 @@ export default class Graph {
   }
 
   access(path: Array<string | number>) {
-    const pathString = path.join('_');
+    const nextPath = path.slice();
+    const pathString = nextPath.join('_');
     this._pathSet.add(pathString);
 
-    const path0 = path.shift() || '';
+    const path0 = nextPath.shift() || '';
 
     if (path0 !== this.getPoint()) {
       throw new StateTrackerError(
-        `access Path '${path}' should be start with '${this.getPoint()}'`
+        `access Path '${nextPath}' should be start with '${this.getPoint()}'`
       );
     }
 
-    path.reduce<{
+    nextPath.reduce<{
       graph: Graph;
       slug: Array<string | number>;
       prev: string | number;

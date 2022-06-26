@@ -4,3 +4,55 @@ sidebar_position: 2
 ---
 
 默认情况下,`state-tracker`都是通过`shallowEqual`进行比较，但是有的时候为了达到`fine-grained`效果会有`deepEqual`的诉求；
+
+
+## shallowEqual
+
+默认情况下，state-tracker执行`shallowEqual`；
+
+```ts
+const state = { a: { a1: 1, a2: 2, } }
+const proxyState = produce(state)
+
+let a1 = 0
+let count = 0
+
+new Reaction({
+  fn: (state) => {
+    a1 = state.a.a1
+    count++
+  },
+  state: proxyState
+})
+
+StateTrackerUtil.setValue(proxyState, {
+  a: { a1: 1, a2: 2, }
+});
+
+console.log('count ', count)  // 2
+```
+
+可以通过设置`shallowEqual = false`参数，将comparison设置为`深比较`；比如下面的形式
+
+```ts
+const state = { a: { a1: 1, a2: 2, } }
+const proxyState = produce(state)
+
+let a1 = 0
+let count = 0
+
+new Reaction({
+  fn: (state) => {
+    a1 = state.a.a1
+    count++
+  },
+  shallowEqual: false,
+  state: proxyState
+})
+
+StateTrackerUtil.setValue(proxyState, {
+  a: { a1: 1, a2: 2, }
+});
+
+console.log('count ', count)  // 1
+```
