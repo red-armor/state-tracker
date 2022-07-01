@@ -297,7 +297,13 @@ const StateTrackerUtil = {
 
       // const cachedRootPoint = cachedAccessPath[0];
       // For set with an proxy value, the same root should be preserved.
-      if (pathEqual(nextAccessPath.slice(0, 1), cachedAccessPath.slice(0, 1))) {
+
+      // slice(0, 1) may have performance metrics; But may cause error on dispatch
+
+      // if (pathEqual(nextAccessPath.slice(0, 1), cachedAccessPath.slice(0, 1))) {
+      if (
+        pathEqual(nextAccessPath.slice(0, -1), cachedAccessPath.slice(0, -1))
+      ) {
         // if (pathEqual(nextAccessPath, cachedAccessPath)) {
         //    too strictly !!! if remove an item, all the left should be re-proxy
         // if (nextAccessPath[0] === cachedAccessPath[0]) {
