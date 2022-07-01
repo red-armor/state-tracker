@@ -197,24 +197,42 @@ const StateTrackerUtil = {
 
     if (stateCompareLevel) {
       for (const [key, graph] of nextGraphMap.entries()) {
-        const newValue = nextValue[key];
-        const token = this.isEqual(newValue, reaction, {
-          type,
-          stateCompareLevel: stateCompareLevel - 1,
-          graphMap: graph.childrenMap,
-        });
-        if (!token.isEqual) return token;
+        const affectedPath = graph.getPath();
+        const affectedKey = this.generateAffectedPathKey(affectedPath);
+        const currentValue = affects.get(affectedKey);
+        if (!isTrackable(nextValue)) {
+          const token = this.resolveEqualityToken({
+            key,
+            currentValue: currentValue,
+            nextValue: nextValue,
+            derivedValueMap,
+          });
+          if (!token.isEqual) return token;
+        } else {
+          const newValue = nextValue[key];
+          const token = this.isEqual(newValue, reaction, {
+            type,
+            stateCompareLevel: stateCompareLevel - 1,
+            graphMap: graph.childrenMap,
+          });
+          if (!token.isEqual) return token;
+        }
       }
       return token;
     }
 
     // @ts-ignore
     for (const [key, graph] of nextGraphMap.entries()) {
-      const newValue = nextValue[key];
-
       const affectedPath = graph.getPath();
       const affectedKey = this.generateAffectedPathKey(affectedPath);
       const currentValue = affects.get(affectedKey);
+      if (!isTrackable(nextValue))
+        return this.createEqualityToken({
+          key,
+          nextValue,
+          currentValue,
+        });
+      const newValue = nextValue[key];
 
       if (!shallowEqual) {
         if (!graph.childrenMap.size) {
@@ -297,7 +315,13 @@ const StateTrackerUtil = {
 
       // const cachedRootPoint = cachedAccessPath[0];
       // For set with an proxy value, the same root should be preserved.
-      if (pathEqual(nextAccessPath.slice(0, 1), cachedAccessPath.slice(0, 1))) {
+
+      // slice(0, 1) may have performance metrics; But may cause error on dispatch
+
+      // if (pathEqual(nextAccessPath.slice(0, 1), cachedAccessPath.slice(0, 1))) {
+      if (
+        pathEqual(nextAccessPath.slice(0, -1), cachedAccessPath.slice(0, -1))
+      ) {
         // if (pathEqual(nextAccessPath, cachedAccessPath)) {
         //    too strictly !!! if remove an item, all the left should be re-proxy
         // if (nextAccessPath[0] === cachedAccessPath[0]) {

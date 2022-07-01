@@ -169,7 +169,8 @@ class Reaction {
     // this.teardown();
     StateTrackerUtil.enterNode(this.state, this._stateTrackerNode);
 
-    const nextArgs = [this.state, ...args];
+    const nextArgs = [...args];
+    if (!nextArgs.length) nextArgs.push(this.state);
     let result;
     if (this.props) nextArgs.push(this.props);
     try {

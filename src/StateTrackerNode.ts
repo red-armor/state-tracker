@@ -378,7 +378,6 @@ class StateTrackerNode {
       // props.data传给子组件 {title: 'first'}, 假如说我们访问`title`的话，
       // path的值是['goods', 'listData', '0', 'title']，但是对于`propsGraphMap`,
       // 它的根节点是`data`, 所以我们需要将['goods', 'listData', '0']拿掉
-
       nextPath = [propsTargetKey].concat(path.slice(rootPath.length));
     }
 
