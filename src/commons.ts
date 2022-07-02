@@ -253,3 +253,7 @@ export function raw(obj: any) {
 }
 
 export const noop = () => {};
+
+export const DEFAULT_CACHED_PROXY_PATH = '__$__';
+export const buildCachedProxyPath = (paths: Array<string | number>) =>
+  paths.join('_');

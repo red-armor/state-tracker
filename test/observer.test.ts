@@ -144,7 +144,7 @@ function testTracker(useProxy: boolean) {
 
       fn({ app: proxyState.app });
 
-      expect(runCount).toBe(2);
+      expect(runCount === 2).toBe(false);
     });
 
     it('deep equal v2', () => {
@@ -200,7 +200,7 @@ function testTracker(useProxy: boolean) {
 
       fn({ app: proxyState.app });
 
-      expect(runCount).toBe(2);
+      expect(runCount).toBe(3);
     });
 
     it('observer: state', done => {

@@ -1,4 +1,4 @@
-import { isPlainObject, isTrackable, raw, noop } from './commons';
+import { isPlainObject, isTrackable, raw, noop, isProxy } from './commons';
 import {
   Activity,
   NextState,
@@ -18,7 +18,7 @@ class StateTrackerNode {
   public propsGraphMap: Map<string, Graph> = new Map();
 
   private _observerProps: ObserverProps;
-  public _derivedValueMap: WeakMap<any, any> = new WeakMap();
+  // public _derivedValueMap: WeakMap<any, any> = new WeakMap();
 
   readonly _shallowEqual: boolean;
   readonly _reaction?: Reaction;
@@ -108,11 +108,16 @@ class StateTrackerNode {
 
   registerObserverProps() {
     this.logActivity('registerProps');
+    const reaction = this.getReaction();
+    reaction?.getParent()?.clearPassingProps(reaction);
 
     for (const key in this._observerProps) {
       if (this._observerProps.hasOwnProperty(key)) {
         const value = this._observerProps[key];
         const rawValue = raw(value);
+        if (isProxy(value)) {
+          reaction?.getParent()?.mountPassingProps(reaction, rawValue);
+        }
         if (!this._propsProxyToKeyMap.has(rawValue)) {
           // proxy should not be key
           this.setPropsProxyToKeyMapValue(rawValue, key);
@@ -262,7 +267,7 @@ class StateTrackerNode {
   isPropsEqual(nextProps: ObserverProps, changedValue?: ChangedValue) {
     // on shallow compare, props should start from root.
     // so rootPoint set to empty string to make it work.
-    if (this._shallowEqual) {
+    if (true) {
       this.logActivity('comparisonStart', { type: 'props' });
       const equalityToken = this.isPropsShallowEqual(nextProps, {
         changedValue,
@@ -341,11 +346,10 @@ class StateTrackerNode {
   }
 
   track({
-    key,
+    // key,
     value,
     target,
     path: base,
-    isDerived = false,
   }: {
     target: {
       [key: string]: any;
@@ -353,7 +357,6 @@ class StateTrackerNode {
     path: Array<string>;
     key: string | number;
     value: any;
-    isDerived?: boolean;
   }) {
     // 如果propsTargetKey存在的话，说明我们在track一个props value
     const propsTargetKey = this._propsProxyToKeyMap.get(raw(target));
@@ -389,11 +392,6 @@ class StateTrackerNode {
     }
     // 存储path对应的value，这个可以认为是oldValue
     const affectedPathKey = StateTrackerUtil.generateAffectedPathKey(nextPath);
-
-    if (isDerived) {
-      this._derivedValueMap.set(raw(target[key]), value);
-    }
-
     this._affectedPathValue.set(affectedPathKey, value);
 
     const graph = graphMap.has(graphMapKey)

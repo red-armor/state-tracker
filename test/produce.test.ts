@@ -1,4 +1,4 @@
-import { TRACKER, isProxy } from '../src/commons';
+import { isProxy } from '../src/commons';
 import { produceImpl as ES5Produce } from '../src/es5';
 import { produceImpl as ES6Produce } from '../src/proxy';
 import StateTrackerUtil from '../src/StateTrackerUtil';
@@ -101,212 +101,212 @@ function testTracker(useProxy: boolean) {
     });
   });
 
-  describe(decorateDesc('child proxies'), () => {
-    it('Access a key with object value will add prop to childProxies', () => {
-      const state = {
-        a: {
-          a1: 1,
-          a2: 2,
-        },
-        b: {
-          b1: {
-            b11: 1,
-            b12: 2,
-          },
-          b2: 2,
-        },
-        c: 3,
-      };
-      const proxyState = produce(state);
-      const tracker = proxyState[TRACKER];
+  // describe(decorateDesc('child proxies'), () => {
+  //   it('Access a key with object value will add prop to childProxies', () => {
+  //     const state = {
+  //       a: {
+  //         a1: 1,
+  //         a2: 2,
+  //       },
+  //       b: {
+  //         b1: {
+  //           b11: 1,
+  //           b12: 2,
+  //         },
+  //         b2: 2,
+  //       },
+  //       c: 3,
+  //     };
+  //     const proxyState = produce(state);
+  //     const tracker = proxyState[TRACKER];
 
-      expect(proxyState.a).toEqual({ a1: 1, a2: 2 });
-      expect(proxyState.c).toEqual(3);
-      const childProxies = tracker._childrenProxies;
+  //     expect(proxyState.a).toEqual({ a1: 1, a2: 2 });
+  //     expect(proxyState.c).toEqual(3);
+  //     const childProxies = tracker._childrenProxies;
 
-      expect(childProxies.has(state.a)).toBeTruthy();
-      expect(childProxies.has(state.c)).toBeFalsy();
-      expect(childProxies.size).toBe(1);
-    });
+  //     expect(childProxies.has(state.a)).toBeTruthy();
+  //     expect(childProxies.has(state.c)).toBeFalsy();
+  //     expect(childProxies.size).toBe(1);
+  //   });
 
-    it('Access a key with array value will add prop to childProxies', () => {
-      const state = {
-        a: [2, 3, 4],
-        b: {
-          b1: {
-            b11: 1,
-            b12: 2,
-          },
-          b2: 2,
-        },
-        c: 3,
-      };
-      const proxyState = produce(state);
-      const tracker = proxyState[TRACKER];
+  //   it('Access a key with array value will add prop to childProxies', () => {
+  //     const state = {
+  //       a: [2, 3, 4],
+  //       b: {
+  //         b1: {
+  //           b11: 1,
+  //           b12: 2,
+  //         },
+  //         b2: 2,
+  //       },
+  //       c: 3,
+  //     };
+  //     const proxyState = produce(state);
+  //     const tracker = proxyState[TRACKER];
 
-      expect(proxyState.a).toEqual([2, 3, 4]);
-      expect(proxyState.c).toEqual(3);
-      const childProxies = tracker._childrenProxies;
-      expect(childProxies.has(state.a)).toBeTruthy();
-      expect(childProxies.has(state.c)).toBeFalsy();
-      expect(childProxies.size).toBe(1);
-    });
+  //     expect(proxyState.a).toEqual([2, 3, 4]);
+  //     expect(proxyState.c).toEqual(3);
+  //     const childProxies = tracker._childrenProxies;
+  //     expect(childProxies.has(state.a)).toBeTruthy();
+  //     expect(childProxies.has(state.c)).toBeFalsy();
+  //     expect(childProxies.size).toBe(1);
+  //   });
 
-    it('Access a key with primitive value will not add prop to childProxies', () => {
-      const state = {
-        a: [2, 3, 4],
-        b: {
-          b1: {
-            b11: 1,
-            b12: 2,
-          },
-          b2: 2,
-        },
-        c: 3,
-      };
-      const proxyState = produce(state);
-      const tracker = StateTrackerUtil.getTracker(proxyState.b);
-      expect(proxyState.c).toEqual(3);
-      const childProxies = tracker._childrenProxies;
-      expect(childProxies.size).toBe(0);
-    });
+  //   it('Access a key with primitive value will not add prop to childProxies', () => {
+  //     const state = {
+  //       a: [2, 3, 4],
+  //       b: {
+  //         b1: {
+  //           b11: 1,
+  //           b12: 2,
+  //         },
+  //         b2: 2,
+  //       },
+  //       c: 3,
+  //     };
+  //     const proxyState = produce(state);
+  //     const tracker = StateTrackerUtil.getTracker(proxyState.b);
+  //     expect(proxyState.c).toEqual(3);
+  //     const childProxies = tracker._childrenProxies;
+  //     expect(childProxies.size).toBe(0);
+  //   });
 
-    it('Access a key with undefined value will not add prop to childProxies', () => {
-      const state = {
-        a: [2, 3, 4],
-        b: {
-          b1: {
-            b11: 1,
-            b12: 2,
-          },
-        },
-        c: 3,
-      };
-      const proxyState = produce(state);
-      const tracker = StateTrackerUtil.getTracker(proxyState.b);
-      expect(proxyState.b.b2).toEqual(undefined);
-      const childProxies = tracker._childrenProxies;
-      expect(childProxies.size).toBe(0);
-    });
+  //   it('Access a key with undefined value will not add prop to childProxies', () => {
+  //     const state = {
+  //       a: [2, 3, 4],
+  //       b: {
+  //         b1: {
+  //           b11: 1,
+  //           b12: 2,
+  //         },
+  //       },
+  //       c: 3,
+  //     };
+  //     const proxyState = produce(state);
+  //     const tracker = StateTrackerUtil.getTracker(proxyState.b);
+  //     expect(proxyState.b.b2).toEqual(undefined);
+  //     const childProxies = tracker._childrenProxies;
+  //     expect(childProxies.size).toBe(0);
+  //   });
 
-    it('Set a key with different type value which will cause clear up childProxies', () => {
-      const state = {
-        a: [2, 3, 4],
-        b: {
-          b1: {
-            b11: 1,
-            b12: 2,
-          },
-          b2: 2,
-        },
-        c: 3,
-      };
-      const proxyState = produce(state);
-      const tracker = StateTrackerUtil.getTracker(proxyState);
+  //   it('Set a key with different type value which will cause clear up childProxies', () => {
+  //     const state = {
+  //       a: [2, 3, 4],
+  //       b: {
+  //         b1: {
+  //           b11: 1,
+  //           b12: 2,
+  //         },
+  //         b2: 2,
+  //       },
+  //       c: 3,
+  //     };
+  //     const proxyState = produce(state);
+  //     const tracker = StateTrackerUtil.getTracker(proxyState);
 
-      expect(proxyState.a).toEqual([2, 3, 4]);
-      expect(proxyState.c).toEqual(3);
-      const childProxies = tracker._childrenProxies;
-      expect(childProxies.size).toBe(1);
-      proxyState.a = { a1: 1 };
-      const childrenProxies = tracker._childrenProxies;
+  //     expect(proxyState.a).toEqual([2, 3, 4]);
+  //     expect(proxyState.c).toEqual(3);
+  //     const childProxies = tracker._childrenProxies;
+  //     expect(childProxies.size).toBe(1);
+  //     proxyState.a = { a1: 1 };
+  //     const childrenProxies = tracker._childrenProxies;
 
-      expect(childrenProxies.size).toBe(0);
-    });
+  //     expect(childrenProxies.size).toBe(0);
+  //   });
 
-    it('childProxies key will be deleted after set with new value', () => {
-      const list = [
-        {
-          v: 1,
-        },
-        {
-          v: 2,
-        },
-        {
-          v: 3,
-        },
-      ];
+  //   it('childProxies key will be deleted after set with new value', () => {
+  //     const list = [
+  //       {
+  //         v: 1,
+  //       },
+  //       {
+  //         v: 2,
+  //       },
+  //       {
+  //         v: 3,
+  //       },
+  //     ];
 
-      const state = {
-        a: [2, 3, 4],
-        b: {
-          list: list,
-          b1: 3,
-        },
-        c: 3,
-      };
-      const proxyState = produce(state);
-      expect(proxyState.b.list).toEqual(list);
-      const tracker = StateTrackerUtil.getTracker(proxyState);
-      const childProxies = tracker._childrenProxies;
-      expect(childProxies.size).toBe(1);
+  //     const state = {
+  //       a: [2, 3, 4],
+  //       b: {
+  //         list: list,
+  //         b1: 3,
+  //       },
+  //       c: 3,
+  //     };
+  //     const proxyState = produce(state);
+  //     expect(proxyState.b.list).toEqual(list);
+  //     const tracker = StateTrackerUtil.getTracker(proxyState);
+  //     const childProxies = tracker._childrenProxies;
+  //     expect(childProxies.size).toBe(1);
 
-      proxyState.b = { b1: [1] };
+  //     proxyState.b = { b1: [1] };
 
-      expect(childProxies.size).toBe(0);
-    });
+  //     expect(childProxies.size).toBe(0);
+  //   });
 
-    it('reuse array trackerable item', () => {
-      const list = [
-        {
-          v: 1,
-        },
-        {
-          v: 2,
-        },
-        {
-          v: 3,
-        },
-      ];
+  //   it('reuse array trackerable item', () => {
+  //     const list = [
+  //       {
+  //         v: 1,
+  //       },
+  //       {
+  //         v: 2,
+  //       },
+  //       {
+  //         v: 3,
+  //       },
+  //     ];
 
-      const state = {
-        a: [2, 3, 4],
-        b: {
-          list,
-          b1: 3,
-        },
-        c: 3,
-      };
+  //     const state = {
+  //       a: [2, 3, 4],
+  //       b: {
+  //         list,
+  //         b1: 3,
+  //       },
+  //       c: 3,
+  //     };
 
-      const proxyState = produce(state);
-      expect(proxyState.b.list[0].v).toEqual(1);
-      expect(proxyState.b.list[1].v).toEqual(2);
-      expect(proxyState.b.list[2].v).toEqual(3);
+  //     const proxyState = produce(state);
+  //     expect(proxyState.b.list[0].v).toEqual(1);
+  //     expect(proxyState.b.list[1].v).toEqual(2);
+  //     expect(proxyState.b.list[2].v).toEqual(3);
 
-      const list_1_tracker = StateTrackerUtil.getTracker(proxyState.b.list);
-      const list_1_0_tracker = StateTrackerUtil.getTracker(
-        proxyState.b.list[0]
-      );
-      const list_1_1_tracker = StateTrackerUtil.getTracker(
-        proxyState.b.list[1]
-      );
-      const list_1_2_tracker = StateTrackerUtil.getTracker(
-        proxyState.b.list[2]
-      );
+  //     const list_1_tracker = StateTrackerUtil.getTracker(proxyState.b.list);
+  //     const list_1_0_tracker = StateTrackerUtil.getTracker(
+  //       proxyState.b.list[0]
+  //     );
+  //     const list_1_1_tracker = StateTrackerUtil.getTracker(
+  //       proxyState.b.list[1]
+  //     );
+  //     const list_1_2_tracker = StateTrackerUtil.getTracker(
+  //       proxyState.b.list[2]
+  //     );
 
-      proxyState.b.list = list.slice();
+  //     proxyState.b.list = list.slice();
 
-      const list_2_tracker = StateTrackerUtil.getTracker(proxyState.b.list);
-      const list_2_0_tracker = StateTrackerUtil.getTracker(
-        proxyState.b.list[0]
-      );
-      const list_2_1_tracker = StateTrackerUtil.getTracker(
-        proxyState.b.list[1]
-      );
-      const list_2_2_tracker = StateTrackerUtil.getTracker(
-        proxyState.b.list[2]
-      );
+  //     const list_2_tracker = StateTrackerUtil.getTracker(proxyState.b.list);
+  //     const list_2_0_tracker = StateTrackerUtil.getTracker(
+  //       proxyState.b.list[0]
+  //     );
+  //     const list_2_1_tracker = StateTrackerUtil.getTracker(
+  //       proxyState.b.list[1]
+  //     );
+  //     const list_2_2_tracker = StateTrackerUtil.getTracker(
+  //       proxyState.b.list[2]
+  //     );
 
-      expect(list_1_tracker._id).not.toEqual(list_2_tracker._id);
-      expect(list_1_0_tracker).toBe(list_2_0_tracker);
-      expect(list_1_1_tracker).toBe(list_2_1_tracker);
-      expect(list_1_2_tracker).toBe(list_2_2_tracker);
+  //     expect(list_1_tracker._id).not.toEqual(list_2_tracker._id);
+  //     expect(list_1_0_tracker).toBe(list_2_0_tracker);
+  //     expect(list_1_1_tracker).toBe(list_2_1_tracker);
+  //     expect(list_1_2_tracker).toBe(list_2_2_tracker);
 
-      expect(proxyState.b.list[0].v).toEqual(1);
-      expect(proxyState.b.list[1].v).toEqual(2);
-      expect(proxyState.b.list[2].v).toEqual(3);
-    });
-  });
+  //     expect(proxyState.b.list[0].v).toEqual(1);
+  //     expect(proxyState.b.list[1].v).toEqual(2);
+  //     expect(proxyState.b.list[2].v).toEqual(3);
+  //   });
+  // });
 
   describe(decorateDesc('access path'), () => {
     it('verify getPaths', () => {
@@ -428,24 +428,24 @@ function testTracker(useProxy: boolean) {
       expect(id1 + 1).toBe(id2);
     });
 
-    it('Tracker base value will be updated after try to access it value', () => {
-      const old = {
-        a1: 1,
-        a2: 2,
-      };
-      const next = {
-        a1: 3,
-        a2: 4,
-      };
-      const state = {
-        a: old,
-      };
-      const proxyState = produce(state);
-      const tracker = StateTrackerUtil.getTracker(proxyState.a);
+    // it('Tracker base value will be updated after try to access it value', () => {
+    //   const old = {
+    //     a1: 1,
+    //     a2: 2,
+    //   };
+    //   const next = {
+    //     a1: 3,
+    //     a2: 4,
+    //   };
+    //   const state = {
+    //     a: old,
+    //   };
+    //   const proxyState = produce(state);
+    //   const tracker = StateTrackerUtil.getTracker(proxyState.a);
 
-      proxyState.a = next;
-      expect(tracker._base).toBe(old);
-    });
+    //   proxyState.a = next;
+    //   expect(tracker._base).toBe(old);
+    // });
   });
 
   describe(decorateDesc('tracker id'), () => {

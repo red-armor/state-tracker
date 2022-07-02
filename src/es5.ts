@@ -80,9 +80,9 @@ export function createES5Proxy(
         // const nextValue = base[prop as string];
         // const childrenProxies = tracker._childrenProxies;
 
-        const { isDerived, value } = StateTrackerUtil.resolveNextValue({
+        const value = StateTrackerUtil.resolveNextValue({
           value: base[prop],
-          tracker,
+          // tracker,
           stateTrackerContext,
           nextAccessPath: nextAccessPath.slice(),
           proxy: copy,
@@ -94,7 +94,7 @@ export function createES5Proxy(
           if (stateTrackerContext.getCurrent()) {
             stateTrackerContext.getCurrent().track({
               target,
-              isDerived,
+              // isDerived,
               value: value,
               key: prop as string,
               path: outerAccessPath.concat(prop as string),
