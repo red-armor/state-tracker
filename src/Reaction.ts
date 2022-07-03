@@ -240,6 +240,7 @@ class Reaction {
     this._passingPropsSet = new Set();
     StateTrackerUtil.enterNode(this.state, this._stateTrackerNode);
     const nextArgs = [...args];
+
     if (!nextArgs.length) nextArgs.push(this.state);
     let result;
     if (this.props) nextArgs.push(this.props);
