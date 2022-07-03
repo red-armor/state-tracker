@@ -60,3 +60,42 @@ console.log('count ', count)  // 1
 ## stateCompareLevel
 
 除了可以通过`shallowEqual`控制比较的深度，另一个参数是`stateCompareLevel`,
+
+## deepEqual
+
+只针对当前scope下的是否`equal`；
+
+### Only leaf node compare
+只针对leaf进行比较，中间的node即使不一样也不认为`not equal`；那么就存在下面的问题，即使下游使用到了data，并且使用到的比如`data.count`发生了变化；但是`GoodsView`不再进行rerender这也就会造成数据不更新的问题。
+
+```ts
+const GoodsView = () => {
+  const [state] = useRelinx('goods')
+  const { listData, listLength } = state
+
+  const updateCount = useRef(0)
+
+  updateCount.current = updateCount.current + 1
+  const spanStyle = useRef({
+    position: 'absolute',
+    top: 0,
+    left: '20px',
+    color: 'red',
+  })
+
+  return (
+    <div>
+      <span style={spanStyle.current}>
+        {`view update ${updateCount.current}, length ${listLength}`}
+      </span>
+      {listData.map((data, key) => (
+        <GoodsItem
+          key={data.id}
+          data={data}
+          index={key}
+        />
+      ))}
+    </div>
+  )
+}
+```

@@ -1,29 +1,21 @@
 import StateTrackerNode from './StateTrackerNode';
-import { generateRandomKey } from './commons';
-import {
-  ProxyCache,
-  ProxyNextCache,
-  StateTrackerContextProps,
-} from './types/stateTrackerContext';
-import { IStateTracker, ObserverProps } from './types';
+import { generateRandomKey, DEFAULT_CACHED_PROXY_PATH } from './commons';
+import { StateTrackerContextProps } from './types/stateTrackerContext';
+import { ObserverProps } from './types';
 import Container from './Container';
 
 class StateTrackerContext {
   private queue: Array<StateTrackerNode>;
   private _lastUpdateAt: number;
   private _id: string;
-  // 原则上，还是先用`childrenProxies`中的值，只有当是一个被经过createProxy处理
-  // 过的对象才能够放到cache里面
-  private proxyCache: ProxyCache;
-  private proxyNextCache: ProxyNextCache;
+  private _cachedProxies: Map<string, WeakMap<any, any>>;
   readonly container: Container;
 
   constructor(props: StateTrackerContextProps) {
     this.queue = [];
     this._id = generateRandomKey();
     this._lastUpdateAt = Date.now();
-    this.proxyCache = props.proxyCache || new WeakMap();
-    this.proxyNextCache = props.proxyNextCache || new Map();
+    this._cachedProxies = new Map();
     this.container = props.container;
   }
 
@@ -31,30 +23,22 @@ class StateTrackerContext {
     return this._id;
   }
 
-  getCachedProxy(obj: object) {
-    return this.proxyCache.get(obj);
+  getCachedProxy(path: string, key: any) {
+    const nextPath = path || DEFAULT_CACHED_PROXY_PATH;
+    const group = this._cachedProxies.has(nextPath)
+      ? this._cachedProxies.get(nextPath)
+      : this._cachedProxies.set(nextPath, new WeakMap()).get(nextPath);
+
+    return group?.get(key);
   }
 
-  setCachedProxy(key: object, value: IStateTracker) {
-    this.proxyCache.set(key, value);
-  }
+  setCachedProxy(path: string, key: any, value: any) {
+    const nextPath = path || DEFAULT_CACHED_PROXY_PATH;
+    const group = this._cachedProxies.has(nextPath)
+      ? this._cachedProxies.get(nextPath)
+      : this._cachedProxies.set(nextPath, new WeakMap()).get(nextPath);
 
-  getCachedNextProxy(rootPoint: string | number, obj: object) {
-    const values = this.proxyNextCache.get(rootPoint);
-    if (values) return values.get(obj);
-    return null;
-  }
-
-  setCachedNextProxy(
-    rootPoint: string | number,
-    key: object,
-    value: IStateTracker
-  ) {
-    const values = this.proxyNextCache.has(rootPoint)
-      ? this.proxyNextCache.get(rootPoint)
-      : this.proxyNextCache.set(rootPoint, new WeakMap()).get(rootPoint);
-    if (values) values.set(key, value);
-    return true;
+    group?.set(key, value);
   }
 
   enter(name: string, props?: ObserverProps) {

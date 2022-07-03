@@ -1,6 +1,6 @@
 import StateTrackerUtil from './StateTrackerUtil';
 import StateTrackerNode from './StateTrackerNode';
-import { generateReactionName, isPlainObject } from './commons';
+import { generateReactionName, isPlainObject, raw } from './commons';
 import {
   ReactionProps,
   IStateTracker,
@@ -24,9 +24,15 @@ class Reaction {
 
   private _stateCompareLevel: null | number = null;
 
-  private _disposer?: Function | null;
+  private _containerDisposer?: Function | null;
+  private _parentDisposer?: Function | null;
   private _fineGrainListenerDisposer?: Function | null;
   private _affectedFineGrainKeys = new Set<string>();
+  private _passingPropsSet: Set<any> = new Set();
+
+  private _children: Array<Reaction> = [];
+  private _childrenPassingPropsMap: Map<Reaction, Set<any>> = new Map();
+  private _parent: Reaction | null = null;
 
   private _reactionResult: null | any;
 
@@ -83,7 +89,8 @@ class Reaction {
 
     this._reactionResult = null;
 
-    this.register();
+    this.registerToContainer();
+    this.registerToParent();
     this.dispose = this.dispose.bind(this);
     this.run = this.run.bind(this);
 
@@ -97,6 +104,10 @@ class Reaction {
     return context.container;
   }
 
+  getParent() {
+    return this._parent;
+  }
+
   getChangedValue() {
     return this._changedValue;
   }
@@ -105,9 +116,36 @@ class Reaction {
     return this._reactionResult;
   }
 
-  register() {
+  registerToContainer() {
     const container = this.getContainer();
-    this._disposer = container.register(this);
+    this._containerDisposer = container.register(this);
+  }
+
+  registerToParent() {
+    const context = StateTrackerUtil.getContext(this.state);
+    const currentTrackerNode = context.getCurrent();
+    const parentReaction = currentTrackerNode
+      ? currentTrackerNode.getReaction()
+      : null;
+    if (parentReaction) {
+      this._parent = parentReaction;
+      this._parentDisposer = parentReaction.appendChild(this);
+    }
+  }
+
+  appendChild(reaction: Reaction) {
+    const index = this._children.findIndex(child => child === reaction);
+    if (index === -1) {
+      this._children.push(reaction);
+      this._childrenPassingPropsMap.set(reaction, new Set());
+    }
+    return () => {
+      const index = this._children.findIndex(child => child === reaction);
+      if (index !== -1) {
+        this._children.splice(index, 1);
+        this._childrenPassingPropsMap.delete(reaction);
+      }
+    };
   }
 
   // 当state发生变化时，尽量聚焦当前Reaction所关联的state对应的key的变化，
@@ -119,6 +157,33 @@ class Reaction {
       this
     );
     this._affectedFineGrainKeys.add(key);
+  }
+
+  mountPassingProps(childReaction: Reaction, value: any) {
+    const group = this._childrenPassingPropsMap.has(childReaction)
+      ? this._childrenPassingPropsMap.get(childReaction)
+      : this._childrenPassingPropsMap
+          .set(childReaction, new Set())
+          .get(childReaction);
+    group!.add(value);
+  }
+
+  clearPassingProps(childReaction: Reaction) {
+    this._childrenPassingPropsMap.set(childReaction, new Set());
+  }
+
+  aggregatePassingProps() {
+    // @ts-ignore
+    let next = [];
+    for (const value of this._childrenPassingPropsMap.values()) {
+      // @ts-ignore
+      next = next.concat(Array.from(value));
+    }
+    this._passingPropsSet = new Set(next);
+  }
+
+  hasPassingProps(value: any) {
+    return this._passingPropsSet.has(raw(value));
   }
 
   resolverLogToken({
@@ -140,9 +205,14 @@ class Reaction {
   }
 
   dispose() {
-    if (this._disposer) {
-      this._disposer();
-      this._disposer = null;
+    if (typeof this._containerDisposer === 'function') {
+      this._containerDisposer();
+      this._containerDisposer = null;
+    }
+
+    if (typeof this._parentDisposer === 'function') {
+      this._parentDisposer();
+      this._parentDisposer = null;
     }
 
     this.disposeFineGrainListener();
@@ -167,9 +237,10 @@ class Reaction {
   run(...args: Array<any>) {
     // should not teardown, or props will cleaned two times
     // this.teardown();
+    this._passingPropsSet = new Set();
     StateTrackerUtil.enterNode(this.state, this._stateTrackerNode);
-
     const nextArgs = [...args];
+
     if (!nextArgs.length) nextArgs.push(this.state);
     let result;
     if (this.props) nextArgs.push(this.props);
@@ -185,6 +256,7 @@ class Reaction {
     this._reactionResult = result;
 
     StateTrackerUtil.leave(this.state);
+    this.aggregatePassingProps();
     return result;
   }
 
@@ -203,10 +275,12 @@ class Reaction {
   }
 
   enter() {
+    this._passingPropsSet = new Set();
     StateTrackerUtil.enterNode(this.state, this._stateTrackerNode);
   }
 
   leave() {
+    this.aggregatePassingProps();
     StateTrackerUtil.leave(this.state);
   }
 
@@ -216,11 +290,18 @@ class Reaction {
       this._changedValue
     );
 
-    if (!truthy) {
-      // if props not equal, then tear down.
-      // this.teardown();
-      this.updateObserverProps(props);
-    }
+    // due to support props deep equal; no matter truthy is true or not
+    // props should be update to update `_passingPropsSet` in reaction!!
+    // or,
+    this.updateObserverProps(props);
+
+    // if (!truthy) {
+    //   // if props not equal, then tear down.
+    //   // this.teardown();
+    //   this.updateObserverProps(props);
+    // } else {
+
+    // }
     return truthy;
   }
 
@@ -295,9 +376,9 @@ class Reaction {
     return this._stateTrackerNode._affectedPathValue || new Map();
   }
 
-  getDerivedValueMap() {
-    return this._stateTrackerNode._derivedValueMap || new WeakMap();
-  }
+  // getDerivedValueMap() {
+  //   return this._stateTrackerNode._derivedValueMap || new WeakMap();
+  // }
 }
 
 export default Reaction;

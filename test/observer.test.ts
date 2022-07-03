@@ -91,7 +91,7 @@ function testTracker(useProxy: boolean) {
       }
     );
 
-    it('deep equal', () => {
+    it('deep equal: props parent with deep equal', () => {
       const state = {
         app: {
           list: [
@@ -147,7 +147,7 @@ function testTracker(useProxy: boolean) {
       expect(runCount).toBe(2);
     });
 
-    it('deep equal v2', () => {
+    it('deep equal: props child with deep equal', () => {
       const state = {
         app: {
           list: [
@@ -199,6 +199,115 @@ function testTracker(useProxy: boolean) {
       proxyState.app = { ...app, list: nextList };
 
       fn({ app: proxyState.app });
+
+      expect(runCount).toBe(2);
+    });
+
+    it('deep equal - state included: shallowEqual', () => {
+      const state = {
+        app: {
+          list: [
+            { id: 1, label: 'first' },
+            { id: 2, label: 'second' },
+          ],
+        },
+      };
+
+      const proxyState = produce(state);
+      let runCount = 0;
+
+      // @ts-ignore
+      const fn = observer(
+        proxyState,
+        // @ts-ignore
+        (state: any) => {
+          const { app } = state;
+          runCount++;
+          app.list.forEach((item: any) => {
+            const { id } = item;
+            return `${id}`;
+          });
+        }
+      );
+
+      fn();
+      expect(runCount).toBe(1);
+
+      const app = state.app;
+      const nextList = app.list.slice();
+      nextList[0] = { ...nextList[0] };
+      StateTrackerUtil.setValue(proxyState, {
+        app: {
+          list: nextList,
+        },
+      });
+
+      expect(runCount).toBe(2);
+    });
+
+    it('deep equal - state included: simple copy', () => {
+      const state = {
+        app: {
+          list: [
+            { id: 1, label: 'first' },
+            { id: 2, label: 'second' },
+          ],
+        },
+      };
+
+      const proxyState = produce(state);
+      let runCount = 0;
+
+      // @ts-ignore
+      const fn = observer(
+        proxyState,
+        // @ts-ignore
+        (state: any) => {
+          const { app } = state;
+          runCount++;
+          app.list.forEach((item: any) => {
+            const { id } = item;
+            return `${id}`;
+          });
+        },
+        {
+          shallowEqual: false,
+        }
+      );
+
+      fn();
+      expect(runCount).toBe(1);
+
+      const app = state.app;
+      const nextList = app.list.slice();
+      nextList[0] = { ...nextList[0] };
+      StateTrackerUtil.setValue(proxyState, {
+        app: {
+          list: nextList,
+        },
+      });
+
+      expect(runCount).toBe(1);
+
+      const appV2 = state.app;
+      const nextListV2 = appV2.list.slice();
+      nextListV2[0] = { ...nextListV2[0], label: 'third' };
+      StateTrackerUtil.setValue(proxyState, {
+        app: {
+          list: nextListV2,
+        },
+      });
+
+      expect(runCount).toBe(1);
+
+      const appV3 = state.app;
+      const nextListV3 = appV3.list.slice();
+      nextListV3[0] = { ...nextListV3[0], id: 3 };
+      StateTrackerUtil.setValue(proxyState, {
+        app: {
+          list: nextListV3,
+        },
+      });
 
       expect(runCount).toBe(2);
     });

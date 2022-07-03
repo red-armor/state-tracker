@@ -6,6 +6,8 @@ import {
   shallowCopy,
   isPlainObject,
   generateRandomContextKey,
+  isProxy,
+  buildCachedProxyPath,
 } from './commons';
 import {
   State,
@@ -15,7 +17,7 @@ import {
   IStateTracker,
   ObserverProps,
   ProduceProxyOptions,
-  StateTrackerProperties,
+  // StateTrackerProperties,
 } from './types';
 import Graph from './Graph';
 import Reaction from './Reaction';
@@ -68,6 +70,22 @@ const StateTrackerUtil = {
       }
       return proxyState;
     }, proxyState);
+  },
+
+  peekValue: function(
+    proxyState: IStateTracker | NextState,
+    key: string | number
+  ) {
+    if (isTrackable(proxyState)) {
+      const tracker = (proxyState as IStateTracker)[TRACKER];
+      if (tracker) {
+        tracker._isPeeking = true;
+        const nextProxy = proxyState[key];
+        tracker._isPeeking = false;
+        return nextProxy;
+      }
+    }
+    return proxyState[key];
   },
 
   perform(
@@ -143,13 +161,13 @@ const StateTrackerUtil = {
     key: string | number;
     currentValue: any;
     nextValue: any;
-    derivedValueMap?: WeakMap<any, any>;
+    // derivedValueMap?: WeakMap<any, any>;
   }) {
     const {
       key,
       currentValue,
       nextValue,
-      derivedValueMap = new WeakMap(),
+      // derivedValueMap = new WeakMap(),
     } = options;
     const rawNewValue = raw(nextValue);
     const rawCurrentValue = raw(currentValue);
@@ -159,12 +177,7 @@ const StateTrackerUtil = {
       currentValue,
     });
 
-    if (
-      rawNewValue !== rawCurrentValue &&
-      (!derivedValueMap.get(rawNewValue) ||
-        (derivedValueMap.get(rawNewValue) &&
-          raw(derivedValueMap.get(rawNewValue)) !== rawCurrentValue))
-    ) {
+    if (rawNewValue !== rawCurrentValue) {
       token.isEqual = false;
       token.key = key;
       token.nextValue = rawNewValue;
@@ -186,7 +199,7 @@ const StateTrackerUtil = {
     const { type = 'state', stateCompareLevel, graphMap } = options || {};
     const shallowEqual = reaction._shallowEqual;
     const affects = reaction.getAffects();
-    const derivedValueMap = reaction.getDerivedValueMap();
+    // const derivedValueMap = reaction.getDerivedValueMap();
     const token = this.createEqualityToken();
 
     const nextGraphMap =
@@ -200,16 +213,16 @@ const StateTrackerUtil = {
         const affectedPath = graph.getPath();
         const affectedKey = this.generateAffectedPathKey(affectedPath);
         const currentValue = affects.get(affectedKey);
-        if (!isTrackable(nextValue)) {
+        if (!isTrackable(nextValue) || reaction.hasPassingProps(currentValue)) {
           const token = this.resolveEqualityToken({
             key,
             currentValue: currentValue,
             nextValue: nextValue,
-            derivedValueMap,
+            // derivedValueMap,
           });
           if (!token.isEqual) return token;
         } else {
-          const newValue = nextValue[key];
+          const newValue = StateTrackerUtil.peekValue(nextValue, key);
           const token = this.isEqual(newValue, reaction, {
             type,
             stateCompareLevel: stateCompareLevel - 1,
@@ -232,15 +245,15 @@ const StateTrackerUtil = {
           nextValue,
           currentValue,
         });
-      const newValue = nextValue[key];
+      const newValue = StateTrackerUtil.peekValue(nextValue, key);
 
       if (!shallowEqual) {
-        if (!graph.childrenMap.size) {
+        if (!graph.childrenMap.size || reaction.hasPassingProps(currentValue)) {
           const token = this.resolveEqualityToken({
             key,
             currentValue: currentValue,
             nextValue: newValue,
-            derivedValueMap,
+            // derivedValueMap,
           });
           if (!token.isEqual) return token;
         } else {
@@ -256,7 +269,7 @@ const StateTrackerUtil = {
           key,
           currentValue,
           nextValue: newValue,
-          derivedValueMap,
+          // derivedValueMap,
         });
 
         if (!token.isEqual) return token;
@@ -272,7 +285,6 @@ const StateTrackerUtil = {
 
   resolveNextValue: function resolveNextValue({
     value,
-    tracker,
     stateTrackerContext,
     nextAccessPath,
     proxy,
@@ -282,126 +294,50 @@ const StateTrackerUtil = {
     value: any;
     rootPath: Array<string>;
     proxy: IStateTracker;
-    tracker: StateTrackerProperties;
     nextAccessPath: Array<string | number>;
     stateTrackerContext: StateTrackerContext;
     createProxy: (state: State, options: ProduceProxyOptions) => IStateTracker;
   }) {
-    const childrenProxies = tracker._childrenProxies;
-    const token = {
-      isDerived: false,
-      value,
-    };
-    if (!isTrackable(token.value)) {
-      return token;
+    if (!isTrackable(value)) {
+      return value;
     }
+    const path = buildCachedProxyPath(nextAccessPath.slice(0, -1));
+    const isProxyValue = isProxy(value);
 
-    // used for cached key
-    const rawNextValue = raw(token.value);
-
-    // 1. use value in childrenProxies
-    if (childrenProxies.has(rawNextValue)) {
-      token.value = childrenProxies.get(rawNextValue);
-      return token;
-    }
-
-    // 2. use value in context cached proxy
-    const cachedProxy = stateTrackerContext.getCachedProxy(rawNextValue);
-    const rootPoint = nextAccessPath[0];
-
-    if (cachedProxy) {
-      const cachedTracker = StateTrackerUtil.getTracker(cachedProxy);
-      const cachedAccessPath = cachedTracker._accessPath;
-
-      // const cachedRootPoint = cachedAccessPath[0];
-      // For set with an proxy value, the same root should be preserved.
-
-      // slice(0, 1) may have performance metrics; But may cause error on dispatch
-
-      // if (pathEqual(nextAccessPath.slice(0, 1), cachedAccessPath.slice(0, 1))) {
+    if (isProxyValue) {
+      const tracker = StateTrackerUtil.getTracker(value);
       if (
-        pathEqual(nextAccessPath.slice(0, -1), cachedAccessPath.slice(0, -1))
+        pathEqual(nextAccessPath.slice(0, 1), tracker._accessPath.slice(0, 1))
       ) {
-        // if (pathEqual(nextAccessPath, cachedAccessPath)) {
-        //    too strictly !!! if remove an item, all the left should be re-proxy
-        // if (nextAccessPath[0] === cachedAccessPath[0]) {
-        //    may result in a bug!!!, for Example, set value under the same root !
-        // so we only care the path except the end point !!!
-        // not matched, will be placed in getCachedNextProxy...But, it still has a issue.
-        // set more than once, then it may have overlap!!
-        childrenProxies.set(rawNextValue, cachedProxy);
-        token.value = cachedProxy;
-        return token;
+        return value;
       }
-
-      const cachedNextProxy = stateTrackerContext.getCachedNextProxy(
-        rootPoint,
-        rawNextValue
-      );
-
-      token.isDerived = true;
-
-      if (cachedNextProxy) {
-        const cachedNextTracker = StateTrackerUtil.getTracker(cachedNextProxy);
-
-        if (rootPoint === cachedNextTracker._accessPath[0]) {
-          // childrenProxies.set(rawNextValue, cachedNextProxy);
-          token.value = cachedNextProxy;
-          return token;
-        }
-      }
-
-      const next = createProxy(
-        // only new value should create new proxy object..
-        // Array.isArray(value) ? value.slice() : { ...value },
-        shallowCopy(token.value),
-        {
-          accessPath: nextAccessPath.slice() as Array<string>,
-          parentProxy: proxy as IStateTracker,
-          rootPath,
-          stateTrackerContext,
-        }
-      );
-      token.value = next;
-
-      stateTrackerContext.setCachedNextProxy(
-        rootPoint,
-        rawNextValue,
-        token.value
-      );
-      // childrenProxies.set(rawNextValue, token.value);
-      return token;
     }
 
-    // 被设置了一个trackedValue，这个时候会尽量用这个trackedValue
-    if (StateTrackerUtil.hasTracker(token.value)) {
-      const nextValueTracker = StateTrackerUtil.getTracker(token.value);
-      if (!pathEqual(nextAccessPath, nextValueTracker._accessPath)) {
-        const next = createProxy(
-          // only new value should create new proxy object..
-          shallowCopy(token.value),
-          {
-            accessPath: nextAccessPath.slice() as Array<string>,
-            parentProxy: proxy as IStateTracker,
-            rootPath,
-            stateTrackerContext,
-          }
-        );
-        token.value = next;
-      }
-    } else {
-      const next = createProxy(token.value, {
+    const rawValue = raw(value);
+
+    const cachedProxy = stateTrackerContext.getCachedProxy(path, rawValue);
+
+    if (cachedProxy) return cachedProxy;
+    if (!isProxy(value)) {
+      const next = createProxy(value, {
         accessPath: nextAccessPath.slice() as Array<string>,
         parentProxy: proxy as IStateTracker,
         rootPath,
         stateTrackerContext,
       });
-      token.value = next;
+      stateTrackerContext.setCachedProxy(path, value, next);
+      return next;
     }
 
-    stateTrackerContext.setCachedProxy(rawNextValue, token.value);
-    childrenProxies.set(rawNextValue, token.value);
-    return token;
+    const next = createProxy(isProxyValue ? shallowCopy(value) : value, {
+      accessPath: nextAccessPath.slice() as Array<string>,
+      parentProxy: proxy as IStateTracker,
+      rootPath,
+      stateTrackerContext,
+    });
+
+    stateTrackerContext.setCachedProxy(path, rawValue, next);
+    return next;
   },
 };
 
