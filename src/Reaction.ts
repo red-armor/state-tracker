@@ -290,11 +290,18 @@ class Reaction {
       this._changedValue
     );
 
-    if (!truthy) {
-      // if props not equal, then tear down.
-      // this.teardown();
-      this.updateObserverProps(props);
-    }
+    // due to support props deep equal; no matter truthy is true or not
+    // props should be update to update `_passingPropsSet` in reaction!!
+    // or,
+    this.updateObserverProps(props);
+
+    // if (!truthy) {
+    //   // if props not equal, then tear down.
+    //   // this.teardown();
+    //   this.updateObserverProps(props);
+    // } else {
+
+    // }
     return truthy;
   }
 

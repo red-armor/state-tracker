@@ -267,7 +267,8 @@ class StateTrackerNode {
   isPropsEqual(nextProps: ObserverProps, changedValue?: ChangedValue) {
     // on shallow compare, props should start from root.
     // so rootPoint set to empty string to make it work.
-    if (true) {
+
+    if (this._shallowEqual) {
       this.logActivity('comparisonStart', { type: 'props' });
       const equalityToken = this.isPropsShallowEqual(nextProps, {
         changedValue,
@@ -279,8 +280,9 @@ class StateTrackerNode {
       this.logActivity('comparisonEnd', { type: 'props' });
       return equalityToken.isEqual;
     }
-    // 针对props的话，我们只能够做到部分的粒度化
+    // ！！！ Props can not perform deep equal..
 
+    // 针对props的话，我们只能够做到部分的粒度化
     const trackerKeys = Array.from(this.propsGraphMap.keys()) || [];
     let equalityToken = this.isPropsShallowEqual(nextProps, {
       changedValue,

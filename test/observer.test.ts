@@ -91,7 +91,7 @@ function testTracker(useProxy: boolean) {
       }
     );
 
-    it('deep equal - props not included: parent with deep equal', () => {
+    it('deep equal: props parent with deep equal', () => {
       const state = {
         app: {
           list: [
@@ -144,10 +144,10 @@ function testTracker(useProxy: boolean) {
 
       fn({ app: proxyState.app });
 
-      expect(runCount === 2).toBe(false);
+      expect(runCount).toBe(2);
     });
 
-    it('deep equal - props not included: child with deep equal', () => {
+    it('deep equal: props child with deep equal', () => {
       const state = {
         app: {
           list: [
@@ -200,7 +200,7 @@ function testTracker(useProxy: boolean) {
 
       fn({ app: proxyState.app });
 
-      expect(runCount).toBe(3);
+      expect(runCount).toBe(2);
     });
 
     it('deep equal - state included: shallowEqual', () => {
