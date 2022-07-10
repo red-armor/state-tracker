@@ -238,6 +238,7 @@ class Reaction {
     // should not teardown, or props will cleaned two times
     // this.teardown();
     this._passingPropsSet = new Set();
+    this._stateTrackerNode.cleanup();
     StateTrackerUtil.enterNode(this.state, this._stateTrackerNode);
     const nextArgs = [...args];
 

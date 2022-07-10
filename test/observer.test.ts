@@ -144,7 +144,7 @@ function testTracker(useProxy: boolean) {
 
       fn({ app: proxyState.app });
 
-      expect(runCount).toBe(2);
+      expect(runCount).toBe(3);
     });
 
     it('deep equal: props child with deep equal', () => {
@@ -200,7 +200,7 @@ function testTracker(useProxy: boolean) {
 
       fn({ app: proxyState.app });
 
-      expect(runCount).toBe(2);
+      expect(runCount).toBe(3);
     });
 
     it('deep equal - state included: shallowEqual', () => {

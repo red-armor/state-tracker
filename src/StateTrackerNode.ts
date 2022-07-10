@@ -161,20 +161,35 @@ class StateTrackerNode {
   // because on every rerender, props will be compared. if it's empty,
   // the propsEqual will always be true
   stateChangedCleanup() {
-    this.logActivity('cleanupStateDeps');
-    this.stateGraphMap = new Map();
-    // this._affectedPathValue is used to temp save access path value.
-    // It should be cleanup on each `false` equality !!
-    this._affectedPathValue = new Map();
-    this._reaction!.disposeFineGrainListener();
+    // this.logActivity('cleanupStateDeps');
+    // this.stateGraphMap = new Map();
+    // // this._affectedPathValue is used to temp save access path value.
+    // // It should be cleanup on each `false` equality !!
+    // this._affectedPathValue = new Map();
+    // this._reaction!.disposeFineGrainListener();
   }
 
   propsChangedCleanup() {
+    // this.logActivity('cleanupPropsDeps');
+    // this.propsGraphMap = new Map();
+    // this._propsProxyToKeyMap = new Map();
+    // this._affectedPathValue = new Map();
+    // this.propsRootMetaMap = new Map();
+  }
+
+  cleanup() {
     this.logActivity('cleanupPropsDeps');
     this.propsGraphMap = new Map();
     this._propsProxyToKeyMap = new Map();
     this._affectedPathValue = new Map();
     this.propsRootMetaMap = new Map();
+
+    // this.logActivity('cleanupStateDeps');
+    this.stateGraphMap = new Map();
+    // this._affectedPathValue is used to temp save access path value.
+    // It should be cleanup on each `false` equality !!
+    // this._affectedPathValue = new Map();
+    this._reaction!.disposeFineGrainListener();
   }
 
   generateAffectedPathKey(path: Array<string | number> = []) {
