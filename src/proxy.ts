@@ -12,6 +12,7 @@ import {
 import { createPlainTrackerObject } from './StateTracker';
 import {
   State,
+  ProxyCache,
   IStateTracker,
   ProduceProxyOptions,
   StateTrackerProperties,
@@ -23,7 +24,7 @@ import Container from './Container';
 export function produceImpl(
   state: State,
   // affected?: WeakMap<object, IStateTracker>,
-  proxyCache?: WeakMap<object, IStateTracker>
+  proxyCache?: ProxyCache
 ) {
   const container = new Container({
     state,

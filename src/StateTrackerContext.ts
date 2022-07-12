@@ -15,7 +15,7 @@ class StateTrackerContext {
     this.queue = [];
     this._id = generateRandomKey();
     this._lastUpdateAt = Date.now();
-    this._cachedProxies = new Map();
+    this._cachedProxies = props.proxyCache || new Map();
     this.container = props.container;
   }
 

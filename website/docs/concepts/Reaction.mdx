@@ -29,13 +29,17 @@ type Fn = (state: ProxyState) => any
 ## State & Props
 
 在`Reaction`中它有两个重要的概念是`state`和`props`；之所以，这么设计是借鉴了目前组件的普遍的渲染模式，
-- 组件有自己的域值，称之为`state`
-- 组件有上游传下来的值，称之为`props`
+- `state`: 自身的域值，不受任何其它控制
+- `props`: 来自上游的数据，目前主要是`parent`
 
 :::note
 1. fn中第一个参数是`state`，第二个参数是可选的`props`
 2. 如果只有使用到的`props`值发生变化，是不会触发`re-run`
 3. 如果`props`发生了变化，同时`state`发生了变化，那么在`fn`中可以拿到最新的`state`和`props`
+:::
+
+:::info
+[Serialization of component state](https://dev.to/builderio/qwik-the-answer-to-optimal-fine-grained-lazy-loading-2hdp#serialization-of-component-state) 是目前`qwik`针对`Resumable`概念，阐述的关于`state, props, transient state`
 :::
 
 ### Examples
@@ -94,6 +98,10 @@ console.log('count2 ', count) // 1
 
 #### 当state也发生变化时，才能够将props的最新值应用上
 
+在`state-tracker`中，我们虽然定义了`state`和`props`两个概念；但是`state`的变化才是`auto-run`启动的原动力；虽然说，props发生变化会驱动绑定到它的`reaction rerun`；但是需要明确的是，`props`永远都是从`state`分岔出来的，它的更改必定对应一个`state`的更改；
+
+下面的例子阐述了，如果`props`变了，但是`state`没变的话，`fn`依旧不会自动触发；
+
 ```ts
 const state = { app: { a1: 1, a2: 2 } };
 const data = { data: [{ title: 'first' }]}
@@ -111,16 +119,18 @@ new Reaction({
 }, proxyData);
 
 console.log('count1 ', count)   // 1
+
 StateTrackerUtil.setValue(
   proxyData, {
     data: [{ title: 'second' }]
   }
 )
+console.log('count2 ', count) // 1
+
 StateTrackerUtil.setValue(
   proxyState, {
     app: { a1: 2, a2: 2 }
   }
 )
-
-console.log('count2 ', count) // 1
+console.log('count3 ', count) // 2
 ```

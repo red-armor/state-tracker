@@ -6,3 +6,4 @@ export * from './container';
 export * from './stateTracker';
 export * from './stateTrackerNode';
 export * from './reporter';
+export * from './stateTrackerContext';

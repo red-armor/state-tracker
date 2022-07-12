@@ -14,3 +14,6 @@ sidebar_position: 2
 
 - **Easy observable state for React ⚡️** <br />
   https://github.com/alloc/wana <br />
+
+- **Reactivity - qwik**<br />
+  https://github.com/BuilderIO/qwik/blob/main/packages/docs/src/pages/docs/concepts/reactivity.mdx <br />

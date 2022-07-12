@@ -8,7 +8,13 @@ import {
   createHiddenProperty,
 } from './commons';
 import { createPlainTrackerObject } from './StateTracker';
-import { State, IndexType, IStateTracker, ProduceProxyOptions } from './types';
+import {
+  ProxyCache,
+  State,
+  IndexType,
+  IStateTracker,
+  ProduceProxyOptions,
+} from './types';
 import StateTrackerContext from './StateTrackerContext';
 import StateTrackerUtil from './StateTrackerUtil';
 import Container from './Container';
@@ -16,7 +22,7 @@ import Container from './Container';
 export function produceImpl(
   state: State,
   // affected?: WeakMap<object, IStateTracker>,
-  proxyCache?: WeakMap<object, IStateTracker>
+  proxyCache?: ProxyCache
 ) {
   const container = new Container({ state });
   const stateTrackerContext = new StateTrackerContext({

@@ -161,14 +161,8 @@ const StateTrackerUtil = {
     key: string | number;
     currentValue: any;
     nextValue: any;
-    // derivedValueMap?: WeakMap<any, any>;
   }) {
-    const {
-      key,
-      currentValue,
-      nextValue,
-      // derivedValueMap = new WeakMap(),
-    } = options;
+    const { key, currentValue, nextValue } = options;
     const rawNewValue = raw(nextValue);
     const rawCurrentValue = raw(currentValue);
     const token = this.createEqualityToken({
@@ -178,6 +172,16 @@ const StateTrackerUtil = {
     });
 
     if (rawNewValue !== rawCurrentValue) {
+      if (this.hasTracker(currentValue)) {
+        const currentTracker = StateTrackerUtil.getTracker(currentValue);
+        const context = currentTracker._stateTrackerContext;
+        const path = currentTracker._accessPath.slice();
+        const affectedKey = this.generateAffectedPathKey(path);
+        const derivedValue = context.getCachedProxy(affectedKey, rawNewValue);
+        if (derivedValue === currentValue) {
+          return token;
+        }
+      }
       token.isEqual = false;
       token.key = key;
       token.nextValue = rawNewValue;
