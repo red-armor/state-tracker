@@ -175,8 +175,8 @@ const StateTrackerUtil = {
       if (this.hasTracker(currentValue)) {
         const currentTracker = StateTrackerUtil.getTracker(currentValue);
         const context = currentTracker._stateTrackerContext;
-        const path = currentTracker._accessPath.slice();
-        const affectedKey = this.generateAffectedPathKey(path);
+        const path = currentTracker._accessPath.slice() || [];
+        const affectedKey = this.generateAffectedPathKey(path.slice(0, -1));
         const derivedValue = context.getCachedProxy(affectedKey, rawNewValue);
         if (derivedValue === currentValue) {
           return token;
