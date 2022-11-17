@@ -1,7 +1,8 @@
 import StateTrackerUtil from './StateTrackerUtil';
 import { SeenKeys } from './types';
 
-export const env = process ? process?.env?.NODE_ENV : 'production';
+export const env =
+  'process' in globalThis ? process?.env?.NODE_ENV : 'production';
 
 const toString = Function.call.bind<Function>(Object.prototype.toString);
 const ownKeys = (o: any) =>
@@ -13,8 +14,12 @@ const ownKeys = (o: any) =>
       )
     : Object.getOwnPropertyNames(o);
 
-export const arrayProtoOwnKeys = () => ownKeys(Object.getPrototypeOf([]));
-export const objectProtoOwnKeys = () => ownKeys(Object.getPrototypeOf({}));
+export const arrayProtoOwnKeys = Object.freeze(
+  ownKeys(Object.getPrototypeOf([]))
+);
+export const objectProtoOwnKeys = Object.freeze(
+  ownKeys(Object.getPrototypeOf({}))
+);
 
 export const emptyFunction = () => {};
 export const isObject = (o: any) =>
@@ -72,7 +77,7 @@ export function each<T>(obj: T, iter: Iter<T>) {
     );
   } else if (isObject(obj)) {
     // @ts-ignore
-    ownKeys(obj).forEach(key => (iter as EachObject<T>)(key, obj[key], obj));
+    ownKeys(obj).forEach((key) => (iter as EachObject<T>)(key, obj[key], obj));
   }
 }
 
@@ -87,7 +92,7 @@ export function shallowCopy(o: any) {
   tracker._isPeeking = true;
   if (Array.isArray(o)) return o.slice();
   const value = Object.create(Object.getPrototypeOf(o));
-  ownKeys(o).forEach(key => {
+  ownKeys(o).forEach((key) => {
     value[key] = o[key];
   });
   tracker._isPeeking = false;
@@ -211,8 +216,11 @@ export const pathEqual = (
   a: Array<string | number>,
   b: Array<string | number>
 ) => {
-  if (a && b && is(JSON.stringify(a), JSON.stringify(b))) return true;
-  return false;
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) {
+    if (a[i] !== b[i]) return false;
+  }
+  return true;
 };
 
 let reactionNameCounter = 0;
@@ -233,7 +241,7 @@ export function peek(
   if (index === -1) return null;
 
   const left = accessPathString.slice(index + rootPathString.length);
-  const parts = left.split('_').filter(v => v);
+  const parts = left.split('_').filter((v) => v);
   return parts.reduce((n: { [key: string]: any }, c: string) => {
     return n[c];
   }, obj);

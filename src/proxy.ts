@@ -71,11 +71,11 @@ export function createProxy(
         switch (targetType) {
           case Type.Array:
             // length should be tracked
-            if (prop !== 'length' && ~arrayProtoOwnKeys().indexOf(prop as any))
+            if (prop !== 'length' && ~arrayProtoOwnKeys.indexOf(prop as any))
               return Reflect.get(target, prop, receiver);
             break;
           case Type.Object:
-            if (~objectProtoOwnKeys().indexOf(prop as any))
+            if (~objectProtoOwnKeys.indexOf(prop as any))
               return Reflect.get(target, prop, receiver);
             break;
         }
@@ -88,13 +88,13 @@ export function createProxy(
         // value here...
         // const childrenProxies = tracker._childrenProxies;
 
-        const nextAccessPath = accessPath.slice().concat(prop as string);
+        const nextAccessPath = accessPath.concat(prop as string);
         const isPeeking = tracker._isPeeking;
         const value = StateTrackerUtil.resolveNextValue({
           value: target[prop],
           // tracker,
           stateTrackerContext,
-          nextAccessPath: nextAccessPath.slice(),
+          nextAccessPath,
           proxy,
           rootPath,
           createProxy,
@@ -181,7 +181,7 @@ export function createProxy(
   // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Errors/Cant_define_property_object_not_extensible
   // if property value is not extensible, it will cause error. such as a ref value..
   createHiddenProperty(proxy, TRACKER, tracker);
-  createHiddenProperty(proxy, 'unlink', function(this: IStateTracker) {
+  createHiddenProperty(proxy, 'unlink', function (this: IStateTracker) {
     const tracker = this[TRACKER];
     return tracker._base;
   });
