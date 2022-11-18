@@ -22,6 +22,20 @@ export const objectProtoOwnKeys = Object.freeze(
 );
 
 export const emptyFunction = () => {};
+
+// https://stackoverflow.com/questions/7299010/why-is-string-concatenation-faster-than-array-join/54970240#54970240
+export function fastJoin(arr: (string | number)[], sep: string) {
+  if (arr.length > 100) {
+    return arr.join(sep);
+  }
+  let str = '';
+  for (let i = 0; i < arr.length; i++) {
+    if (i !== 0) str += sep;
+    str += arr[i];
+  }
+  return str;
+}
+
 export const isObject = (o: any) =>
   o ? typeof o === 'object' || typeof o === 'function' : false; // eslint-disable-line
 export const hasSymbol = typeof Symbol !== 'undefined';
@@ -233,8 +247,8 @@ export function peek(
   accessPath: Array<string>
 ) {
   if (!isTrackable(obj)) return null;
-  const rootPathString = rootPath.join('_');
-  const accessPathString = accessPath.join('_');
+  const rootPathString = fastJoin(rootPath, '_');
+  const accessPathString = fastJoin(accessPath, '_');
 
   const index = accessPathString.indexOf(rootPathString);
 
@@ -264,4 +278,4 @@ export const noop = () => {};
 
 export const DEFAULT_CACHED_PROXY_PATH = '__$__';
 export const buildCachedProxyPath = (paths: Array<string | number>) =>
-  paths.join('_');
+  fastJoin(paths, '_');
