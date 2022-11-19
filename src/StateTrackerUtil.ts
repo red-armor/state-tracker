@@ -8,6 +8,7 @@ import {
   generateRandomContextKey,
   isProxy,
   buildCachedProxyPath,
+  fastJoin,
 } from './commons';
 import {
   State,
@@ -25,34 +26,34 @@ import StateTrackerContext from './StateTrackerContext';
 import StateTrackerNode from './StateTrackerNode';
 
 const StateTrackerUtil = {
-  hasTracker: function(proxy: IStateTracker) {
+  hasTracker: function (proxy: IStateTracker) {
     return proxy && isPlainObject(proxy) && !!proxy[TRACKER];
   },
 
-  getTracker: function(proxy: IStateTracker) {
+  getTracker: function (proxy: IStateTracker) {
     return proxy[TRACKER];
   },
 
-  enter: function(proxy: IStateTracker, mark?: string, props?: ObserverProps) {
+  enter: function (proxy: IStateTracker, mark?: string, props?: ObserverProps) {
     const tracker = proxy[TRACKER];
     const name = mark || generateRandomContextKey();
     const trackerContext = tracker._stateTrackerContext;
     trackerContext.enter(name, props);
   },
 
-  enterNode: function(proxy: IStateTracker, node: StateTrackerNode) {
+  enterNode: function (proxy: IStateTracker, node: StateTrackerNode) {
     const tracker = proxy[TRACKER];
     const trackerContext = tracker._stateTrackerContext;
     trackerContext.enterNode(node);
   },
 
-  leave: function(proxy: IStateTracker) {
+  leave: function (proxy: IStateTracker) {
     const tracker = proxy[TRACKER];
     const trackerContext = tracker._stateTrackerContext;
     trackerContext.leave();
   },
 
-  peek: function(
+  peek: function (
     proxyState: IStateTracker | NextState,
     accessPath: Array<string>
   ) {
@@ -72,7 +73,7 @@ const StateTrackerUtil = {
     }, proxyState);
   },
 
-  peekValue: function(
+  peekValue: function (
     proxyState: IStateTracker | NextState,
     key: string | number
   ) {
@@ -154,7 +155,7 @@ const StateTrackerUtil = {
   },
 
   generateAffectedPathKey(path: Array<string | number> = []) {
-    return path.join('_');
+    return fastJoin(path, '_');
   },
 
   resolveEqualityToken(options: {
@@ -282,7 +283,7 @@ const StateTrackerUtil = {
     return token;
   },
 
-  getContext: function(proxy: IStateTracker) {
+  getContext: function (proxy: IStateTracker) {
     const tracker = proxy[TRACKER];
     return tracker._stateTrackerContext;
   },

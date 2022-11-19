@@ -1,4 +1,11 @@
-import { isPlainObject, isTrackable, raw, noop, isProxy } from './commons';
+import {
+  isPlainObject,
+  isTrackable,
+  raw,
+  noop,
+  isProxy,
+  fastJoin,
+} from './commons';
 import {
   Activity,
   NextState,
@@ -193,7 +200,7 @@ class StateTrackerNode {
   }
 
   generateAffectedPathKey(path: Array<string | number> = []) {
-    return path.join('_');
+    return fastJoin(path, '_');
   }
 
   setObserverProps(props?: ObserverProps) {
