@@ -9,8 +9,5 @@ __A fast, intuitive, access path based reactive react state management__
 ```ts
 import { produce, Reaction } from 'state-tracker'
 
-const data = {
-
-}
-
+const data = {}
 ```
