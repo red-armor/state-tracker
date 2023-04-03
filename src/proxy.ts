@@ -8,6 +8,7 @@ import {
   arrayProtoOwnKeys,
   objectProtoOwnKeys,
   createHiddenProperty,
+  internalKeys,
 } from './commons';
 import { createPlainTrackerObject } from './StateTracker';
 import {
@@ -20,7 +21,6 @@ import {
 import StateTrackerContext from './StateTrackerContext';
 import StateTrackerUtil from './StateTrackerUtil';
 import Container from './Container';
-
 export function produceImpl(
   state: State,
   // affected?: WeakMap<object, IStateTracker>,
@@ -54,28 +54,27 @@ export function createProxy(
     rootPath = [],
     stateTrackerContext,
   } = options || {};
-  const internalKeys = [TRACKER, 'unlink'];
 
   const handler = {
     get: (target: IStateTracker, prop: PropertyKey, receiver: any) => {
       try {
-        // https://stackoverflow.com/questions/36372611/how-to-test-if-an-object-is-a-proxy
         if (prop === IS_PROXY) return true;
-        if (internalKeys.indexOf(prop as string | symbol) !== -1)
-          return Reflect.get(target, prop, receiver);
-        if (typeof prop === 'symbol')
+        if (
+          internalKeys.has(prop as string | symbol) ||
+          typeof prop === 'symbol'
+        )
           return Reflect.get(target, prop, receiver);
         let tracker = Reflect.get(target, TRACKER) as StateTrackerProperties;
         const targetType = tracker._type;
-
+        // https://stackoverflow.com/questions/55057200/is-the-set-has-method-o1-and-array-indexof-on
         switch (targetType) {
           case Type.Array:
             // length should be tracked
-            if (prop !== 'length' && ~arrayProtoOwnKeys.indexOf(prop as any))
+            if (prop !== 'length' && arrayProtoOwnKeys.has(prop as any))
               return Reflect.get(target, prop, receiver);
             break;
           case Type.Object:
-            if (~objectProtoOwnKeys.indexOf(prop as any))
+            if (objectProtoOwnKeys.has(prop as any))
               return Reflect.get(target, prop, receiver);
             break;
         }
@@ -101,15 +100,13 @@ export function createProxy(
         });
 
         if (!isPeeking) {
-          if (stateTrackerContext.getCurrent()) {
-            stateTrackerContext.getCurrent().track({
-              target,
-              key: prop,
-              // isDerived,
-              value: value,
-              path: nextAccessPath,
-            });
-          }
+          stateTrackerContext.getCurrent()?.track({
+            target,
+            key: prop,
+            // isDerived,
+            value: value,
+            path: nextAccessPath,
+          });
         }
 
         return value;
@@ -181,7 +178,7 @@ export function createProxy(
   // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Errors/Cant_define_property_object_not_extensible
   // if property value is not extensible, it will cause error. such as a ref value..
   createHiddenProperty(proxy, TRACKER, tracker);
-  createHiddenProperty(proxy, 'unlink', function (this: IStateTracker) {
+  createHiddenProperty(proxy, 'unlink', function(this: IStateTracker) {
     const tracker = this[TRACKER];
     return tracker._base;
   });

@@ -25,14 +25,16 @@ function testTracker(useProxy: boolean) {
       };
       const proxyState = produce(state);
       let count = 0;
-
-      new Reaction({
+      const changedValue = { app: { title: 'next' } };
+      const reaction = new Reaction({
         fn: () => count++,
         state: proxyState,
+        changedValue,
       });
+      expect(proxyState['unlink']()).toEqual(JSON.parse(JSON.stringify(state)));
+      expect(reaction.getChangedValue()).toBe(changedValue);
       expect(count).toBe(1);
     });
-
     it('reaction with props', () => {
       const state = {
         app: {
@@ -55,7 +57,7 @@ function testTracker(useProxy: boolean) {
       let count = 0;
       let title = '';
 
-      new Reaction(
+      const reaction = new Reaction(
         {
           fn: (state: any) => {
             title = state.app.title;
@@ -67,6 +69,10 @@ function testTracker(useProxy: boolean) {
           data: proxyData,
         }
       );
+
+      reaction.enter();
+      reaction.leave();
+      reaction.teardown();
       expect(count).toBe(1);
       expect(title).toBe('current');
     });
@@ -259,5 +265,69 @@ function testTracker(useProxy: boolean) {
 
     expect(count).toBe(1);
     expect(a1).toBe(1);
+  });
+
+  it('buildAffectedPathsGraph should create a graph with the correct paths', () => {
+    const state = {
+      app: {
+        list: [{ id: 1, label: 'first' }],
+        location: {
+          city: 'shanghai',
+        },
+        title: 'current',
+        description: 'testing',
+      },
+    };
+    const data = [
+      {
+        title: 1,
+      },
+    ];
+    const proxyState = produce(state);
+    const proxyData = produce(data);
+
+    let title = '';
+    let description = '';
+
+    const reaction = new Reaction(
+      {
+        fn: (state: any) => {
+          title = state.app.title;
+          description = state.app.description;
+        },
+        name: 'testBuildAffectedPathsGraph',
+        state: proxyState,
+      },
+      {
+        data: proxyData,
+      }
+    );
+    const paths = reaction.getAffectedPaths();
+    const graphMap: any = reaction.buildAffectedPathsGraph(paths as any);
+    const getPaths = graphMap.get('app');
+    expect(reaction.name).toBe('testBuildAffectedPathsGraph');
+    expect(title).toBe('current');
+    expect(description).toBe('testing');
+    expect(paths).toEqual({
+      app: [['app'], ['app', 'title'], ['app', 'description']],
+    });
+    expect(graphMap.size).toBe(1);
+    expect(getPaths.getPaths()).toEqual([
+      ['app'],
+      ['app', 'title'],
+      ['app', 'description'],
+    ]);
+    expect(getPaths).not.toBeUndefined();
+    expect(reaction.getStateTrackerNode().name).toEqual(
+      'testBuildAffectedPathsGraph'
+    );
+    expect(reaction.getStateTrackerNode()._reaction).toEqual(reaction);
+    expect(reaction.getStateTrackerNode()._shallowEqual).toEqual(
+      reaction._shallowEqual
+    );
+    expect(reaction.getStateTrackerNode().changedValueListener).toEqual(
+      undefined
+    );
+    expect(reaction.getStateTrackerNode().activityListener).toEqual(undefined);
   });
 }

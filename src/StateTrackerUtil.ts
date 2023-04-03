@@ -1,14 +1,13 @@
 import {
   raw,
   TRACKER,
-  pathEqual,
   isTrackable,
   shallowCopy,
   isPlainObject,
   generateRandomContextKey,
-  isProxy,
   buildCachedProxyPath,
   fastJoin,
+  IS_PROXY,
 } from './commons';
 import {
   State,
@@ -26,34 +25,34 @@ import StateTrackerContext from './StateTrackerContext';
 import StateTrackerNode from './StateTrackerNode';
 
 const StateTrackerUtil = {
-  hasTracker: function (proxy: IStateTracker) {
+  hasTracker: function(proxy: IStateTracker) {
     return proxy && isPlainObject(proxy) && !!proxy[TRACKER];
   },
 
-  getTracker: function (proxy: IStateTracker) {
+  getTracker: function(proxy: IStateTracker) {
     return proxy[TRACKER];
   },
 
-  enter: function (proxy: IStateTracker, mark?: string, props?: ObserverProps) {
+  enter: function(proxy: IStateTracker, mark?: string, props?: ObserverProps) {
     const tracker = proxy[TRACKER];
     const name = mark || generateRandomContextKey();
     const trackerContext = tracker._stateTrackerContext;
     trackerContext.enter(name, props);
   },
 
-  enterNode: function (proxy: IStateTracker, node: StateTrackerNode) {
+  enterNode: function(proxy: IStateTracker, node: StateTrackerNode) {
     const tracker = proxy[TRACKER];
     const trackerContext = tracker._stateTrackerContext;
     trackerContext.enterNode(node);
   },
 
-  leave: function (proxy: IStateTracker) {
+  leave: function(proxy: IStateTracker) {
     const tracker = proxy[TRACKER];
     const trackerContext = tracker._stateTrackerContext;
     trackerContext.leave();
   },
 
-  peek: function (
+  peek: function(
     proxyState: IStateTracker | NextState,
     accessPath: Array<string>
   ) {
@@ -73,7 +72,7 @@ const StateTrackerUtil = {
     }, proxyState);
   },
 
-  peekValue: function (
+  peekValue: function(
     proxyState: IStateTracker | NextState,
     key: string | number
   ) {
@@ -283,7 +282,7 @@ const StateTrackerUtil = {
     return token;
   },
 
-  getContext: function (proxy: IStateTracker) {
+  getContext: function(proxy: IStateTracker) {
     const tracker = proxy[TRACKER];
     return tracker._stateTrackerContext;
   },
@@ -303,46 +302,38 @@ const StateTrackerUtil = {
     stateTrackerContext: StateTrackerContext;
     createProxy: (state: State, options: ProduceProxyOptions) => IStateTracker;
   }) {
-    if (!isTrackable(value)) {
+    const trackableFlag = isTrackable(value);
+    if (!trackableFlag) {
       return value;
     }
-    const path = buildCachedProxyPath(nextAccessPath.slice(0, -1));
-    const isProxyValue = isProxy(value);
-
+    const isProxyValue = trackableFlag && value[IS_PROXY];
     if (isProxyValue) {
       const tracker = StateTrackerUtil.getTracker(value);
-      if (
-        pathEqual(nextAccessPath.slice(0, 1), tracker._accessPath.slice(0, 1))
-      ) {
-        return value;
-      }
+      if (nextAccessPath[0] === tracker._accessPath[0]) return value;
     }
 
-    const rawValue = raw(value);
-
+    let rawValue = value;
+    if (isProxyValue) rawValue = StateTrackerUtil.getTracker(value)._base;
+    const path = buildCachedProxyPath(nextAccessPath.slice(0, -1));
     const cachedProxy = stateTrackerContext.getCachedProxy(path, rawValue);
-
     if (cachedProxy) return cachedProxy;
-    if (!isProxy(value)) {
-      const next = createProxy(value, {
-        accessPath: nextAccessPath.slice() as Array<string>,
+
+    const createNextProxy = () => {
+      const next = createProxy(isProxyValue ? shallowCopy(value) : value, {
+        accessPath: nextAccessPath.slice() as string[],
         parentProxy: proxy as IStateTracker,
         rootPath,
         stateTrackerContext,
       });
-      stateTrackerContext.setCachedProxy(path, value, next);
+      stateTrackerContext.setCachedProxy(
+        path,
+        isProxyValue ? rawValue : value,
+        next
+      );
       return next;
-    }
+    };
 
-    const next = createProxy(isProxyValue ? shallowCopy(value) : value, {
-      accessPath: nextAccessPath.slice() as Array<string>,
-      parentProxy: proxy as IStateTracker,
-      rootPath,
-      stateTrackerContext,
-    });
-
-    stateTrackerContext.setCachedProxy(path, rawValue, next);
-    return next;
+    return createNextProxy();
   },
 };
 

@@ -7,7 +7,7 @@ export default class Graph {
   private _pathSet: Set<string> = new Set();
 
   constructor(point: string | number, slug: Array<string | number> = []) {
-    this.slug = slug || [];
+    this.slug = slug;
     this._point = point;
   }
 

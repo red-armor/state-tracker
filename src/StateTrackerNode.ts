@@ -248,7 +248,7 @@ class StateTrackerNode {
   //       which need to be fixed for performance
   isPropsShallowEqual(
     nextProps: ObserverProps,
-    options: {
+    options?: {
       changedValue?: ChangedValue;
       omitKeys?: Array<string>;
     }

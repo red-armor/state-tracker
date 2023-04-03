@@ -360,7 +360,6 @@ class Reaction {
     const graphMap = new Map();
 
     const keys = Object.keys(paths);
-
     keys.forEach(graphMapKey => {
       const graph = graphMap.has(graphMapKey)
         ? graphMap.get(graphMapKey)
