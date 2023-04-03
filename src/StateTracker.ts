@@ -12,10 +12,10 @@ const createPlainTrackerObject = function({
   lastUpdateAt,
 }: StateTrackerConstructorProps) {
   return {
-    _id: canIUseProxy()
+    _id: canIUseProxy
       ? `ProxyStateTracker_${count++}`
       : `ES5StateTracker_${count++}`,
-    _useProxy: canIUseProxy(),
+    _useProxy: canIUseProxy,
     _accessPath: accessPath,
     _rootPath: rootPath,
     _type: Array.isArray(base) ? Type.Array : Type.Object,

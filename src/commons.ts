@@ -14,12 +14,8 @@ const ownKeys = (o: any) =>
       )
     : Object.getOwnPropertyNames(o);
 
-export const arrayProtoOwnKeys = Object.freeze(
-  ownKeys(Object.getPrototypeOf([]))
-);
-export const objectProtoOwnKeys = Object.freeze(
-  ownKeys(Object.getPrototypeOf({}))
-);
+export const arrayProtoOwnKeys = new Set(ownKeys(Object.getPrototypeOf([])));
+export const objectProtoOwnKeys = new Set(ownKeys(Object.getPrototypeOf({})));
 
 export const emptyFunction = () => {};
 
@@ -46,22 +42,22 @@ export const IS_PROXY: unique symbol = hasSymbol
   ? Symbol.for('is_proxy')
   : ('__is_proxy__' as any);
 
-export const canIUseProxy = () => {
+export const canIUseProxy = (() => {
   try {
     new Proxy({}, {}); // eslint-disable-line
   } catch (err) {
     return false;
   }
-
   return true;
-};
+})();
 
 export const hasOwnProperty = (o: object, prop: PropertyKey) =>
   o.hasOwnProperty(prop); // eslint-disable-line
 
 export const isTrackable = (o: any) => {
   // eslint-disable-line
-  return ['[object Object]', '[object Array]'].indexOf(toString(o)) !== -1;
+  const type = toString(o);
+  return type === '[object Object]' || type === '[object Array]';
 };
 
 export const isNumber = (obj: any) => toString(obj) === '[object Number]';
@@ -91,7 +87,7 @@ export function each<T>(obj: T, iter: Iter<T>) {
     );
   } else if (isObject(obj)) {
     // @ts-ignore
-    ownKeys(obj).forEach((key) => (iter as EachObject<T>)(key, obj[key], obj));
+    ownKeys(obj).forEach(key => (iter as EachObject<T>)(key, obj[key], obj));
   }
 }
 
@@ -106,7 +102,7 @@ export function shallowCopy(o: any) {
   tracker._isPeeking = true;
   if (Array.isArray(o)) return o.slice();
   const value = Object.create(Object.getPrototypeOf(o));
-  ownKeys(o).forEach((key) => {
+  ownKeys(o).forEach(key => {
     value[key] = o[key];
   });
   tracker._isPeeking = false;
@@ -255,7 +251,7 @@ export function peek(
   if (index === -1) return null;
 
   const left = accessPathString.slice(index + rootPathString.length);
-  const parts = left.split('_').filter((v) => v);
+  const parts = left.split('_').filter(v => v);
   return parts.reduce((n: { [key: string]: any }, c: string) => {
     return n[c];
   }, obj);
@@ -279,3 +275,5 @@ export const noop = () => {};
 export const DEFAULT_CACHED_PROXY_PATH = '__$__';
 export const buildCachedProxyPath = (paths: Array<string | number>) =>
   fastJoin(paths, '_');
+
+export const internalKeys = new Set([TRACKER, 'unlink']);

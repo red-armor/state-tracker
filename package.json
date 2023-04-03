@@ -15,6 +15,7 @@
     "build": "tsdx build",
     "lint": "tsdx lint --fix",
     "test": "tsdx test",
+    "test:coverage": "tsdx test --coverage",
     "prepare": "tsdx build",
     "size": "size-limit",
     "analyze": "size-limit --why",

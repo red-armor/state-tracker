@@ -1,6 +1,6 @@
 import { produceImpl as ES5Produce } from '../src/es5';
 import { produceImpl as ES6Produce } from '../src/proxy';
-import observer from '../src/observer';
+import { observer } from '../src/index';
 import { StateTrackerUtil } from '../src';
 
 testTracker(true);

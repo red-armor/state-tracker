@@ -8,7 +8,7 @@ import StateTrackerUtil from './StateTrackerUtil';
 
 // produce = ES6Produce;
 
-// if (canIUseProxy()) {
+// if (canIUseProxy) {
 //   produce = ES6Produce;
 // } else {
 //   produce = ES5Produce;
